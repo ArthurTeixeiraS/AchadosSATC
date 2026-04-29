@@ -21,15 +21,14 @@ Para garantir que os itens sejam entregues aos donos legítimos, o app implement
 - **Histórico (Logs):** Registro completo de quem cadastrou, alterações de status e quem autorizou a retirada.
 
 ## 🚀 Como Executar
-Clone o repositório.
-Instale as dependências:
-Inicie o projeto:
-Utilize o Expo GO no seu smartphone para escanear o QR Code
-.
+Clone o repositório. </br>
+Instale as dependências: </br>
+Inicie o projeto: </br>
+Utilize o Expo GO no seu smartphone para escanear o QR Code.
 
 👥 Equipe
-Arthur Teixeira Serafim
-Davi Chechetto Westphal
-Gabriel Fillipe Casagrande Fernandes
-Guilherme Rabello Carrer
-Ígor da Silva Antunes
+Arthur Teixeira Serafim </br>
+Davi Chechetto Westphal </br>
+Gabriel Fillipe Casagrande Fernandes </br>
+Guilherme Rabello Carrer </br>
+Ígor da Silva Antunes </br>
