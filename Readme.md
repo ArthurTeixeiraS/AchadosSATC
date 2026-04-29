@@ -26,7 +26,7 @@ Instale as dependências: </br>
 Inicie o projeto: </br>
 Utilize o Expo GO no seu smartphone para escanear o QR Code.
 
-👥 Equipe
+## 👥 Equipe
 Arthur Teixeira Serafim </br>
 Davi Chechetto Westphal </br>
 Gabriel Fillipe Casagrande Fernandes </br>
