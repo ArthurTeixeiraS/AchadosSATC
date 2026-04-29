@@ -1,0 +1,45 @@
+# AchadosSATC - Gestão de Achados e Perdidos
+
+## 📱 Sobre o Projeto
+O **AchadosSATC** é uma solução mobile desenvolvida para organizar o processo de achados e perdidos do setor de Apoio da faculdade UNISATC. O objetivo principal é facilitar o registro, o acompanhamento e a devolução segura de objetos encontrados na instituição [2].
+
+O sistema atende a dois perfis principais:
+1. **Administrador (Apoio):** Possui controle total (CRUD) sobre os itens, podendo cadastrar, editar, alterar o status e registrar a devolução [3].
+2. **Usuário Comum:** Pode consultar itens disponíveis através de filtros e solicitar a identificação do objeto [3].
+
+## 🛠️ Tecnologias Utilizadas
+- **Framework:** [React Native](https://reactnative.dev/) com [Expo](https://expo.dev/) [4]
+- **Linguagem:** TypeScript (para maior qualidade e tipagem do código)
+- **Navegação:** [React Navigation](https://reactnavigation.org/) (Stack Navigator) [5, 6]
+- **UI:** [React Native Paper](https://callstack.github.io/react-native-paper/) (opcional/sugerido) [9]
+
+## 🔒 Segurança e Protocolo de Devolução
+Para garantir que os itens sejam entregues aos donos legítimos, o app implementa:
+- **Descrições Restritas:** Detalhes específicos dos itens são ocultados do público geral [10, 11].
+- **Validação de Posse:** O atendente deve validar informações que apenas o dono saiba (ex: conteúdo interno, marcas específicas) [11].
+- **QR Code de Retirada:** Utilização de QR Code para validação digital e registro da entrega física.
+- **Histórico (Logs):** Registro completo de quem cadastrou, alterações de status e quem autorizou a retirada [12].
+
+## 📁 Estrutura de Pastas Sugerida
+Seguindo as boas práticas abordadas em aula [13, 14]:
+AchadosSATC/
+├── src/
+│   ├── assets/      # Ícones e identidade visual [4, 14]
+│   ├── components/  # Componentes reutilizáveis [14]
+│   ├── database/    # Configuração do SQLite [8]
+│   ├── routes/      # Configuração da navegação entre as 5 telas [6, 14]
+│   └── views/       # Telas: Login, Lista, Cadastro, Detalhes e Edição [10, 14]
+└── App.tsx          # Ponto de entrada da aplicação 
+🚀 Como Executar
+Clone o repositório.
+Instale as dependências:
+Inicie o projeto:
+Utilize o Expo GO no seu smartphone para escanear o QR Code
+.
+
+👥 Equipe
+Arthur Teixeira Serafim
+Davi Chechetto Westphal
+Gabriel Fillipe Casagrande Fernandes
+Guilherme Rabello Carrer
+Ígor da Silva Antunes
