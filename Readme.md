@@ -11,11 +11,11 @@ O sistema atende a dois perfis principais:
 - **Framework:** [React Native](https://reactnative.dev/) com [Expo](https://expo.dev/)
 - **Linguagem:** TypeScript (para maior qualidade e tipagem do código)
 - **Navegação:** [React Navigation](https://reactnavigation.org/) (Stack Navigator)
-- **UI:** [React Native Paper](https://callstack.github.io/react-native-paper/) (opcional/sugerido)
+- **UI:** [React Native Paper](https://callstack.github.io/react-native-paper/)
 
 ## 🔒 Segurança e Protocolo de Devolução
 Para garantir que os itens sejam entregues aos donos legítimos, o app implementa:
-- **Descrições Restritas:** Detalhes específicos dos itens são ocultados do público geral [10, 11].
+- **Descrições Restritas:** Detalhes específicos dos itens são ocultados do público geral.
 - **Validação de Posse:** O atendente deve validar informações que apenas o dono saiba (ex: conteúdo interno, marcas específicas).
 - **QR Code de Retirada:** Utilização de QR Code para validação digital e registro da entrega física.
 - **Histórico (Logs):** Registro completo de quem cadastrou, alterações de status e quem autorizou a retirada.
