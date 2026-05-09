@@ -93,7 +93,7 @@ O sistema implementa:
 - persistência em nuvem;
 - controle de status dos empréstimos;
 - rastreabilidade das movimentações realizadas;
-- histórico de empréstimos e devoluções. :contentReference[oaicite:4]{index=4}
+- histórico de empréstimos e devoluções.
 
 ---
 
