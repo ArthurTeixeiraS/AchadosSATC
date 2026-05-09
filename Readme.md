@@ -2,7 +2,7 @@
 
 ## 📱 Sobre o Projeto
 
-O **Ferramentaria SATC** é uma aplicação mobile desenvolvida para digitalizar e organizar o processo de empréstimo de ferramentas da Ferramentaria da SATC. O sistema tem como objetivo substituir os registros manuais atualmente realizados em papel, proporcionando maior controle, rastreabilidade e agilidade no gerenciamento dos empréstimos. :contentReference[oaicite:0]{index=0}
+O **Ferramentaria SATC** é uma aplicação mobile desenvolvida para digitalizar e organizar o processo de empréstimo de ferramentas da Ferramentaria da SATC. O sistema tem como objetivo substituir os registros manuais atualmente realizados em papel, proporcionando maior controle, rastreabilidade e agilidade no gerenciamento dos empréstimos.
 
 A aplicação atende dois perfis principais:
 
@@ -23,7 +23,7 @@ O sistema foi desenvolvido para:
 - Melhorar o acompanhamento de devoluções e atrasos;
 - Permitir consultas rápidas sobre disponibilidade de ferramentas;
 - Disponibilizar histórico de empréstimos;
-- Reduzir o uso de registros físicos e processos manuais. :contentReference[oaicite:1]{index=1}
+- Reduzir o uso de registros físicos e processos manuais.
 
 ---
 
@@ -47,7 +47,7 @@ O sistema foi desenvolvido para:
 - Solicitação de empréstimos;
 - Consulta de status das solicitações;
 - Histórico de empréstimos;
-- Recebimento de notificações relacionadas aos prazos de devolução. :contentReference[oaicite:2]{index=2}
+- Recebimento de notificações relacionadas aos prazos de devolução.
 
 ---
 
@@ -63,7 +63,7 @@ O fluxo principal do sistema ocorre da seguinte forma:
 6. Ferramenta é retirada;
 7. Sistema acompanha prazo de devolução;
 8. Funcionário registra devolução;
-9. Empréstimo é encerrado. :contentReference[oaicite:3]{index=3}
+9. Empréstimo é encerrado.
 
 O sistema também realiza:
 - controle de atrasos;
@@ -122,7 +122,7 @@ O sistema implementa:
 - Alertas de prazo;
 - Aprovação;
 - Recusa;
-- Atrasos. :contentReference[oaicite:5]{index=5}
+- Atrasos.
 
 ---
 
@@ -140,7 +140,7 @@ O sistema implementa:
 - Lista de ferramentas;
 - Minhas solicitações;
 - Histórico;
-- Notificações. :contentReference[oaicite:6]{index=6}
+- Notificações. 
 
 ---
 
@@ -149,4 +149,4 @@ O sistema implementa:
 ### Clone o repositório
 
 ```bash
-git clone URL_DO_REPOSITORIO
+git clone https://github.com/ArthurTeixeiraS/FerramentariaSATC
