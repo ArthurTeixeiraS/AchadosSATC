@@ -2,10 +2,10 @@ import React from "react";
 import { View } from "react-native";
 import { Text } from "react-native-paper";
 
-export function ProfessorHomeScreen() {
+export function ChavesScreen() {
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text variant="titleLarge">Professor</Text>
+      <Text variant="titleLarge">Chaves</Text>
     </View>
   );
 }
