@@ -22,16 +22,9 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 36,
   },
-  logoTitle: {
-    fontSize: 42,
-    fontFamily: typography.fontFamily.bold,
-    color: colors.greenMedium,
-    letterSpacing: 1,
-  },
-  logoSubtitle: {
-    fontSize: 14,
-    fontFamily: typography.fontFamily.bold,
-    color: colors.primary,
+  logo: {
+    width: 220,
+    height: 120,
   },
   label: {
     fontSize: 14,

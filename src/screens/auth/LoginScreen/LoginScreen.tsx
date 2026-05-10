@@ -10,6 +10,7 @@ import { Text, TextInput } from "react-native-paper";
 import { useAuth } from "../../../contexts/AuthContext";
 import { AppInput } from "../../../components/AppInput";
 import { AppButton } from "../../../components/AppButton";
+import { Image } from "react-native";
 
 import { styles } from "./styles";
 
@@ -48,8 +49,11 @@ export function LoginScreen() {
     >
       <View style={styles.card}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoTitle}>SATC</Text>
-          <Text style={styles.logoSubtitle}>FERRAMENTARIA</Text>
+          <Image
+            source={require("../../../../assets/icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <Text style={styles.label}>Crachá</Text>
