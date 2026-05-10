@@ -1,5 +1,7 @@
 import React from "react";
 import { TextInput, TextInputProps } from "react-native-paper";
+
+import { colors } from "../../styles/colors";
 import { styles } from "./styles";
 
 interface AppInputProps extends TextInputProps {
@@ -14,8 +16,10 @@ export function AppInput(props: AppInputProps) {
       mode="outlined"
       style={styles.input}
       outlineStyle={styles.outline}
-      activeOutlineColor="#004732"
-      outlineColor="#F0F0F0"
+      activeOutlineColor={colors.primary}
+      outlineColor={colors.border}
+      textColor={colors.text}
+      placeholderTextColor={colors.textSecondary}
       {...props}
     />
   );

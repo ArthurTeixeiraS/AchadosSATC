@@ -1,14 +1,17 @@
 import { StyleSheet } from "react-native";
 
+import { colors } from "../../../styles/colors";
+import { typography } from "../../../styles/typography";
+
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#3A3A3A",
+    backgroundColor: colors.primary,
     justifyContent: "center",
     padding: 12,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 8,
     paddingHorizontal: 28,
     paddingVertical: 48,
@@ -21,29 +24,29 @@ export const styles = StyleSheet.create({
   },
   logoTitle: {
     fontSize: 42,
-    fontWeight: "bold",
-    color: "#007A3D",
+    fontFamily: typography.fontFamily.bold,
+    color: colors.greenMedium,
     letterSpacing: 1,
   },
   logoSubtitle: {
     fontSize: 14,
-    fontWeight: "bold",
-    color: "#004732",
+    fontFamily: typography.fontFamily.bold,
+    color: colors.primary,
   },
   label: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#1F2937",
+    fontFamily: typography.fontFamily.semiBold,
+    color: colors.text,
     marginBottom: 8,
   },
   forgotText: {
-    color: "#007A4D",
-    fontWeight: "700",
+    color: colors.secondary,
+    fontFamily: typography.fontFamily.semiBold,
     marginBottom: 24,
   },
   errorText: {
-    color: "#B00020",
+    color: colors.error,
     marginBottom: 16,
-    fontWeight: "600",
+    fontFamily: typography.fontFamily.semiBold,
   },
 });
