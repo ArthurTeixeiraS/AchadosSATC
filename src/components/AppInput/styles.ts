@@ -1,9 +1,13 @@
 import { StyleSheet } from "react-native";
 
+import { colors } from "../../styles/colors";
+import { typography } from "../../styles/typography";
+
 export const styles = StyleSheet.create({
   input: {
     marginBottom: 22,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.background,
+    fontFamily: typography.fontFamily.regular,
   },
   outline: {
     borderRadius: 16,

@@ -1,10 +1,11 @@
 import { StyleSheet } from "react-native";
 
+import { typography } from "../../styles/typography";
+
 export const styles = StyleSheet.create({
   button: {
     borderRadius: 28,
     marginTop: 8,
-    color: "#03362A"
   },
   content: {
     height: 58,
@@ -12,6 +13,6 @@ export const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: typography.fontFamily.semiBold,
   },
 });

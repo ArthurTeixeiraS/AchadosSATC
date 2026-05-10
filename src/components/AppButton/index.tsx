@@ -1,5 +1,7 @@
 import React from "react";
-import { Button, ButtonProps, ActivityIndicator } from "react-native-paper";
+import { ActivityIndicator, Button, ButtonProps } from "react-native-paper";
+
+import { colors } from "../../styles/colors";
 import { styles } from "./styles";
 
 interface AppButtonProps extends ButtonProps {
@@ -11,14 +13,15 @@ export function AppButton({ loading, children, ...props }: AppButtonProps) {
   return (
     <Button
       mode="contained"
-      buttonColor="#004732"
+      buttonColor={colors.primary}
+      textColor={colors.white}
       style={styles.button}
       contentStyle={styles.content}
       labelStyle={styles.label}
       disabled={loading || props.disabled}
       {...props}
     >
-      {loading ? <ActivityIndicator color="#FFFFFF" /> : children}
+      {loading ? <ActivityIndicator color={colors.white} /> : children}
     </Button>
   );
 }
