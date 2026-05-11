@@ -29,7 +29,7 @@ export function LoginScreen() {
       setErro("");
 
       if (!cracha.trim() || !senha.trim()) {
-        setErro("Informe o crachá e a senha.");
+        setErro("Informe a matrícula e a senha.");
         return;
       }
 
@@ -56,11 +56,11 @@ export function LoginScreen() {
           />
         </View>
 
-        <Text style={styles.label}>Crachá</Text>
+        <Text style={styles.label}>Matrícula</Text>
         <AppInput
           value={cracha}
           onChangeText={setCracha}
-          placeholder="Informe seu número do crachá"
+          placeholder="Informe seu número da matrícula"
           keyboardType="numeric"
         />
 
