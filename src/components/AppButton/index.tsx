@@ -18,10 +18,11 @@ export function AppButton({ loading, children, ...props }: AppButtonProps) {
       style={styles.button}
       contentStyle={styles.content}
       labelStyle={styles.label}
+      loading={loading}
       disabled={loading || props.disabled}
       {...props}
     >
-      {loading ? <ActivityIndicator color={colors.white} /> : children}
+      {children}
     </Button>
   );
 }

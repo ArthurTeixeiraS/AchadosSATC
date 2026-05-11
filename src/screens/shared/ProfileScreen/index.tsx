@@ -30,7 +30,7 @@ export function ProfileScreen() {
         <Text style={styles.cardTitle}>Dados do usuário</Text>
 
         <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Crachá</Text>
+          <Text style={styles.infoLabel}>Matrícula</Text>
           <Text style={styles.infoValue}>{appUser?.cracha}</Text>
         </View>
 
