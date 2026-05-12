@@ -9,6 +9,7 @@ import { ChavesScreen } from "../screens/admin/ChavesScreen";
 import { ProfileScreen } from "../screens/shared/ProfileScreen";
 
 import { colors } from "../styles/colors";
+import { typography } from "../styles/typography";
 
 const Tab = createBottomTabNavigator();
 
@@ -19,6 +20,27 @@ export function AdminRoutes() {
         headerShown: true,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
+
+        tabBarStyle: {
+          height: 70,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontFamily: typography.fontFamily.medium,
+        },
+
+        headerStyle: {
+          backgroundColor: colors.primary,
+        },
+
+        headerTintColor: colors.white,
+
+        headerTitleStyle: {
+          fontFamily: typography.fontFamily.bold,
+        },
       }}
     >
       <Tab.Screen
