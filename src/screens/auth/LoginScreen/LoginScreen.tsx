@@ -1,10 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 
 import { useAuth } from "../../../contexts/AuthContext";
@@ -23,6 +19,11 @@ export function LoginScreen() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+
+  //refencias
+  const matriculaRef = useRef<any>(null);
+  const senhaRef = useRef<any>(null);
+  const buttonRef = useRef<any>(null);
 
   async function handleLogin() {
     try {
@@ -58,18 +59,24 @@ export function LoginScreen() {
 
         <Text style={styles.label}>Matrícula</Text>
         <AppInput
+          ref={matriculaRef}
           value={cracha}
           onChangeText={setCracha}
           placeholder="Informe seu número da matrícula"
           keyboardType="numeric"
+          returnKeyType="next"
+          onSubmitEditing={() => senhaRef.current?.focus()}
         />
 
         <Text style={styles.label}>Senha</Text>
         <AppInput
+          ref={senhaRef}
           value={senha}
           onChangeText={setSenha}
           placeholder="Informe sua senha"
           secureTextEntry={!mostrarSenha}
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
           right={
             <TextInput.Icon
               icon={mostrarSenha ? "eye-off" : "eye"}

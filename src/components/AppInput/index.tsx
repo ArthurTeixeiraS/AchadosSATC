@@ -10,9 +10,10 @@ interface AppInputProps extends TextInputProps {
 }
 
 //Componente padrão de input para aplicação
-export function AppInput(props: AppInputProps) {
+export const AppInput = React.forwardRef<any, AppInputProps>((props, ref) => {
   return (
     <TextInput
+      ref={ref}
       mode="outlined"
       style={styles.input}
       outlineStyle={styles.outline}
@@ -23,4 +24,4 @@ export function AppInput(props: AppInputProps) {
       {...props}
     />
   );
-}
+});
