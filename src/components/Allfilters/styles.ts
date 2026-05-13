@@ -1,5 +1,8 @@
 import { StyleSheet } from "react-native";
 
+import { colors } from "../../styles/colors";
+import { typography } from "../../styles/typography";
+
 export const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
@@ -8,27 +11,27 @@ export const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  filterButton: {
+    filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#D0D5DD",
-    backgroundColor: "#FFF",
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
 
-  activeFilter: {
-    backgroundColor: "#00875F",
-    borderColor: "#00875F",
+    activeFilter: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 
-  filterText: {
-    color: "#344054",
-    fontWeight: "500",
+    filterText: {
+    color: colors.text,
+    fontFamily: typography.fontFamily.medium,
     fontSize: 14,
   },
 
-  activeFilterText: {
-    color: "#FFF",
+    activeFilterText: {
+    color: colors.white,
   },
 });

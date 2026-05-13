@@ -9,11 +9,9 @@ export async function uploadImageAsync(
   const response = await fetch(uri);
   const blob = await response.blob();
 
-  const storageRef = ref(storage, path);
+  const imageRef = ref(storage, path);
 
-  await uploadBytes(storageRef, blob);
+  await uploadBytes(imageRef, blob);
 
-  const downloadURL = await getDownloadURL(storageRef);
-
-  return downloadURL;
+  return await getDownloadURL(imageRef);
 }
