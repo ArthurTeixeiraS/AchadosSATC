@@ -5,12 +5,13 @@ import { typography } from "../../styles/typography";
 
 export const styles = StyleSheet.create({
   title: {
+    marginTop: 0,
     fontSize: 24,
     fontFamily: typography.fontFamily.bold,
     color: colors.text,
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 0,
     fontSize: 14,
     fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
