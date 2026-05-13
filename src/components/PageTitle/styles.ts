@@ -5,7 +5,7 @@ import { typography } from "../../styles/typography";
 
 export const styles = StyleSheet.create({
   title: {
-    marginTop: 0,
+    marginTop: 10,
     fontSize: 24,
     fontFamily: typography.fontFamily.bold,
     color: colors.text,

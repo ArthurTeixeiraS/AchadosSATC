@@ -9,8 +9,14 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.background,
     fontFamily: typography.fontFamily.regular,
   },
+
+  multilineInput: {
+    minHeight: 110,
+    textAlignVertical: "top",
+  },
+
   outline: {
-    borderRadius: 16,
-    borderWidth: 0,
+    borderRadius: 24,
+    borderWidth: 1,
   },
 });
