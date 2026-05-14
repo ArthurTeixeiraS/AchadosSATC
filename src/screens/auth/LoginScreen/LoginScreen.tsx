@@ -85,8 +85,6 @@ export function LoginScreen() {
           }
         />
 
-        <Text style={styles.forgotText}>Esqueceu sua senha?</Text>
-
         {!!erro && <Text style={styles.errorText}>{erro}</Text>}
 
         <AppButton

@@ -32,11 +32,6 @@ export const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 8,
   },
-  forgotText: {
-    color: colors.secondary,
-    fontFamily: typography.fontFamily.semiBold,
-    marginBottom: 24,
-  },
   errorText: {
     color: colors.error,
     marginBottom: 16,

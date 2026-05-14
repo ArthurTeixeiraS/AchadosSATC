@@ -11,15 +11,14 @@ export const styles = StyleSheet.create({
   resourceHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
+    alignItems: "center",
   },
 
   resourceName: {
     fontSize: 17,
     fontFamily: typography.fontFamily.semiBold,
     color: colors.text,
-    flex: 1,
+    flex: 0,
   },
 
   resourceNameContainer: {
@@ -33,10 +32,36 @@ export const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
+  resourceActions: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    alignItems: "flex-end",
+    gap: 10,
+  },
+
+  cardContent: {
+    position: "relative",
+    paddingRight: 72,
+  },
+
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+
   resourceType: {
     fontSize: 12,
     fontFamily: typography.fontFamily.semiBold,
     color: colors.primary,
+    textAlign: "right",
+    left: 30,
   },
 
   resourceDescription: {
