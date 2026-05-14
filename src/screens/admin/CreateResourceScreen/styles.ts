@@ -23,6 +23,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    borderStyle: "dashed",
   },
 
   imagePreview: {
@@ -35,5 +36,30 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
+  },
+
+  imageOptions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 12,
+  },
+
+  imageOptionButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  imageOptionText: {
+    fontSize: 14,
+    fontFamily: typography.fontFamily.semiBold,
+    color: colors.primary,
   },
 });

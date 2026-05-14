@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ScrollView, Image, TouchableOpacity, View, Alert } from "react-native";
 import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
@@ -8,18 +8,18 @@ import { PageTitle } from "../../../components/PageTitle";
 import { AppInput } from "../../../components/AppInput";
 import { AppButton } from "../../../components/AppButton";
 
-import { createResource } from "../../../services/resources/resourceServices";
+import { createResource, listLaboratories } from "../../../services/resources/resourceServices";
 import { RecursosStackParamList } from "../../../routes/RecursosStackRoutes";
-import { ResourceStatus, ResourceType } from "../../../types/Resources";
+import { Resource, ResourceStatus, ResourceType } from "../../../types/Resources";
 
 import { styles } from "./styles";
 import { AppCard } from "../../../components/AppCard";
 import { AppSelect } from "../../../components/AppSelect";
 
 import * as ImagePicker from "expo-image-picker";
-import { Image, TouchableOpacity, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import { uploadImageAsync } from "../../../services/storage/uploadImage";
+import { colors } from "../../../styles/colors";
 
 type Props = NativeStackScreenProps<
   RecursosStackParamList,
@@ -39,11 +39,12 @@ const resourceStatusOptions = [
   { label: "Indisponível", value: "INDISPONIVEL" },
 ] as const;
 
-export function CreateResourceScreen({ navigation }: Props) {
+export function CreateResourceScreen({ navigation, route }: Props) {
+  const initialType = route.params?.initialType ?? "FERRAMENTA";
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [tipo, setTipo] = useState<ResourceType>("FERRAMENTA");
-  const [status, setStatus] = useState<ResourceStatus>("DISPONIVEL");
+  const [tipo, setTipo] = useState<ResourceType>(initialType);
+  const [status] = useState<ResourceStatus>("DISPONIVEL");
   const [quantidadeTotal, setQuantidadeTotal] = useState("");
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState("");
   const [localizacao, setLocalizacao] = useState("");
@@ -51,94 +52,166 @@ export function CreateResourceScreen({ navigation }: Props) {
   const [erro, setErro] = useState("");
   const [patrimonio, setPatrimonio] = useState("");
   const [imageUri, setImageUri] = useState("");
+  const [laboratories, setLaboratories] = useState<Resource[]>([]);
+  const [laboratorioId, setLaboratorioId] = useState("");
 
   const isFerramenta = tipo === "FERRAMENTA";
   const isMaquina = tipo === "MAQUINA";
   const isLaboratorio = tipo === "LABORATORIO";
 
+  const laboratoryOptions = laboratories.map((lab) => ({
+    label: lab.nome,
+    value: lab.id,
+  }));
+
+  useEffect(() => {
+    async function loadLaboratories() {
+      const data = await listLaboratories();
+      setLaboratories(data);
+    }
+
+    loadLaboratories();
+  }, []);
+
   function handleChangeTipo(value: ResourceType) {
+    if (value === "MAQUINA" && laboratories.length === 0) {
+      showNoLaboratoryAlert();
+      return;
+    }
+
     setTipo(value);
 
     if (value === "FERRAMENTA") {
-        setPatrimonio("");
+      setPatrimonio("");
+      setLaboratorioId("");
     }
 
     if (value === "MAQUINA") {
-        setQuantidadeTotal("");
-        setQuantidadeDisponivel("");
+      setQuantidadeTotal("");
+      setQuantidadeDisponivel("");
     }
 
     if (value === "LABORATORIO") {
-        setPatrimonio("");
-        setQuantidadeTotal("");
-        setQuantidadeDisponivel("");
+      setPatrimonio("");
+      setQuantidadeTotal("");
+      setQuantidadeDisponivel("");
+      setLaboratorioId("");
+      setImageUri("");
     }
-}
-
-async function handlePickImage() {
-  const permission =
-    await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  if (!permission.granted) {
-    return;
   }
 
-  const result =
-    await ImagePicker.launchImageLibraryAsync({
+  function showNoLaboratoryAlert() {
+    Alert.alert(
+      "Nenhum laboratório cadastrado",
+      "Para cadastrar uma máquina, é necessário cadastrar pelo menos um laboratório primeiro.",
+      [
+        {
+          text: "OK",
+          onPress: () =>
+            navigation.replace("CreateResource", {
+              initialType: "LABORATORIO",
+            }),
+        },
+      ]
+    );
+  }
+
+  function handleChangeQuantidadeTotal(value: string) {
+    setQuantidadeTotal(value);
+
+    if (!quantidadeDisponivel || quantidadeDisponivel === quantidadeTotal) {
+      setQuantidadeDisponivel(value);
+    }
+  }
+
+  async function handlePickImageFromGallery() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      setErro("Permissão para acessar a galeria negada.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
     });
 
-  if (!result.canceled) {
-    setImageUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
   }
-}
+
+  async function handleTakePhoto() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      setErro("Permissão para acessar a câmera negada.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  }
 
   async function handleCreateResource() {
     try {
-        setErro("");
+      setErro("");
 
-        if (!nome.trim()) {
+      if (!nome.trim()) {
         setErro("Informe o nome do recurso.");
         return;
-        }
+      }
 
-        setLoading(true);
+      setLoading(true);
 
-        let imagemUrl: string | undefined;
+      let imagemUrl: string | undefined;
 
-        if (isFerramenta && imageUri) {
+      if (isFerramenta && imageUri) {
         const imagePath = `recursos/${Date.now()}-${nome.trim()}.jpg`;
 
         imagemUrl = await uploadImageAsync(imageUri, imagePath);
-        }
+      }
 
-        await createResource({
+      if (isMaquina && !laboratorioId) {
+        setErro("Selecione o laboratório da máquina.");
+        return;
+      }
+
+      await createResource({
         nome: nome.trim(),
         descricao: descricao.trim(),
         tipo,
-        status,
+        status: "DISPONIVEL",
         localizacao: localizacao.trim() || undefined,
         patrimonio: patrimonio.trim() || undefined,
         quantidadeTotal: quantidadeTotal
-            ? Number(quantidadeTotal)
-            : undefined,
+          ? Number(quantidadeTotal)
+          : undefined,
         quantidadeDisponivel: quantidadeDisponivel
-            ? Number(quantidadeDisponivel)
-            : undefined,
+          ? Number(quantidadeDisponivel)
+          : undefined,
         imagemUrl,
-        });
+        laboratorioId: isMaquina ? laboratorioId : undefined,
+      });
 
-        navigation.goBack();
+      navigation.goBack();
     } catch (error) {
-        console.log("Erro ao cadastrar recurso:", error);
-        setErro("Não foi possível cadastrar o recurso.");
+      console.log("Erro ao cadastrar recurso:", error);
+      setErro("Não foi possível cadastrar o recurso.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-}
+  }
 
   return (
     <ScreenContainer>
@@ -149,105 +222,109 @@ async function handlePickImage() {
         />
 
         <AppCard>
-            <AppSelect
-                label="Tipo"
-                value={tipo}
-                options={resourceTypeOptions}
-                onChange={handleChangeTipo}
-            />
-            <AppInput
-                value={nome}
-                onChangeText={setNome}
-                placeholder="Nome do simples do recurso"
-            />
+          <AppSelect
+            label="Tipo"
+            value={tipo}
+            options={resourceTypeOptions}
+            onChange={handleChangeTipo}
+          />
+          <AppInput
+            value={nome}
+            onChangeText={setNome}
+            placeholder="Nome simples do recurso"
+          />
 
-            <AppInput
-                value={descricao}
-                onChangeText={setDescricao}
-                placeholder="Descrição detalhada do recurso, tamanho, modelo, etc"
-                multiline
-            />
+          <AppInput
+            value={descricao}
+            onChangeText={setDescricao}
+            placeholder="Descrição detalhada do recurso, tamanho, modelo, etc"
+            multiline
+          />
 
-            <AppSelect
-                label="Status"
-                value={status}
-                options={resourceStatusOptions}
-                onChange={setStatus}
-            />
-
-            {isFerramenta && (
+          {isFerramenta && (
             <>
-                <AppInput
-                    value={quantidadeTotal}
-                    onChangeText={setQuantidadeTotal}
-                    placeholder="Quantidade total"
-                    keyboardType="numeric"
-                />
+              <AppInput
+                value={quantidadeTotal}
+                onChangeText={handleChangeQuantidadeTotal}
+                placeholder="Quantidade total"
+                keyboardType="numeric"
+              />
 
-                <AppInput
-                    value={quantidadeDisponivel}
-                    onChangeText={setQuantidadeDisponivel}
-                    placeholder="Quantidade disponível"
-                    keyboardType="numeric"
-                />
+              <AppInput
+                value={quantidadeDisponivel}
+                onChangeText={setQuantidadeDisponivel}
+                placeholder="Quantidade disponível"
+                keyboardType="numeric"
+              />
 
-                <AppInput
-                    value={localizacao}
-                    onChangeText={setLocalizacao}
-                    placeholder="Localização"
-                />
+              <View style={styles.imageSection}>
+                <View style={styles.imagePicker}>
+                  {imageUri ? (
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={styles.imagePreview}
+                    />
+                  ) : (
+                    <>
+                      <Feather
+                        name="image"
+                        size={32}
+                        color={colors.textSecondary}
+                      />
 
-                <View style={styles.imageSection}>
-                    <TouchableOpacity
-                        style={styles.imagePicker}
-                        onPress={handlePickImage}
-                    >
-                        {imageUri ? (
-                        <Image
-                            source={{ uri: imageUri }}
-                            style={styles.imagePreview}
-                        />
-                        ) : (
-                        <>
-                            <Feather
-                            name="image"
-                            size={28}
-                            color="#6B7280"
-                            />
-
-                            <Text style={styles.imageText}>
-                            Selecionar foto
-                            </Text>
-                        </>
-                        )}
-                    </TouchableOpacity>
+                      <Text style={styles.imageText}>
+                        Nenhuma imagem selecionada
+                      </Text>
+                    </>
+                  )}
                 </View>
-            </>
-            )}
 
-            {isMaquina && (
+                <View style={styles.imageOptions}>
+                  <TouchableOpacity
+                    style={styles.imageOptionButton}
+                    onPress={handleTakePhoto}
+                  >
+                    <Feather name="camera" size={18} color={colors.primary} />
+                    <Text style={styles.imageOptionText}>Câmera</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.imageOptionButton}
+                    onPress={handlePickImageFromGallery}
+                  >
+                    <Feather name="image" size={18} color={colors.primary} />
+                    <Text style={styles.imageOptionText}>Galeria</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+            </>
+          )}
+
+          {isMaquina && (
             <>
-                <AppInput
-                    value={patrimonio}
-                    onChangeText={setPatrimonio}
-                    placeholder="Patrimônio"
-                />
+              <AppSelect
+                label="Laboratório"
+                value={laboratorioId}
+                options={laboratoryOptions}
+                onChange={setLaboratorioId}
+              />
 
-                <AppInput
-                    value={localizacao}
-                    onChangeText={setLocalizacao}
-                    placeholder="Laboratório/localização"
-                />
+              <AppInput
+                value={patrimonio}
+                onChangeText={setPatrimonio}
+                placeholder="Patrimônio"
+              />
             </>
-            )}
+          )}
 
-            {isLaboratorio && (
+          {isLaboratorio && (
             <AppInput
-                value={localizacao}
-                onChangeText={setLocalizacao}
-                placeholder="Localização do laboratório"
+              value={localizacao}
+              onChangeText={setLocalizacao}
+              placeholder="Localização do laboratório"
             />
-            )}
+          )}
 
         </AppCard>
         {!!erro && <Text style={styles.errorText}>{erro}</Text>}

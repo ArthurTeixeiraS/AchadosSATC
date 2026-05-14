@@ -1,19 +1,19 @@
-import React, { useState } from "react";
-import {ScrollView,TouchableOpacity,Text,View,} from "react-native";
+import React from "react";
+import { ScrollView, TouchableOpacity, Text } from "react-native";
 
 import { styles } from "./styles";
 
 type AllFiltersProps = {
   filters: string[];
+  selectedFilter: string;
+  onSelectFilter: (filter: string) => void;
 };
 
 export function AllFilters({
   filters,
+  selectedFilter,
+  onSelectFilter,
 }: AllFiltersProps) {
-
-  const [selectedFilter, setSelectedFilter] =
-    useState(filters[0]);
-
   return (
     <ScrollView
       horizontal
@@ -21,30 +21,15 @@ export function AllFilters({
       contentContainerStyle={styles.container}
     >
       {filters.map((filter) => {
-        const isActive =
-          selectedFilter === filter;
+        const isActive = selectedFilter === filter;
 
         return (
           <TouchableOpacity
             key={filter}
-            style={[
-              styles.filterButton,
-
-              isActive &&
-                styles.activeFilter,
-            ]}
-            onPress={() =>
-              setSelectedFilter(filter)
-            }
+            style={[styles.filterButton, isActive && styles.activeFilter]}
+            onPress={() => onSelectFilter(filter)}
           >
-            <Text
-              style={[
-                styles.filterText,
-
-                isActive &&
-                  styles.activeFilterText,
-              ]}
-            >
+            <Text style={[styles.filterText, isActive && styles.activeFilterText]}>
               {filter}
             </Text>
           </TouchableOpacity>
