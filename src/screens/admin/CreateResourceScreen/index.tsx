@@ -32,13 +32,6 @@ const resourceTypeOptions = [
   { label: "Laboratório", value: "LABORATORIO" },
 ] as const;
 
-const resourceStatusOptions = [
-  { label: "Disponível", value: "DISPONIVEL" },
-  { label: "Em uso", value: "EM_USO" },
-  { label: "Manutenção", value: "MANUTENCAO" },
-  { label: "Indisponível", value: "INDISPONIVEL" },
-] as const;
-
 export function CreateResourceScreen({ navigation, route }: Props) {
   const initialType = route.params?.initialType ?? "FERRAMENTA";
   const [nome, setNome] = useState("");

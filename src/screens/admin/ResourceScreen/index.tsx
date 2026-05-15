@@ -74,6 +74,26 @@ export function ResourceScreen() {
     return matchesStatus && matchesType;
   });
 
+  function getStatusLabel(status: string) {
+    const labels: Record<string, string> = {
+      DISPONIVEL: "Disponível",
+      EM_USO: "Em uso",
+      MANUTENCAO: "Manutenção",
+    };
+
+    return labels[status] ?? status;
+  }
+
+  function getTypeLabel(type: string) {
+    const labels: Record<string, string> = {
+      FERRAMENTA: "Ferramenta",
+      MAQUINA: "Máquina",
+      LABORATORIO: "Laboratório",
+    };
+
+    return labels[type] ?? type;
+  }
+
   return (
     <ScreenContainer>
       <PageTitle
@@ -97,7 +117,15 @@ export function ResourceScreen() {
         />
       </AppCard>
 
-      {filteredResources.length === 0 ? (
+      {resources.length === 0 ? (
+        <AppCard>
+          <EmptyState
+            icon="briefcase"
+            title="Nenhum recurso cadastrado"
+            message="Cadastre ferramentas, máquinas ou laboratórios para começar."
+          />
+        </AppCard>
+      ) : filteredResources.length === 0 ? (
         <AppCard>
           <EmptyState
             icon="briefcase"
@@ -107,7 +135,7 @@ export function ResourceScreen() {
         </AppCard>
       ) : (
         <FlatList
-          data={filteredResources}        
+          data={filteredResources}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
@@ -115,8 +143,16 @@ export function ResourceScreen() {
               <View style={styles.cardContent}>
                 <View style={styles.resourceHeader}>
                   <View style={styles.resourceNameContainer}>
-                    <Text style={styles.resourceName}>{item.nome}</Text>
 
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate("ResourceDetails", {
+                          resource: item,
+                        })
+                      }
+                    >
+                      <Text style={styles.resourceName}>{item.nome}</Text>
+                    </TouchableOpacity>   
                     {!!item.imagemUrl && (
                       <Feather
                         name="image"
@@ -127,7 +163,7 @@ export function ResourceScreen() {
                     )}
                   </View>
 
-                  <Text style={styles.resourceType}>{item.tipo}</Text>
+                  <Text style={styles.resourceType}>{getTypeLabel(item.tipo)}</Text>
                 </View>
 
                 <TouchableOpacity
@@ -147,7 +183,7 @@ export function ResourceScreen() {
                   <Text style={styles.resourceDescription}>{item.descricao}</Text>
                 )}
 
-                <Text style={styles.resourceStatus}>Status: {item.status}</Text>
+                <Text style={styles.resourceStatus}>Status: {getStatusLabel(item.status)}</Text>
               </View>
             </AppCard>
           )}

@@ -10,6 +10,7 @@ import { ProfileScreen } from "../screens/shared/ProfileScreen";
 
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
+import { ResourceStackRoutes } from "./ResourceStackRoutes";
 
 const Tab = createBottomTabNavigator();
 
@@ -65,7 +66,7 @@ export function AdminRoutes() {
 
       <Tab.Screen
         name="Recursos"
-        component={ResourceScreen}
+        component={ResourceStackRoutes}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="briefcase" size={size} color={color} />
