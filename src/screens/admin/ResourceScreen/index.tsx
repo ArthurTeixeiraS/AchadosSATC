@@ -20,16 +20,16 @@ import { FAB } from "react-native-paper";
 import { colors } from "../../../styles/colors";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RecursosStackParamList } from "../../../routes/RecursosStackRoutes";
+import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 
 // Seria interessante exibir os laboratórios aos quais as máquinas estão associadas
 
-export function RecursosScreen() {
+export function ResourceScreen() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [typeFilter, setTypeFilter] = useState("Todos");
-  const navigation = useNavigation<NativeStackNavigationProp<RecursosStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
 
   const statusFilters = ["Todos", "Disponíveis", "Em Uso", "Manutenção"];
   const typeFilters = ["Todos", "Ferramenta", "Máquina", "Laboratório"];

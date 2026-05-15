@@ -9,7 +9,7 @@ import { AppInput } from "../../../components/AppInput";
 import { AppButton } from "../../../components/AppButton";
 
 import { createResource, listLaboratories } from "../../../services/resources/resourceServices";
-import { RecursosStackParamList } from "../../../routes/RecursosStackRoutes";
+import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { Resource, ResourceStatus, ResourceType } from "../../../types/Resources";
 
 import { styles } from "./styles";
@@ -22,7 +22,7 @@ import { uploadImageAsync } from "../../../services/storage/uploadImage";
 import { colors } from "../../../styles/colors";
 
 type Props = NativeStackScreenProps<
-  RecursosStackParamList,
+  ResourceStackParamList,
   "CreateResource"
 >;
 

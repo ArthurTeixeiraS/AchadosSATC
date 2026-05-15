@@ -1,14 +1,14 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { RecursosScreen } from "../screens/admin/ResourceScreen";
+import { ResourceScreen } from "../screens/admin/ResourceScreen";
 import { CreateResourceScreen } from "../screens/admin/CreateResourceScreen";
 import { EditResourceScreen } from "../screens/admin/EditResourceScreen";
 
 import { Resource, ResourceType } from "../types/Resources";
 
-export type RecursosStackParamList = {
-  RecursosList: undefined;
+export type ResourceStackParamList = {
+  ResourceList: undefined;
   CreateResource:
   | {
     initialType?: ResourceType;
@@ -19,12 +19,12 @@ export type RecursosStackParamList = {
   };
 };
 
-const Stack = createNativeStackNavigator<RecursosStackParamList>();
+const Stack = createNativeStackNavigator<ResourceStackParamList>();
 
-export function RecursosStackRoutes() {
+export function ResourceStackRoutes() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="RecursosList" component={RecursosScreen} />
+      <Stack.Screen name="ResourceList" component={ResourceScreen} />
       <Stack.Screen name="CreateResource" component={CreateResourceScreen} />
       <Stack.Screen name="EditResource" component={EditResourceScreen} />
     </Stack.Navigator>

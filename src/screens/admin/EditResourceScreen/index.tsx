@@ -17,7 +17,7 @@ import { AppInput } from "../../../components/AppInput";
 import { AppButton } from "../../../components/AppButton";
 import { AppSelect } from "../../../components/AppSelect";
 
-import { RecursosStackParamList } from "../../../routes/RecursosStackRoutes";
+import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { Resource, ResourceStatus } from "../../../types/Resources";
 import {
     listLaboratories,
@@ -28,7 +28,7 @@ import { uploadImageAsync } from "../../../services/storage/uploadImage";
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
 
-type Props = NativeStackScreenProps<RecursosStackParamList, "EditResource">;
+type Props = NativeStackScreenProps<ResourceStackParamList, "EditResource">;
 
 const resourceStatusOptions = [
     { label: "Disponível", value: "DISPONIVEL" },
