@@ -11,6 +11,6 @@ export const styles = StyleSheet.create({
   },
   outline: {
     borderRadius: 16,
-    borderWidth: 0,
+    borderWidth: 1,
   },
 });

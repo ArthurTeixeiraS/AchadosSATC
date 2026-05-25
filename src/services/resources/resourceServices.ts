@@ -8,7 +8,8 @@ import {
   doc,
   updateDoc,
   where,
-  getDoc
+  getDoc,
+  deleteDoc
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebaseConfig";
@@ -100,4 +101,27 @@ export async function listLaboratories(): Promise<Resource[]> {
     id: doc.id,
     ...doc.data(),
   })) as Resource[];
+}
+
+export async function getResourceById(
+  id: string
+): Promise<Resource | null> {
+  const resourceRef = doc(db, COLLECTION_NAME, id);
+
+  const snapshot = await getDoc(resourceRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    ...snapshot.data(),
+  } as Resource;
+}
+
+export async function deleteResource(id: string): Promise<void> {
+  const resourceRef = doc(db, COLLECTION_NAME, id);
+
+  await deleteDoc(resourceRef)
 }

@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ResourceScreen } from "../screens/admin/ResourceScreen";
 import { CreateResourceScreen } from "../screens/admin/CreateResourceScreen";
 import { EditResourceScreen } from "../screens/admin/EditResourceScreen";
+import { ResourceDetailsScreen } from "../screens/admin/ResourceDetailsScreen";
 
 import { Resource, ResourceType } from "../types/Resources";
 
@@ -12,9 +13,13 @@ export type ResourceStackParamList = {
   CreateResource:
   | {
     initialType?: ResourceType;
+    duplicateFrom?: Resource;
   }
   | undefined;
   EditResource: {
+    resource: Resource;
+  }
+  ResourceDetails: {
     resource: Resource;
   };
 };
@@ -27,6 +32,7 @@ export function ResourceStackRoutes() {
       <Stack.Screen name="ResourceList" component={ResourceScreen} />
       <Stack.Screen name="CreateResource" component={CreateResourceScreen} />
       <Stack.Screen name="EditResource" component={EditResourceScreen} />
+      <Stack.Screen name="ResourceDetails" component={ResourceDetailsScreen} />
     </Stack.Navigator>
   );
 }
