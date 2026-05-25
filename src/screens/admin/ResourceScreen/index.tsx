@@ -107,7 +107,7 @@ export function ResourceScreen() {
         </AppCard>
       ) : (
         <FlatList
-          data={filteredResources}        
+          data={filteredResources}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
@@ -157,7 +157,9 @@ export function ResourceScreen() {
         icon="plus"
         style={styles.fab}
         color={colors.white}
-        onPress={() => navigation.navigate("CreateResource")}
+        onPress={() =>
+          navigation.navigate("CreateResource", undefined)
+        }
       />
     </ScreenContainer>
   );
