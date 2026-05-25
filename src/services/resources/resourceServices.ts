@@ -65,27 +65,6 @@ export async function listResources(): Promise<Resource[]> {
   })) as Resource[];
 }
 
-export async function getResourceById(
-  id: string
-): Promise<Resource | null> {
-  try {
-    const resourceRef = doc(db, COLLECTION_NAME, id);
-
-    const snapshot = await getDoc(resourceRef);
-
-    if (!snapshot.exists()) {
-      return null;
-    }
-
-    return {
-      id: snapshot.id,
-      ...snapshot.data(),
-    } as Resource;
-  } catch (error) {
-    console.log("Erro ao buscar recurso por ID:", error);
-    return null;
-  }
-}
 
 export async function listLaboratories(): Promise<Resource[]> {
   const recursosRef = collection(db, COLLECTION_NAME);

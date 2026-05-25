@@ -10,7 +10,6 @@ import { ProfileScreen } from "../screens/shared/ProfileScreen";
 
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
-import { ResourceStackRoutes } from "./ResourceStackRoutes";
 
 const Tab = createBottomTabNavigator();
 
