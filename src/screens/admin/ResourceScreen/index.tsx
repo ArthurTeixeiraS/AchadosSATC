@@ -193,7 +193,9 @@ export function ResourceScreen() {
         icon="plus"
         style={styles.fab}
         color={colors.white}
-        onPress={() => navigation.navigate("CreateResource")}
+        onPress={() =>
+          navigation.navigate("CreateResource", undefined)
+        }
       />
     </ScreenContainer>
   );

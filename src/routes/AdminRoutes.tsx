@@ -4,7 +4,7 @@ import Feather from "@expo/vector-icons/Feather";
 
 import { DashboardScreen } from "../screens/admin/DashboardScreen";
 import { SolicitacoesAdminScreen } from "../screens/admin/SolicitacoesAdminScreen";
-import { ResourceScreen } from "../screens/admin/ResourceScreen";
+import { ResourceStackRoutes } from "./ResourceStackRoutes";
 import { ChavesScreen } from "../screens/admin/ChavesScreen";
 import { ProfileScreen } from "../screens/shared/ProfileScreen";
 

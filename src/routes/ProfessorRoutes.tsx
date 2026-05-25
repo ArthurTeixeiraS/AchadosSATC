@@ -2,15 +2,24 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/ProfessorHomeScreen";
-import { NovaSolicitacaoScreen } from "../screens/professor/NovaSolicitacaoScreen";
+import { NovaSolicitacaoStackRoutes } from "./NovaSolicitacaoStackRoutes";
 import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacaoScreen/index";
 import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
 import { ProfileScreen } from "../screens/shared/ProfileScreen";
 import { colors } from "../styles/colors";
 import Feather from '@expo/vector-icons/Feather';
 import { typography } from "../styles/typography";
+import { SolicitationDraftProvider } from "../contexts/SolicitationDraftContext";
 
 const Tab = createBottomTabNavigator();
+
+function NovaSolicitacaoFlow() {
+  return (
+    <SolicitationDraftProvider>
+      <NovaSolicitacaoStackRoutes />
+    </SolicitationDraftProvider>
+  );
+}
 
 //Módulo exclusivo para rotas de professores
 export function ProfessorRoutes() {
@@ -44,30 +53,30 @@ export function ProfessorRoutes() {
       }}
     >
       <Tab.Screen name="Home" component={ProfessorHomeScreen} options={{
-                  tabBarIcon: ({ color, size }) => (
-                    <Feather name="home" size={size} color={color} />
-                  ),
-                }}/>
-      <Tab.Screen name="Nova Solicitação" component={NovaSolicitacaoScreen} options={{
-                  tabBarIcon: ({ color, size }) => (
-                    <Feather name="plus" size={size} color={color} />
-                  ),
-                }}/>
+        tabBarIcon: ({ color, size }) => (
+          <Feather name="home" size={size} color={color} />
+        ),
+      }} />
+      <Tab.Screen name="Nova Solicitação" component={NovaSolicitacaoFlow} options={{
+        tabBarIcon: ({ color, size }) => (
+          <Feather name="plus" size={size} color={color} />
+        ),
+      }} />
       <Tab.Screen name="Minhas Solicitações" component={MinhasSolicitacoesScreen} options={{
-                  tabBarIcon: ({ color, size }) => (
-                    <Feather name="file" size={size} color={color} />
-                  ),
-                }}/>
+        tabBarIcon: ({ color, size }) => (
+          <Feather name="file" size={size} color={color} />
+        ),
+      }} />
       <Tab.Screen name="Ocorrências" component={OcorrenciasScreen} options={{
-                  tabBarIcon: ({ color, size }) => (
-                    <Feather name="tool" size={size} color={color} />
-                  ),
-                }}/>
+        tabBarIcon: ({ color, size }) => (
+          <Feather name="tool" size={size} color={color} />
+        ),
+      }} />
       <Tab.Screen name="Perfil" component={ProfileScreen} options={{
-                  tabBarIcon: ({ color, size }) => (
-                    <Feather name="user" size={size} color={color} />
-                  ),
-                }}/>
+        tabBarIcon: ({ color, size }) => (
+          <Feather name="user" size={size} color={color} />
+        ),
+      }} />
     </Tab.Navigator>
   );
 }
