@@ -55,4 +55,19 @@ export const styles = StyleSheet.create({
     marginTop: 20,
     gap: 12,
   },
+
+  priorityBadge: {
+    marginTop: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#FEF3C7",
+    alignSelf: "flex-start",
+  },
+
+  priorityBadgeText: {
+    fontSize: 12,
+    fontFamily: typography.fontFamily.semiBold,
+    color: "#92400E",
+  },
 });

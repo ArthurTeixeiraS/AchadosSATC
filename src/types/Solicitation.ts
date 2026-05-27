@@ -4,12 +4,13 @@ export type SolicitationShift = "TARDE" | "NOITE"; //Turno (já que a ferramenta
 
 export type SolicitationStatus =
   | "PENDENTE"
-  | "IMEDIATA"
   | "APROVADA"
   | "RECUSADA"
   | "EM_USO"
   | "ENCERRADA"
   | "CANCELADA";
+
+export type SolicitationPriority = "NORMAL" | "IMEDIATA";
 
 export interface SelectedMachine {
   resource: Resource;

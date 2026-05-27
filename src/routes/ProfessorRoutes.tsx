@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/ProfessorHomeScreen";
 import { NovaSolicitacaoStackRoutes } from "./NovaSolicitacaoStackRoutes";
-import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacaoScreen/index";
+import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacoesScreen/index";
 import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
 import { ProfileScreen } from "../screens/shared/ProfileScreen";
 import { colors } from "../styles/colors";

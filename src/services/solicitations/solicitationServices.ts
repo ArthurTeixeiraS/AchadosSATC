@@ -1,4 +1,11 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  query,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
 
 import { db } from "../firebase/firebaseConfig";
 import { AppUser } from "../../types/User";
@@ -36,21 +43,34 @@ export async function createSolicitation(
     professorId: professor.id,
     professorNome: professor.nomeCompleto,
     professorCracha: professor.cracha,
-
     status: "PENDENTE",
-
+    prioridade: "NORMAL",
     dataUtilizacao: draft.dataUtilizacao,
     turno: draft.turno,
     atividade: draft.atividade,
     observacoes: draft.observacoes,
-
     laboratoriosIds,
     maquinas,
     ferramentas,
-
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
   return docRef.id;
+}
+
+export async function listSolicitationsByProfessor(professorId: string) {
+  const solicitacoesRef = collection(db, COLLECTION_NAME);
+
+  const q = query(
+    solicitacoesRef,
+    where("professorId", "==", professorId)
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 }
