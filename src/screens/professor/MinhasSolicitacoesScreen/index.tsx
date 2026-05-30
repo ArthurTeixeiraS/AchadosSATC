@@ -22,7 +22,6 @@ type Solicitation = any;
 const statusFilters = [
   "Todos",
   "Pendente",
-  "Imediata",
   "Aprovada",
   "Recusada",
   "Em uso",
@@ -38,8 +37,8 @@ const priorityFilters = [
 
 const orderFilters = [
   "Status",
-  "Data",
-  "Mais recentes",
+  "Data de uso",
+  "Criados recentemente",
 ];
 
 function getStatusLabel(status: string) {
@@ -145,6 +144,18 @@ export function MinhasSolicitacoesScreen() {
     let data = [...solicitations];
 
     data = data.filter((item) => {
+      if (statusFilter === "Todos") return true;
+      if (statusFilter === "Pendente") return item.status === "PENDENTE";
+      if (statusFilter === "Aprovada") return item.status === "APROVADA";
+      if (statusFilter === "Recusada") return item.status === "RECUSADA";
+      if (statusFilter === "Em uso") return item.status === "EM_USO";
+      if (statusFilter === "Encerrada") return item.status === "ENCERRADA";
+      if (statusFilter === "Cancelada") return item.status === "CANCELADA";
+
+      return true;
+    });
+
+    data = data.filter((item) => {
       if (priorityFilter === "Todas") return true;
       if (priorityFilter === "Normal") return item.prioridade === "NORMAL";
       if (priorityFilter === "Imediata") return item.prioridade === "IMEDIATA";
@@ -163,11 +174,11 @@ export function MinhasSolicitacoesScreen() {
         return getStatusPriority(a) - getStatusPriority(b);
       }
 
-      if (orderFilter === "Data") {
+      if (orderFilter === "Data de uso") {
         return String(b.dataUtilizacao).localeCompare(String(a.dataUtilizacao));
       }
 
-      if (orderFilter === "Mais recentes") {
+      if (orderFilter === "Criados recentemente") {
         const aSeconds = a.createdAt?.seconds ?? 0;
         const bSeconds = b.createdAt?.seconds ?? 0;
 
@@ -246,7 +257,7 @@ export function MinhasSolicitacoesScreen() {
                     {item.dataUtilizacao} - {getTurnoLabel(item.turno)}
                   </Text>
                 </View>
-                
+
                 {item.prioridade === "IMEDIATA" && (
                   <View style={styles.priorityBadge}>
                     <Text style={styles.priorityBadgeText}>Imediata</Text>
