@@ -23,6 +23,7 @@ interface AuthContextData {
   loading: boolean;
   login: (cracha: string, senha: string) => Promise<void>;
   logout: () => Promise<void>;
+  reloadUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -109,6 +110,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
+  async function reloadUser() {
+    if (firebaseUser) {
+      await loadUserData(firebaseUser.uid);
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -117,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         logout,
+        reloadUser,
       }}
     >
       {children}

@@ -1,15 +1,22 @@
 import React from "react";
-import { View } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import { Text } from "react-native-paper";
+import Feather from "@expo/vector-icons/Feather";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { AppButton } from "../../../components/AppButton";
 import { ScreenContainer } from "../../../components/ScreenContainer";
+import { ProfileStackParamList } from "../../../routes/ProfileStackRoutes";
 
 import { styles } from "./styles";
 
+type NavProp = NativeStackNavigationProp<ProfileStackParamList, "Profile">;
+
 export function ProfileScreen() {
   const { appUser, logout } = useAuth();
+  const navigation = useNavigation<NavProp>();
 
   return (
     <ScreenContainer>
@@ -20,7 +27,17 @@ export function ProfileScreen() {
           </Text>
         </View>
 
-        <Text style={styles.name}>{appUser?.nomeCompleto}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name}>{appUser?.nomeCompleto}</Text>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate("EditProfile")}
+          >
+            <Feather name="edit-2" size={16} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.role}>
           {appUser?.tipoUsuario === "FUNCIONARIO" ? "Funcionário" : "Professor"}
         </Text>

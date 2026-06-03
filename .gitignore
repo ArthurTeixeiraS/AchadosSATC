@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# gabriel
+CHANGES.md
+
 # Expo
 .expo/
 dist/

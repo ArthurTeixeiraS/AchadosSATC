@@ -6,7 +6,7 @@ import { DashboardScreen } from "../screens/admin/DashboardScreen";
 import { SolicitacoesAdminScreen } from "../screens/admin/SolicitacoesAdminScreen";
 import { ResourceStackRoutes } from "./ResourceStackRoutes";
 import { ChavesScreen } from "../screens/admin/ChavesScreen";
-import { ProfileScreen } from "../screens/shared/ProfileScreen";
+import { ProfileStackRoutes } from "./ProfileStackRoutes";
 
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
@@ -85,8 +85,9 @@ export function AdminRoutes() {
 
       <Tab.Screen
         name="Perfil"
-        component={ProfileScreen}
+        component={ProfileStackRoutes}
         options={{
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
           ),

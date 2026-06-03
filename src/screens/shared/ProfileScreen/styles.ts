@@ -25,6 +25,13 @@ export const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.bold,
   },
 
+  // Linha que mantém nome e ícone de lápis lado a lado
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
   name: {
     fontSize: 22,
     fontFamily: typography.fontFamily.bold,
