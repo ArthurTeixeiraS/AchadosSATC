@@ -5,7 +5,7 @@ import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/Pr
 import { NovaSolicitacaoStackRoutes } from "./NovaSolicitacaoStackRoutes";
 import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacoesScreen/index";
 import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
-import { ProfileScreen } from "../screens/shared/ProfileScreen";
+import { ProfileStackRoutes } from "./ProfileStackRoutes";
 import { colors } from "../styles/colors";
 import Feather from '@expo/vector-icons/Feather';
 import { typography } from "../styles/typography";
@@ -72,7 +72,8 @@ export function ProfessorRoutes() {
           <Feather name="tool" size={size} color={color} />
         ),
       }} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} options={{
+      <Tab.Screen name="Perfil" component={ProfileStackRoutes} options={{
+        headerShown: false,
         tabBarIcon: ({ color, size }) => (
           <Feather name="user" size={size} color={color} />
         ),
