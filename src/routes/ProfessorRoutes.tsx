@@ -3,13 +3,13 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/ProfessorHomeScreen";
 import { NovaSolicitacaoStackRoutes } from "./NovaSolicitacaoStackRoutes";
-import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacoesScreen/index";
 import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
 import { ProfileStackRoutes } from "./ProfileStackRoutes";
 import { colors } from "../styles/colors";
 import Feather from '@expo/vector-icons/Feather';
 import { typography } from "../styles/typography";
 import { SolicitationDraftProvider } from "../contexts/SolicitationDraftContext";
+import { MinhasSolicitacoesStackRoutes } from "./MinhasSolicitacoesStackRoutes";
 
 const Tab = createBottomTabNavigator();
 
@@ -62,7 +62,7 @@ export function ProfessorRoutes() {
           <Feather name="plus" size={size} color={color} />
         ),
       }} />
-      <Tab.Screen name="Minhas Solicitações" component={MinhasSolicitacoesScreen} options={{
+      <Tab.Screen name="Minhas Solicitações" component={MinhasSolicitacoesStackRoutes} options={{
         tabBarIcon: ({ color, size }) => (
           <Feather name="file" size={size} color={color} />
         ),

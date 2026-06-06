@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, View } from "react-native";
+import { FlatList, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
@@ -14,6 +14,10 @@ import { AllFilters } from "../../../components/Allfilters";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { listSolicitationsByProfessor } from "../../../services/solicitations/solicitationServices";
+
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicitacoesStackRoutes";
 
 import { styles } from "./styles";
 
@@ -117,6 +121,9 @@ export function MinhasSolicitacoesScreen() {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [orderFilter, setOrderFilter] = useState("Status");
   const [priorityFilter, setPriorityFilter] = useState("Todas");
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<MinhasSolicitacoesStackParamList>>();
 
   async function loadSolicitations() {
     if (!appUser) return;
@@ -248,44 +255,52 @@ export function MinhasSolicitacoesScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <AppCard style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.code}>SL-{item.id.slice(0, 4).toUpperCase()}</Text>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("ProfessorSolicitationDetails", {
+                  solicitation: item,
+                })
+              }
+            >
+              <AppCard style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View>
+                    <Text style={styles.code}>SL-{item.id.slice(0, 4).toUpperCase()}</Text>
 
-                  <Text style={styles.date}>
-                    {item.dataUtilizacao} - {getTurnoLabel(item.turno)}
-                  </Text>
+                    <Text style={styles.date}>
+                      {item.dataUtilizacao} - {getTurnoLabel(item.turno)}
+                    </Text>
+                  </View>
+
+                  {item.prioridade === "IMEDIATA" && (
+                    <View style={styles.priorityBadge}>
+                      <Text style={styles.priorityBadgeText}>Imediata</Text>
+                    </View>
+                  )}
+
+                  <View style={[styles.badge, getStatusStyle(item.status)]}>
+                    <Text style={styles.badgeText}>
+                      {isOverdue(item) ? "Atrasado" : getStatusLabel(item.status)}
+                    </Text>
+                  </View>
                 </View>
 
-                {item.prioridade === "IMEDIATA" && (
-                  <View style={styles.priorityBadge}>
-                    <Text style={styles.priorityBadgeText}>Imediata</Text>
+                {isOverdue(item) && (
+                  <View style={styles.overdueBox}>
+                    <Text style={styles.overdueText}>
+                      Item com devolução em atraso. Entre em contato com a ferramentaria.
+                    </Text>
                   </View>
                 )}
 
-                <View style={[styles.badge, getStatusStyle(item.status)]}>
-                  <Text style={styles.badgeText}>
-                    {isOverdue(item) ? "Atrasado" : getStatusLabel(item.status)}
+                <View style={styles.summaryBox}>
+                  <Text style={styles.summaryLabel}>Resumo dos itens:</Text>
+                  <Text style={styles.summaryText}>
+                    {getItemSummary(item) || "Nenhum item informado"}
                   </Text>
                 </View>
-              </View>
-
-              {isOverdue(item) && (
-                <View style={styles.overdueBox}>
-                  <Text style={styles.overdueText}>
-                    Item com devolução em atraso. Entre em contato com a ferramentaria.
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.summaryBox}>
-                <Text style={styles.summaryLabel}>Resumo dos itens:</Text>
-                <Text style={styles.summaryText}>
-                  {getItemSummary(item) || "Nenhum item informado"}
-                </Text>
-              </View>
-            </AppCard>
+              </AppCard>
+            </TouchableOpacity>
           )}
         />
       )}

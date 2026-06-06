@@ -5,6 +5,8 @@ import {
   query,
   serverTimestamp,
   where,
+  updateDoc,
+  doc
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebaseConfig";
@@ -57,6 +59,16 @@ export async function createSolicitation(
   });
 
   return docRef.id;
+}
+
+export async function cancelSolicitation(id: string): Promise<void> {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+
+  await updateDoc(solicitationRef, {
+    status: "CANCELADA",
+    canceladaEm: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function listSolicitationsByProfessor(professorId: string) {
