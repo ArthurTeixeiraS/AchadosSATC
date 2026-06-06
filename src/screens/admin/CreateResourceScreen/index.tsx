@@ -157,6 +157,8 @@ export function CreateResourceScreen({ navigation, route }: Props) {
   }
 
   async function handleCreateResource() {
+    if (loading) return;
+
     try {
       setErro("");
 
@@ -322,7 +324,10 @@ export function CreateResourceScreen({ navigation, route }: Props) {
         </AppCard>
         {!!erro && <Text style={styles.errorText}>{erro}</Text>}
 
-        <AppButton loading={loading} onPress={handleCreateResource}>
+        <AppButton
+          loading={loading}
+          disabled={loading}
+          onPress={handleCreateResource}>
           Cadastrar recurso
         </AppButton>
 
