@@ -37,6 +37,7 @@ function getShiftLabel(turno: string) {
 export function ReviewSolicitationScreen({ navigation }: Props) {
     const { draft, clearDraft } = useSolicitationDraft();
     const [laboratories, setLaboratories] = useState<Resource[]>([]);
+    const [loading, setLoading] = useState(false);
     const { appUser } = useAuth();
 
     const laboratoryIds = useMemo(() => {
@@ -85,7 +86,11 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
     }
 
     async function handleConfirm() {
+        if (loading) return;
+
         try {
+            setLoading(true);
+
             if (!appUser) {
                 Alert.alert("Erro", "Usuário não encontrado.");
                 return;
@@ -113,6 +118,8 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                 "Erro ao enviar",
                 "Não foi possível enviar a solicitação. Tente novamente."
             );
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -248,11 +255,18 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                 </AppCard>
 
                 <View style={styles.buttonContainer}>
-                    <AppButton onPress={handleConfirm}>
+                    <AppButton 
+                        loading={loading}
+                        disabled={loading}
+                        onPress={handleConfirm}>
                         Enviar solicitação
                     </AppButton>
 
-                    <AppButton mode="outlined" onPress={handleCancel}>
+                    <AppButton 
+                        loading={loading}
+                        disabled={loading}
+                        mode="outlined" 
+                        onPress={handleCancel}>
                         Cancelar solicitação
                     </AppButton>
                 </View>

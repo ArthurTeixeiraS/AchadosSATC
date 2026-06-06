@@ -143,6 +143,8 @@ export function EditResourceScreen({ route, navigation }: Props) {
     }
 
     async function handleUpdateResource() {
+        if (loading) return;
+
         try {
             setErro("");
 
@@ -333,7 +335,10 @@ export function EditResourceScreen({ route, navigation }: Props) {
 
                 {!!erro && <Text style={styles.errorText}>{erro}</Text>}
 
-                <AppButton loading={loading} onPress={handleUpdateResource}>
+                <AppButton
+                    loading={loading}
+                    disabled={loading}
+                    onPress={handleUpdateResource}>
                     Salvar alterações
                 </AppButton>
 
