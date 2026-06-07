@@ -169,7 +169,7 @@ export function SolicitacoesRecebidasScreen() {
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() =>
-          navigation.navigate("EmployeeSolicitationDetails", {
+          navigation.navigate("FuncionarioSolicitationDetails", {
             solicitationId: item.id,
           })
         }
