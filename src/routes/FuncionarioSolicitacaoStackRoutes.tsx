@@ -2,11 +2,11 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { SolicitacoesRecebidasScreen } from "../screens/admin/SolicitacoesRecebidasScreen";
-// import { EmployeeSolicitationDetailsScreen } from "../screens/employee/EmployeeSolicitationDetailsScreen";
+import { FuncionarioSolicitationDetailsScreen } from "../screens/admin/SolicitacaoDetailsScreen";
 
 export type FuncionarioSolicitacaoStackParamList = {
   ReceivedSolicitations: undefined;
-  EmployeeSolicitationDetails: {
+  FuncionarioSolicitationDetails: {
     solicitationId: string;
   };
 };
@@ -22,10 +22,10 @@ export function FuncionarioSolicitacaoStackRoutes() {
         component={SolicitacoesRecebidasScreen}
       />
 
-      {/* <Stack.Screen
-        name="EmployeeSolicitationDetails"
-        component={EmployeeSolicitationDetailsScreen}
-      /> */}
+      <Stack.Screen
+        name="FuncionarioSolicitationDetails"
+        component={FuncionarioSolicitationDetailsScreen}
+      />
     </Stack.Navigator>
   );
 }

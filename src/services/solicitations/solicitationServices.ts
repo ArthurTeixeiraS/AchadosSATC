@@ -6,7 +6,8 @@ import {
   serverTimestamp,
   where,
   updateDoc,
-  doc
+  doc,
+  getDoc
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebaseConfig";
@@ -112,4 +113,85 @@ export async function listSolicitationsByProfessor(professorId: string) {
     id: doc.id,
     ...doc.data(),
   }));
+}
+
+export async function getSolicitationById(id: string) {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+
+  const snapshot = await getDoc(solicitationRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    ...snapshot.data(),
+  };
+}
+
+export async function approveSolicitation(
+  id: string,
+  funcionarioId: string,
+  funcionarioNome: string
+): Promise<void> {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+
+  await updateDoc(solicitationRef, {
+    status: "APROVADA",
+    aprovadaEm: serverTimestamp(),
+    aprovadaPorId: funcionarioId,
+    aprovadaPorNome: funcionarioNome,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function rejectSolicitation(
+  id: string,
+  funcionarioId: string,
+  funcionarioNome: string,
+  motivo: string
+): Promise<void> {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+
+  await updateDoc(solicitationRef, {
+    status: "RECUSADA",
+    motivoRecusa: motivo,
+    recusadaEm: serverTimestamp(),
+    recusadaPorId: funcionarioId,
+    recusadaPorNome: funcionarioNome,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function registerSolicitationWithdrawal(
+  id: string,
+  funcionarioId: string,
+  funcionarioNome: string
+): Promise<void> {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+
+  await updateDoc(solicitationRef, {
+    status: "EM_USO",
+    retiradaEm: serverTimestamp(),
+    retiradaPorId: funcionarioId,
+    retiradaPorNome: funcionarioNome,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function registerSolicitationReturn(
+  id: string,
+  funcionarioId: string,
+  funcionarioNome: string
+): Promise<void> {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+
+  await updateDoc(solicitationRef, {
+    status: "ENCERRADA",
+    devolvidaEm: serverTimestamp(),
+    devolvidaPorId: funcionarioId,
+    devolvidaPorNome: funcionarioNome,
+    updatedAt: serverTimestamp(),
+  });
 }
