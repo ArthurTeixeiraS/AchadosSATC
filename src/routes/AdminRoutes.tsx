@@ -3,13 +3,13 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Feather from "@expo/vector-icons/Feather";
 
 import { DashboardScreen } from "../screens/admin/DashboardScreen";
-import { SolicitacoesAdminScreen } from "../screens/admin/SolicitacoesAdminScreen";
 import { ResourceStackRoutes } from "./ResourceStackRoutes";
 import { ChavesScreen } from "../screens/admin/ChavesScreen";
 import { ProfileStackRoutes } from "./ProfileStackRoutes";
 
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
+import { FuncionarioSolicitacaoStackRoutes } from "./FuncionarioSolicitacaoStackRoutes";
 
 const Tab = createBottomTabNavigator();
 
@@ -55,7 +55,7 @@ export function AdminRoutes() {
 
       <Tab.Screen
         name="Solicitações"
-        component={SolicitacoesAdminScreen}
+        component={FuncionarioSolicitacaoStackRoutes}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="file" size={size} color={color} />

@@ -15,6 +15,22 @@ import { SolicitationDraft } from "../../types/Solicitation";
 
 const COLLECTION_NAME = "solicitacoes";
 
+function parseBrazilianDate(date: string): Date {
+  const [day, month, year] = date.split("/").map(Number);
+
+  return new Date(year, month - 1, day, 23, 59, 59);
+}
+
+function calculateSolicitationPriority(dataUtilizacao: string) {
+  const now = new Date();
+  const useDate = parseBrazilianDate(dataUtilizacao);
+
+  const diffInMs = useDate.getTime() - now.getTime();
+  const diffInHours = diffInMs / (1000 * 60 * 60);
+
+  return diffInHours < 48 ? "IMEDIATA" : "NORMAL";
+}
+
 export async function createSolicitation(
   draft: SolicitationDraft,
   professor: AppUser
@@ -46,7 +62,7 @@ export async function createSolicitation(
     professorNome: professor.nomeCompleto,
     professorCracha: professor.cracha,
     status: "PENDENTE",
-    prioridade: "NORMAL",
+    prioridade: calculateSolicitationPriority(draft.dataUtilizacao),
     dataUtilizacao: draft.dataUtilizacao,
     turno: draft.turno,
     atividade: draft.atividade,
@@ -59,6 +75,17 @@ export async function createSolicitation(
   });
 
   return docRef.id;
+}
+
+export async function listSolicitations() {
+  const solicitacoesRef = collection(db, COLLECTION_NAME);
+
+  const snapshot = await getDocs(solicitacoesRef);
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 }
 
 export async function cancelSolicitation(id: string): Promise<void> {
