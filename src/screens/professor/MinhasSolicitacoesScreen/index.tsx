@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
@@ -13,7 +13,10 @@ import { AppAlert } from "../../../components/AppAlert";
 import { AllFilters } from "../../../components/Allfilters";
 
 import { useAuth } from "../../../contexts/AuthContext";
-import { listSolicitationsByProfessor } from "../../../services/solicitations/solicitationServices";
+import {
+  isSolicitationOverdue,
+  listSolicitationsByProfessor,
+} from "../../../services/solicitations/solicitationServices";
 
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -89,12 +92,12 @@ function getItemSummary(item: Solicitation) {
   return [...maquinas, ...ferramentas].join(", ");
 }
 
-function isOverdue(item: Solicitation) {
-  return item.status === "EM_USO" && item.atrasada === true;
+function isOverdue(item: Solicitation, now: Date) {
+  return isSolicitationOverdue(item, now);
 }
 
-function getStatusPriority(item: Solicitation) {
-  if (isOverdue(item)) return 0;
+function getStatusPriority(item: Solicitation, now: Date) {
+  if (isOverdue(item, now)) return 0;
 
   if (item.prioridade === "IMEDIATA" && item.status === "PENDENTE") {
     return 1;
@@ -121,6 +124,15 @@ export function MinhasSolicitacoesScreen() {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [orderFilter, setOrderFilter] = useState("Status");
   const [priorityFilter, setPriorityFilter] = useState("Todas");
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<MinhasSolicitacoesStackParamList>>();
@@ -171,14 +183,19 @@ export function MinhasSolicitacoesScreen() {
     });
 
     data.sort((a, b) => {
-      const overdueDiff = Number(isOverdue(b)) - Number(isOverdue(a));
+      const overdueDiff =
+        Number(isOverdue(b, currentTime)) -
+        Number(isOverdue(a, currentTime));
 
       if (overdueDiff !== 0) {
         return overdueDiff;
       }
 
       if (orderFilter === "Status") {
-        return getStatusPriority(a) - getStatusPriority(b);
+        return (
+          getStatusPriority(a, currentTime) -
+          getStatusPriority(b, currentTime)
+        );
       }
 
       if (orderFilter === "Data de uso") {
@@ -196,7 +213,13 @@ export function MinhasSolicitacoesScreen() {
     });
 
     return data;
-  }, [solicitations, statusFilter, priorityFilter, orderFilter]);
+  }, [
+    solicitations,
+    statusFilter,
+    priorityFilter,
+    orderFilter,
+    currentTime,
+  ]);
 
   if (loading) {
     return <Loading message="Carregando solicitações..." />;
@@ -280,12 +303,14 @@ export function MinhasSolicitacoesScreen() {
 
                   <View style={[styles.badge, getStatusStyle(item.status)]}>
                     <Text style={styles.badgeText}>
-                      {isOverdue(item) ? "Atrasado" : getStatusLabel(item.status)}
+                      {isOverdue(item, currentTime)
+                        ? "Atrasado"
+                        : getStatusLabel(item.status)}
                     </Text>
                   </View>
                 </View>
 
-                {isOverdue(item) && (
+                {isOverdue(item, currentTime) && (
                   <View style={styles.overdueBox}>
                     <Text style={styles.overdueText}>
                       Item com devolução em atraso. Entre em contato com a ferramentaria.

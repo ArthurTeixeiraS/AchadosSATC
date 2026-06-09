@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
@@ -13,7 +13,10 @@ import { Loading } from "../../../components/Loading";
 import { AllFilters } from "../../../components/Allfilters";
 import { AppAlert } from "../../../components/AppAlert";
 
-import { listSolicitations } from "../../../services/solicitations/solicitationServices";
+import {
+  isSolicitationOverdue,
+  listSolicitations,
+} from "../../../services/solicitations/solicitationServices";
 
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
@@ -70,8 +73,8 @@ function getItemsCount(item: Solicitation) {
   return machinesCount + toolsCount;
 }
 
-function isOverdue(item: Solicitation) {
-  return item.status === "EM_USO" && item.atrasada === true;
+function isOverdue(item: Solicitation, now: Date) {
+  return isSolicitationOverdue(item, now);
 }
 
 export function SolicitacoesRecebidasScreen() {
@@ -83,6 +86,15 @@ export function SolicitacoesRecebidasScreen() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   async function loadSolicitations() {
     try {
@@ -115,11 +127,13 @@ export function SolicitacoesRecebidasScreen() {
   }
 
   const overdueSolicitations = useMemo(() => {
-    return solicitations.filter(isOverdue);
-  }, [solicitations]);
+    return solicitations.filter((item) => isOverdue(item, currentTime));
+  }, [solicitations, currentTime]);
 
   const groupedSolicitations = useMemo<SolicitationGroup[]>(() => {
-    let data = solicitations.filter((item) => !isOverdue(item));
+    let data = solicitations.filter(
+      (item) => !isOverdue(item, currentTime)
+    );
 
     data = data.filter((item) => {
       if (statusFilter === "Todos") return true;
@@ -162,7 +176,7 @@ export function SolicitacoesRecebidasScreen() {
         items,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [solicitations, search, statusFilter]);
+  }, [solicitations, search, statusFilter, currentTime]);
 
   function renderSolicitationCard(item: Solicitation) {
     return (

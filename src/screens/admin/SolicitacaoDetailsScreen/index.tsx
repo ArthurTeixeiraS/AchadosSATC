@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -25,10 +25,13 @@ import {
 import {
     approveSolicitation,
     getSolicitationById,
+    isSolicitationOverdue,
     registerSolicitationReturn,
     registerSolicitationWithdrawal,
     rejectSolicitation,
+    SolicitationBusinessError,
 } from "../../../services/solicitations/solicitationServices";
+import { Solicitation } from "../../../types/Solicitation";
 
 import { styles } from "./styles";
 
@@ -74,11 +77,20 @@ export function FuncionarioSolicitationDetailsScreen({
     const { solicitationId } = route.params;
     const { appUser } = useAuth();
 
-    const [solicitation, setSolicitation] = useState<any>(null);
+    const [solicitation, setSolicitation] = useState<Solicitation | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [rejectModalVisible, setRejectModalVisible] = useState(false);
     const [rejectReason, setRejectReason] = useState("");
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60_000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     async function loadSolicitation() {
         try {
@@ -118,8 +130,12 @@ export function FuncionarioSolicitationDetailsScreen({
             console.log("Erro ao executar ação:", error);
 
             Alert.alert(
-                "Erro",
-                "Não foi possível executar esta ação. Tente novamente."
+                error instanceof SolicitationBusinessError
+                    ? "Ação bloqueada"
+                    : "Erro",
+                error instanceof SolicitationBusinessError
+                    ? error.message
+                    : "Não foi possível executar esta ação. Tente novamente."
             );
         } finally {
             setActionLoading(false);
@@ -127,6 +143,11 @@ export function FuncionarioSolicitationDetailsScreen({
     }
 
     function handleApprove() {
+        if (!solicitation || !appUser) return;
+
+        const solicitationId = solicitation.id;
+        const employee = appUser;
+
         Alert.alert(
             "Aprovar solicitação",
             "Deseja aprovar esta solicitação?",
@@ -138,9 +159,9 @@ export function FuncionarioSolicitationDetailsScreen({
                         executeAction(
                             () =>
                                 approveSolicitation(
-                                    solicitation.id,
-                                    appUser!.id,
-                                    appUser!.nomeCompleto
+                                    solicitationId,
+                                    employee.id,
+                                    employee.nomeCompleto
                                 ),
                             "Solicitação aprovada com sucesso."
                         ),
@@ -150,6 +171,8 @@ export function FuncionarioSolicitationDetailsScreen({
     }
 
     async function handleConfirmReject() {
+        if (!solicitation || !appUser) return;
+
         if (!rejectReason.trim()) {
             Alert.alert("Campo obrigatório", "Informe o motivo da recusa.");
             return;
@@ -161,8 +184,8 @@ export function FuncionarioSolicitationDetailsScreen({
             () =>
                 rejectSolicitation(
                     solicitation.id,
-                    appUser!.id,
-                    appUser!.nomeCompleto,
+                    appUser.id,
+                    appUser.nomeCompleto,
                     rejectReason.trim()
                 ),
             "Solicitação recusada com sucesso."
@@ -175,6 +198,11 @@ export function FuncionarioSolicitationDetailsScreen({
     }
 
     function handleWithdrawal() {
+        if (!solicitation || !appUser) return;
+
+        const solicitationId = solicitation.id;
+        const employee = appUser;
+
         Alert.alert(
             "Registrar retirada",
             "Confirma que os itens foram retirados pelo professor?",
@@ -186,9 +214,9 @@ export function FuncionarioSolicitationDetailsScreen({
                         executeAction(
                             () =>
                                 registerSolicitationWithdrawal(
-                                    solicitation.id,
-                                    appUser!.id,
-                                    appUser!.nomeCompleto
+                                    solicitationId,
+                                    employee.id,
+                                    employee.nomeCompleto
                                 ),
                             "Retirada registrada com sucesso."
                         ),
@@ -198,6 +226,11 @@ export function FuncionarioSolicitationDetailsScreen({
     }
 
     function handleReturn() {
+        if (!solicitation || !appUser) return;
+
+        const solicitationId = solicitation.id;
+        const employee = appUser;
+
         Alert.alert(
             "Registrar devolução",
             "Confirma que os itens foram devolvidos?",
@@ -209,9 +242,9 @@ export function FuncionarioSolicitationDetailsScreen({
                         executeAction(
                             () =>
                                 registerSolicitationReturn(
-                                    solicitation.id,
-                                    appUser!.id,
-                                    appUser!.nomeCompleto
+                                    solicitationId,
+                                    employee.id,
+                                    employee.nomeCompleto
                                 ),
                             "Devolução registrada com sucesso."
                         ),
@@ -305,7 +338,7 @@ export function FuncionarioSolicitationDetailsScreen({
                     )}
                 </AppCard>
 
-                {solicitation.atrasada === true && (
+                {isSolicitationOverdue(solicitation, currentTime) && (
                     <AppAlert
                         variant="error"
                         title="Item com devolução em atraso."
@@ -320,7 +353,7 @@ export function FuncionarioSolicitationDetailsScreen({
                         <>
                             <Text style={styles.resourceGroupTitle}>Máquinas</Text>
 
-                            {solicitation.maquinas.map((machine: any) => (
+                            {solicitation.maquinas.map((machine) => (
                                 <View key={machine.recursoId} style={styles.resourceItem}>
                                     <Text style={styles.resourceName}>{machine.nome}</Text>
 
@@ -339,7 +372,7 @@ export function FuncionarioSolicitationDetailsScreen({
                         <>
                             <Text style={styles.resourceGroupTitle}>Ferramentas</Text>
 
-                            {solicitation.ferramentas.map((tool: any) => (
+                            {solicitation.ferramentas.map((tool) => (
                                 <View key={tool.recursoId} style={styles.resourceItem}>
                                     <Text style={styles.resourceName}>{tool.nome}</Text>
 
