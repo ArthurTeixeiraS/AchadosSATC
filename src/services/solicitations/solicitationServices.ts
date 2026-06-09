@@ -1,20 +1,55 @@
 import {
   addDoc,
   collection,
+  DocumentData,
+  DocumentReference,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   where,
   updateDoc,
   doc,
-  getDoc
+  getDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebaseConfig";
 import { AppUser } from "../../types/User";
-import { SolicitationDraft } from "../../types/Solicitation";
+import {
+  Solicitation,
+  SolicitationDraft,
+  SolicitationShift,
+  SolicitationStatus,
+  SolicitationTool,
+} from "../../types/Solicitation";
 
 const COLLECTION_NAME = "solicitacoes";
+const RESOURCE_COLLECTION_NAME = "recursos";
+
+const SHIFT_END_TIME: Record<
+  SolicitationShift,
+  { hours: number; minutes: number }
+> = {
+  TARDE: { hours: 18, minutes: 0 },
+  NOITE: { hours: 22, minutes: 0 },
+};
+
+type BusinessErrorCode =
+  | "INVALID_STATUS"
+  | "MACHINE_CONFLICT"
+  | "INSUFFICIENT_STOCK"
+  | "RESOURCE_NOT_FOUND";
+
+export class SolicitationBusinessError extends Error {
+  constructor(
+    public code: BusinessErrorCode,
+    message: string,
+    public items: string[] = []
+  ) {
+    super(message);
+    this.name = "SolicitationBusinessError";
+  }
+}
 
 function parseBrazilianDate(date: string): Date {
   const [day, month, year] = date.split("/").map(Number);
@@ -30,6 +65,93 @@ function calculateSolicitationPriority(dataUtilizacao: string) {
   const diffInHours = diffInMs / (1000 * 60 * 60);
 
   return diffInHours < 48 ? "IMEDIATA" : "NORMAL";
+}
+
+function getShiftEndDate(
+  dataUtilizacao: string,
+  turno: SolicitationShift
+): Date | null {
+  const [day, month, year] = dataUtilizacao.split("/").map(Number);
+  const endTime = SHIFT_END_TIME[turno];
+
+  if (!day || !month || !year || !endTime) {
+    return null;
+  }
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    endTime.hours,
+    endTime.minutes,
+    0
+  );
+}
+
+export function isSolicitationOverdue(
+  solicitation: Pick<Solicitation, "status" | "dataUtilizacao" | "turno">,
+  now = new Date()
+): boolean {
+  if (solicitation.status !== "EM_USO") {
+    return false;
+  }
+
+  const shiftEndDate = getShiftEndDate(
+    solicitation.dataUtilizacao,
+    solicitation.turno
+  );
+
+  return shiftEndDate ? now.getTime() > shiftEndDate.getTime() : false;
+}
+
+function mapSolicitation(id: string, data: DocumentData): Solicitation {
+  const solicitation = {
+    id,
+    ...data,
+  } as Solicitation;
+
+  return {
+    ...solicitation,
+    atrasada: isSolicitationOverdue(solicitation),
+  };
+}
+
+function assertStatus(
+  currentStatus: SolicitationStatus,
+  expectedStatus: SolicitationStatus,
+  action: string
+) {
+  if (currentStatus !== expectedStatus) {
+    throw new SolicitationBusinessError(
+      "INVALID_STATUS",
+      `A solicitação precisa estar com status ${expectedStatus} para ${action}.`
+    );
+  }
+}
+
+function getToolReferences(tools: SolicitationTool[]) {
+  return tools.map((tool) => ({
+    tool,
+    reference: doc(
+      db,
+      RESOURCE_COLLECTION_NAME,
+      tool.recursoId
+    ) as DocumentReference<DocumentData>,
+  }));
+}
+
+function getMachineReservationReferences(solicitation: Solicitation) {
+  const dateKey = solicitation.dataUtilizacao.replace(/\D/g, "");
+
+  return solicitation.maquinas.map((machine) => ({
+    machine,
+    reservationKey: `${dateKey}_${solicitation.turno}`,
+    reference: doc(
+      db,
+      RESOURCE_COLLECTION_NAME,
+      machine.recursoId
+    ),
+  }));
 }
 
 export async function createSolicitation(
@@ -78,15 +200,14 @@ export async function createSolicitation(
   return docRef.id;
 }
 
-export async function listSolicitations() {
+export async function listSolicitations(): Promise<Solicitation[]> {
   const solicitacoesRef = collection(db, COLLECTION_NAME);
 
   const snapshot = await getDocs(solicitacoesRef);
 
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  return snapshot.docs.map((snapshot) =>
+    mapSolicitation(snapshot.id, snapshot.data())
+  );
 }
 
 export async function cancelSolicitation(id: string): Promise<void> {
@@ -99,7 +220,9 @@ export async function cancelSolicitation(id: string): Promise<void> {
   });
 }
 
-export async function listSolicitationsByProfessor(professorId: string) {
+export async function listSolicitationsByProfessor(
+  professorId: string
+): Promise<Solicitation[]> {
   const solicitacoesRef = collection(db, COLLECTION_NAME);
 
   const q = query(
@@ -109,13 +232,14 @@ export async function listSolicitationsByProfessor(professorId: string) {
 
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  return snapshot.docs.map((document) =>
+    mapSolicitation(document.id, document.data())
+  );
 }
 
-export async function getSolicitationById(id: string) {
+export async function getSolicitationById(
+  id: string
+): Promise<Solicitation | null> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
 
   const snapshot = await getDoc(solicitationRef);
@@ -124,10 +248,7 @@ export async function getSolicitationById(id: string) {
     return null;
   }
 
-  return {
-    id: snapshot.id,
-    ...snapshot.data(),
-  };
+  return mapSolicitation(snapshot.id, snapshot.data());
 }
 
 export async function approveSolicitation(
@@ -137,12 +258,173 @@ export async function approveSolicitation(
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
 
-  await updateDoc(solicitationRef, {
-    status: "APROVADA",
-    aprovadaEm: serverTimestamp(),
-    aprovadaPorId: funcionarioId,
-    aprovadaPorNome: funcionarioNome,
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(solicitation.status, "PENDENTE", "aprovar");
+
+    const occupiedSolicitationsSnapshot = await getDocs(
+      collection(db, COLLECTION_NAME)
+    );
+    const requestedMachineIds = new Set(
+      solicitation.maquinas.map((machine) => machine.recursoId)
+    );
+    const conflictingMachineNames = new Set<string>();
+
+    occupiedSolicitationsSnapshot.docs.forEach((occupiedDocument) => {
+      if (occupiedDocument.id === solicitation.id) {
+        return;
+      }
+
+      const occupiedSolicitation = occupiedDocument.data();
+      const isSamePeriod =
+        occupiedSolicitation.dataUtilizacao === solicitation.dataUtilizacao &&
+        occupiedSolicitation.turno === solicitation.turno;
+      const occupiesResources = ["APROVADA", "EM_USO"].includes(
+        occupiedSolicitation.status
+      );
+
+      if (!isSamePeriod || !occupiesResources) {
+        return;
+      }
+
+      const occupiedMachines =
+        (occupiedSolicitation.maquinas as Solicitation["maquinas"]) ?? [];
+
+      occupiedMachines.forEach((machine) => {
+        if (requestedMachineIds.has(machine.recursoId)) {
+          conflictingMachineNames.add(machine.nome);
+        }
+      });
+    });
+
+    if (conflictingMachineNames.size > 0) {
+      const items = [...conflictingMachineNames];
+
+      throw new SolicitationBusinessError(
+        "MACHINE_CONFLICT",
+        `Máquinas indisponíveis no período: ${items.join(", ")}.`,
+        items
+      );
+    }
+
+    const toolReferences = getToolReferences(solicitation.ferramentas);
+    const machineReservationReferences =
+      getMachineReservationReferences(solicitation);
+    const toolSnapshots = await Promise.all(
+      toolReferences.map(({ reference }) => transaction.get(reference))
+    );
+    const machineReservationSnapshots = await Promise.all(
+      machineReservationReferences.map(({ reference }) =>
+        transaction.get(reference)
+      )
+    );
+    const unavailableTools: string[] = [];
+
+    machineReservationSnapshots.forEach((reservationSnapshot, index) => {
+      const reservation = machineReservationReferences[index];
+
+      if (!reservation) {
+        return;
+      }
+
+      if (!reservationSnapshot.exists()) {
+        conflictingMachineNames.add(
+          `${reservation.machine.nome} (recurso não encontrado)`
+        );
+        return;
+      }
+
+      const reservations = reservationSnapshot.data().reservas ?? {};
+      const reservedSolicitationId =
+        reservations[reservation.reservationKey];
+
+      if (
+        reservedSolicitationId &&
+        reservedSolicitationId !== solicitation.id
+      ) {
+        conflictingMachineNames.add(reservation.machine.nome);
+      }
+    });
+
+    if (conflictingMachineNames.size > 0) {
+      const items = [...conflictingMachineNames];
+
+      throw new SolicitationBusinessError(
+        "MACHINE_CONFLICT",
+        `Máquinas indisponíveis no período: ${items.join(", ")}.`,
+        items
+      );
+    }
+
+    toolSnapshots.forEach((toolSnapshot, index) => {
+      const toolReference = toolReferences[index];
+
+      if (!toolReference) {
+        return;
+      }
+
+      const requestedTool = toolReference.tool;
+
+      if (!toolSnapshot.exists()) {
+        unavailableTools.push(`${requestedTool.nome} (recurso não encontrado)`);
+        return;
+      }
+
+      const availableQuantity = Number(
+        toolSnapshot.data().quantidadeDisponivel ?? 0
+      );
+
+      if (availableQuantity < requestedTool.quantidade) {
+        unavailableTools.push(
+          `${requestedTool.nome} (disponível: ${availableQuantity}, solicitada: ${requestedTool.quantidade})`
+        );
+      }
+    });
+
+    if (unavailableTools.length > 0) {
+      throw new SolicitationBusinessError(
+        "INSUFFICIENT_STOCK",
+        `Estoque insuficiente: ${unavailableTools.join("; ")}.`,
+        unavailableTools
+      );
+    }
+
+    machineReservationReferences.forEach((reservation, index) => {
+      const reservationSnapshot = machineReservationSnapshots[index];
+
+      if (!reservationSnapshot?.exists()) {
+        return;
+      }
+
+      transaction.update(reservation.reference, {
+        reservas: {
+          ...(reservationSnapshot.data().reservas ?? {}),
+          [reservation.reservationKey]: solicitation.id,
+        },
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    transaction.update(solicitationRef, {
+      status: "APROVADA",
+      aprovadaEm: serverTimestamp(),
+      aprovadaPorId: funcionarioId,
+      aprovadaPorNome: funcionarioNome,
+      updatedAt: serverTimestamp(),
+    });
   });
 }
 
@@ -171,12 +453,87 @@ export async function registerSolicitationWithdrawal(
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
 
-  await updateDoc(solicitationRef, {
-    status: "EM_USO",
-    retiradaEm: serverTimestamp(),
-    retiradaPorId: funcionarioId,
-    retiradaPorNome: funcionarioNome,
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(solicitation.status, "APROVADA", "registrar a retirada");
+
+    const toolReferences = getToolReferences(solicitation.ferramentas);
+    const toolSnapshots = await Promise.all(
+      toolReferences.map(({ reference }) => transaction.get(reference))
+    );
+    const unavailableTools: string[] = [];
+
+    toolSnapshots.forEach((toolSnapshot, index) => {
+      const toolReference = toolReferences[index];
+
+      if (!toolReference) {
+        return;
+      }
+
+      const requestedTool = toolReference.tool;
+
+      if (!toolSnapshot.exists()) {
+        unavailableTools.push(`${requestedTool.nome} (recurso não encontrado)`);
+        return;
+      }
+
+      const availableQuantity = Number(
+        toolSnapshot.data().quantidadeDisponivel ?? 0
+      );
+
+      if (availableQuantity < requestedTool.quantidade) {
+        unavailableTools.push(
+          `${requestedTool.nome} (disponível: ${availableQuantity}, solicitada: ${requestedTool.quantidade})`
+        );
+      }
+    });
+
+    if (unavailableTools.length > 0) {
+      throw new SolicitationBusinessError(
+        "INSUFFICIENT_STOCK",
+        `Não foi possível registrar a retirada. Estoque insuficiente: ${unavailableTools.join("; ")}.`,
+        unavailableTools
+      );
+    }
+
+    toolSnapshots.forEach((toolSnapshot, index) => {
+      const toolReference = toolReferences[index];
+
+      if (!toolReference || !toolSnapshot.exists()) {
+        return;
+      }
+
+      const requestedTool = toolReference.tool;
+      const availableQuantity = Number(
+        toolSnapshot.data().quantidadeDisponivel ?? 0
+      );
+
+      transaction.update(toolReference.reference, {
+        quantidadeDisponivel: availableQuantity - requestedTool.quantidade,
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    transaction.update(solicitationRef, {
+      status: "EM_USO",
+      retiradaEm: serverTimestamp(),
+      retiradaPorId: funcionarioId,
+      retiradaPorNome: funcionarioNome,
+      updatedAt: serverTimestamp(),
+    });
   });
 }
 
@@ -187,11 +544,102 @@ export async function registerSolicitationReturn(
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
 
-  await updateDoc(solicitationRef, {
-    status: "ENCERRADA",
-    devolvidaEm: serverTimestamp(),
-    devolvidaPorId: funcionarioId,
-    devolvidaPorNome: funcionarioNome,
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(solicitation.status, "EM_USO", "registrar a devolução");
+
+    const toolReferences = getToolReferences(solicitation.ferramentas);
+    const machineReservationReferences =
+      getMachineReservationReferences(solicitation);
+    const toolSnapshots = await Promise.all(
+      toolReferences.map(({ reference }) => transaction.get(reference))
+    );
+    const machineReservationSnapshots = await Promise.all(
+      machineReservationReferences.map(({ reference }) =>
+        transaction.get(reference)
+      )
+    );
+
+    toolSnapshots.forEach((toolSnapshot, index) => {
+      const toolReference = toolReferences[index];
+
+      if (!toolReference) {
+        return;
+      }
+
+      if (!toolSnapshot.exists()) {
+        throw new SolicitationBusinessError(
+          "RESOURCE_NOT_FOUND",
+          `A ferramenta ${toolReference.tool.nome} não foi encontrada.`
+        );
+      }
+    });
+
+    toolSnapshots.forEach((toolSnapshot, index) => {
+      const toolReference = toolReferences[index];
+
+      if (!toolReference || !toolSnapshot.exists()) {
+        return;
+      }
+
+      const requestedTool = toolReference.tool;
+      const availableQuantity = Number(
+        toolSnapshot.data().quantidadeDisponivel ?? 0
+      );
+      const totalQuantity = Number(
+        toolSnapshot.data().quantidadeTotal ??
+          availableQuantity + requestedTool.quantidade
+      );
+
+      transaction.update(toolReference.reference, {
+        quantidadeDisponivel: Math.min(
+          availableQuantity + requestedTool.quantidade,
+          totalQuantity
+        ),
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    machineReservationReferences.forEach((reservation, index) => {
+      const reservationSnapshot = machineReservationSnapshots[index];
+
+      if (!reservationSnapshot?.exists()) {
+        return;
+      }
+
+      const reservations = {
+        ...(reservationSnapshot.data().reservas ?? {}),
+      };
+
+      if (reservations[reservation.reservationKey] === solicitation.id) {
+        delete reservations[reservation.reservationKey];
+      }
+
+      transaction.update(reservation.reference, {
+        reservas: reservations,
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    transaction.update(solicitationRef, {
+      status: "ENCERRADA",
+      devolvidaEm: serverTimestamp(),
+      devolvidaPorId: funcionarioId,
+      devolvidaPorNome: funcionarioNome,
+      updatedAt: serverTimestamp(),
+    });
   });
 }

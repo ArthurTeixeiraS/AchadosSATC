@@ -29,3 +29,41 @@ export interface SolicitationDraft {  // Aqui seria um interface temporário pra
   ferramentasSelecionadas: SelectedTool[];
   observacoes: string;
 }
+
+export interface SolicitationMachine {
+  recursoId: string;
+  nome: string;
+  laboratorioId?: string | null;
+  laboratorioNome?: string;
+}
+
+export interface SolicitationTool {
+  recursoId: string;
+  nome: string;
+  quantidade: number;
+  descricao?: string;
+  quantidadeDisponivel?: number;
+}
+
+export interface Solicitation {
+  id: string;
+  professorId: string;
+  professorNome: string;
+  professorCracha: string;
+  status: SolicitationStatus;
+  prioridade: SolicitationPriority;
+  dataUtilizacao: string;
+  turno: SolicitationShift;
+  atividade: string;
+  observacoes?: string;
+  laboratoriosIds: string[];
+  maquinas: SolicitationMachine[];
+  ferramentas: SolicitationTool[];
+  atrasada: boolean;
+  createdAt?: {
+    seconds: number;
+  };
+  updatedAt?: {
+    seconds: number;
+  };
+}

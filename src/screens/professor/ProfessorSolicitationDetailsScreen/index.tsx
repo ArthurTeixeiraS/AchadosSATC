@@ -10,7 +10,10 @@ import { AppAlert } from "../../../components/AppAlert";
 import { EmptyState } from "../../../components/EmptyState";
 import { getResourceById } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
-import { cancelSolicitation } from "../../../services/solicitations/solicitationServices";
+import {
+  cancelSolicitation,
+  isSolicitationOverdue,
+} from "../../../services/solicitations/solicitationServices";
 
 import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicitacoesStackRoutes";
 
@@ -77,10 +80,18 @@ export function ProfessorSolicitationDetailsScreen({
   const { solicitation } = route.params;
 
   const canCancel = solicitation.status === "PENDENTE";
-  const isOverdue = solicitation.atrasada === true;
 
   const [laboratoryNames, setLaboratoryNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function loadLaboratories() {
@@ -220,7 +231,7 @@ export function ProfessorSolicitationDetailsScreen({
           )}
         </AppCard>
 
-        {isOverdue && (
+        {isSolicitationOverdue(solicitation, currentTime) && (
           <AppAlert
             variant="error"
             title="Item com devolução em atraso."
