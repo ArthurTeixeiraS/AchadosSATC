@@ -22,6 +22,8 @@ export interface Resource {
   quantidadeDisponivel?: number;
   laboratorioId?: string;
   patrimonio?: string;
+  reservas?: Record<string, string>;
+  reservasEstoque?: Record<string, Record<string, number>>;
 
   imagemUrl?: string;
 

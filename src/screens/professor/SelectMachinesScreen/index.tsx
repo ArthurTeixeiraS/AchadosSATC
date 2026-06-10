@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, TouchableOpacity, View } from "react-native";
+import { FlatList, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -87,14 +87,6 @@ export function SelectMachinesScreen({ navigation }: Props) {
   }
 
   function handleContinue() {
-    if (draft.maquinasSelecionadas.length === 0) {
-      Alert.alert(
-        "Selecione uma máquina",
-        "Para continuar, selecione pelo menos uma máquina."
-      );
-      return;
-    }
-
     navigation.navigate("SelectTools");
   }
 
