@@ -78,6 +78,42 @@ export async function createSolicitation(
   return docRef.id;
 }
 
+export async function getDashboardStats() {
+  const solicitacoesRef = collection(db, COLLECTION_NAME);
+
+  const hoje = new Date();
+  const inicioDaSemana = new Date(hoje);
+  inicioDaSemana.setDate(hoje.getDate() - hoje.getDay());
+  inicioDaSemana.setHours(0, 0, 0, 0);
+
+  const fimDaSemana = new Date(inicioDaSemana);
+  fimDaSemana.setDate(inicioDaSemana.getDate() + 6);
+  fimDaSemana.setHours(23, 59, 59, 999);
+
+  const snapshot = await getDocs(solicitacoesRef);
+
+  const solicitacoesDaSemana = snapshot.docs.filter((doc) => {
+    const data = doc.data();
+    if (!data.createdAt) return false;
+    const createdAt = data.createdAt.toDate();
+    return createdAt >= inicioDaSemana && createdAt <= fimDaSemana;
+  });
+
+  const pendentes = solicitacoesDaSemana.filter(
+    (doc) => doc.data().status === "PENDENTE"
+  ).length;
+
+  const novas = solicitacoesDaSemana.filter(
+    (doc) => !doc.data().status
+  ).length;
+
+  const encerradas = solicitacoesDaSemana.filter(
+    (doc) => doc.data().status === "ENCERRADA"
+  ).length;
+
+  return { pendentes, novas, encerradas };
+}
+
 export async function listSolicitations() {
   const solicitacoesRef = collection(db, COLLECTION_NAME);
 
