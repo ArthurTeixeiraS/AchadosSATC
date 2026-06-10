@@ -4,6 +4,7 @@ import {
   DocumentData,
   DocumentReference,
   getDocs,
+  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
@@ -208,6 +209,44 @@ export async function listSolicitations(): Promise<Solicitation[]> {
   return snapshot.docs.map((snapshot) =>
     mapSolicitation(snapshot.id, snapshot.data())
   );
+}
+
+export function subscribeDashboardStats(
+  callback: (stats: { pendentes: number; novas: number; encerradas: number }) => void
+) {
+  const solicitacoesRef = collection(db, COLLECTION_NAME);
+
+  const hoje = new Date();
+  const inicioDaSemana = new Date(hoje);
+  inicioDaSemana.setDate(hoje.getDate() - hoje.getDay());
+  inicioDaSemana.setHours(0, 0, 0, 0);
+
+  const fimDaSemana = new Date(inicioDaSemana);
+  fimDaSemana.setDate(inicioDaSemana.getDate() + 6);
+  fimDaSemana.setHours(23, 59, 59, 999);
+
+  return onSnapshot(solicitacoesRef, (snapshot) => {
+    const daSemana = snapshot.docs.filter((doc) => {
+      const data = doc.data();
+      if (!data.createdAt) return false;
+      const createdAt = data.createdAt.toDate();
+      return createdAt >= inicioDaSemana && createdAt <= fimDaSemana;
+    });
+
+    const pendentes = daSemana.filter(
+      (doc) => doc.data().status === "PENDENTE"
+    ).length;
+
+    const novas = daSemana.filter(
+      (doc) => doc.data().status === "APROVADA"
+    ).length;
+
+    const encerradas = daSemana.filter(
+      (doc) => doc.data().status === "ENCERRADA"
+    ).length;
+
+    callback({ pendentes, novas, encerradas });
+  });
 }
 
 export async function cancelSolicitation(id: string): Promise<void> {
