@@ -1,5 +1,26 @@
 # Ferramentaria SATC - Gestão de Empréstimos de Ferramentas
 
+# Cliente
+
+| Campo | Informação |
+|--------|------------|
+| **Empresa** | Associação Beneficente da Indústria Carbonífera de Santa Catarina (SATC) |
+| **CNPJ** | 83.649.830/0001-71 |
+| **Endereço** | Rua Pascoal Meller, 73 - Universitário, Criciúma/SC |
+
+---
+
+## Relato do Problema
+
+Atualmente, o controle de empréstimos e devoluções de ferramentas, chaves de salas, tornos e máquinas no Ferramentário da SATC é realizado por meio de registros manuais em folhas de papel. Esse método gera um grande volume de documentação física, dificultando a organização das informações e aumentando o risco de perda de registros, inconsistências e dificuldades na rastreabilidade das solicitações.
+
+Além disso, o gerenciamento do estoque de ferramentas é realizado de forma pouco eficiente. Quando há uma solicitação, é necessário verificar manualmente a disponibilidade do item, demandando tempo e aumentando a possibilidade de erros no controle do inventário.
+
+Como solução, propõe-se o desenvolvimento de um sistema mobile para gerenciamento do Ferramentário. O sistema permitirá o registro digital das solicitações e devoluções de ferramentas e chaves, proporcionando maior organização, segurança e agilidade no processo. Adicionalmente, contará com um módulo de controle de estoque, permitindo a consulta imediata da disponibilidade dos itens, definição de estoque mínimo e alocação das ferramentas para as solicitações de forma rápida e eficiente.
+
+
+
+
 ## 📱 Sobre o Projeto
 
 O **Ferramentaria SATC** é uma aplicação mobile desenvolvida para digitalizar e organizar o processo de empréstimo de ferramentas da Ferramentaria da SATC. O sistema tem como objetivo substituir os registros manuais atualmente realizados em papel, proporcionando maior controle, rastreabilidade e agilidade no gerenciamento dos empréstimos.
