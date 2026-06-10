@@ -15,7 +15,10 @@ import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext
 import { Resource } from "../../../types/Resources";
 import { getResourceById } from "../../../services/resources/resourceServices";
 
-import { createSolicitation } from "../../../services/solicitations/solicitationServices";
+import {
+    createSolicitation,
+    SolicitationBusinessError,
+} from "../../../services/solicitations/solicitationServices";
 import { useAuth } from "../../../contexts/AuthContext";
 
 import { styles } from "./styles";
@@ -88,6 +91,18 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
     async function handleConfirm() {
         if (loading) return;
 
+        const hasResources =
+            draft.maquinasSelecionadas.length > 0 ||
+            draft.ferramentasSelecionadas.length > 0;
+
+        if (!hasResources) {
+            Alert.alert(
+                "Selecione um recurso",
+                "Adicione pelo menos uma máquina ou ferramenta antes de enviar."
+            );
+            return;
+        }
+
         try {
             setLoading(true);
 
@@ -115,8 +130,12 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
             console.log("Erro ao criar solicitação:", error);
 
             Alert.alert(
-                "Erro ao enviar",
-                "Não foi possível enviar a solicitação. Tente novamente."
+                error instanceof SolicitationBusinessError
+                    ? "Solicitação indisponível"
+                    : "Erro ao enviar",
+                error instanceof SolicitationBusinessError
+                    ? error.message
+                    : "Não foi possível enviar a solicitação. Tente novamente."
             );
         } finally {
             setLoading(false);
@@ -197,7 +216,7 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         <EmptyState
                             icon="tool"
                             title="Nenhuma máquina selecionada"
-                            message="Volte para selecionar as máquinas necessárias."
+                            message="A solicitação pode conter apenas ferramentas."
                         />
                     ) : (
                         draft.maquinasSelecionadas.map((item) => (
@@ -228,7 +247,7 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         <EmptyState
                             icon="briefcase"
                             title="Nenhuma ferramenta selecionada"
-                            message="Você pode enviar a solicitação apenas com máquinas."
+                            message="A solicitação pode conter apenas máquinas."
                         />
                     ) : (
                         draft.ferramentasSelecionadas.map((item) => (
