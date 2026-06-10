@@ -16,10 +16,9 @@ Atualmente, o controle de empréstimos e devoluções de ferramentas, chaves de 
 
 Além disso, o gerenciamento do estoque de ferramentas é realizado de forma pouco eficiente. Quando há uma solicitação, é necessário verificar manualmente a disponibilidade do item, demandando tempo e aumentando a possibilidade de erros no controle do inventário.
 
+## Solução
+
 Como solução, propõe-se o desenvolvimento de um sistema mobile para gerenciamento do Ferramentário. O sistema permitirá o registro digital das solicitações e devoluções de ferramentas e chaves, proporcionando maior organização, segurança e agilidade no processo. Adicionalmente, contará com um módulo de controle de estoque, permitindo a consulta imediata da disponibilidade dos itens, definição de estoque mínimo e alocação das ferramentas para as solicitações de forma rápida e eficiente.
-
-
-
 
 ## 📱 Sobre o Projeto
 
