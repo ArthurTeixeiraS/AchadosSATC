@@ -4,11 +4,12 @@ import { typography } from "../../styles/typography";
 
 export const styles = StyleSheet.create({
   button: {
-    borderRadius: 28,
+    height: 58,
+    borderRadius: 29,
     marginTop: 8,
   },
   content: {
-    height: 58,
+    height: 56,
     flexDirection: "row-reverse",
   },
   label: {

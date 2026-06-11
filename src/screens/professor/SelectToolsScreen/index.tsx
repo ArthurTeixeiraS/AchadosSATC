@@ -3,6 +3,7 @@ import { Alert, FlatList, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppInput } from "../../../components/AppInput";
@@ -95,7 +96,10 @@ export function SelectToolsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <ScreenContainer style={styles.screenContent}>
+      <ScreenContainer
+        edges={["left", "right"]}
+        style={styles.screenContent}
+      >
         <AppInput
           value={search}
           onChangeText={setSearch}
@@ -182,7 +186,10 @@ export function SelectToolsScreen({ navigation }: Props) {
         )}
       </ScreenContainer>
 
-      <View style={styles.bottomSummary}>
+      <SafeAreaView
+        edges={["left", "right", "bottom"]}
+        style={styles.bottomSummary}
+      >
         <View style={styles.summaryHeader}>
           <Text style={styles.summaryTitle}>Ferramentas selecionadas</Text>
 
@@ -216,7 +223,7 @@ export function SelectToolsScreen({ navigation }: Props) {
           </AppButton>
 
         </View>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }

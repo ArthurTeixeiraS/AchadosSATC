@@ -30,13 +30,6 @@ export const styles = StyleSheet.create({
         marginBottom: 4,
     },
 
-    deleteButton: {
-        borderColor: colors.error,
-        borderWidth: 1,
-        borderRadius: 28,
-        marginTop: 8,
-    },
-
     infoValue: {
         fontSize: 16,
         fontFamily: typography.fontFamily.semiBold,

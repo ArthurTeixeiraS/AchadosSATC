@@ -3,6 +3,7 @@ import { FlatList, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppInput } from "../../../components/AppInput";
@@ -96,7 +97,10 @@ export function SelectMachinesScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <ScreenContainer style={styles.screenContent}>
+      <ScreenContainer
+        edges={["left", "right"]}
+        style={styles.screenContent}
+      >
         <AppInput
           value={search}
           onChangeText={setSearch}
@@ -161,7 +165,10 @@ export function SelectMachinesScreen({ navigation }: Props) {
         )}
       </ScreenContainer>
 
-      <View style={styles.bottomSummary}>
+      <SafeAreaView
+        edges={["left", "right", "bottom"]}
+        style={styles.bottomSummary}
+      >
         <View style={styles.summaryHeader}>
           <Text style={styles.summaryTitle}>Máquinas selecionadas</Text>
           <Text style={styles.summaryCount}>
@@ -192,7 +199,7 @@ export function SelectMachinesScreen({ navigation }: Props) {
           </AppButton>
 
         </View>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }

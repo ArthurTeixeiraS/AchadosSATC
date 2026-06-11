@@ -35,7 +35,7 @@ export const styles = StyleSheet.create({
 
     listContent: {
         paddingTop: 0,
-        paddingBottom: 260,
+        paddingBottom: 16,
     },
 
     machineCard: {
@@ -90,10 +90,6 @@ export const styles = StyleSheet.create({
     },
 
     bottomSummary: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
         backgroundColor: colors.surface,
         padding: 16,
         borderTopWidth: 1,

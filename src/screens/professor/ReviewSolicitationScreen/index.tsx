@@ -6,6 +6,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
+import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { EmptyState } from "../../../components/EmptyState";
 
 import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoStackRoutes";
@@ -21,6 +22,7 @@ import {
 import { useAuth } from "../../../contexts/AuthContext";
 
 import { styles } from "./styles";
+import { colors } from "../../../styles/colors";
 
 type Props = NativeStackScreenProps<
     NovaSolicitacaoStackParamList,
@@ -228,6 +230,9 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
 
                     <AppButton
                         mode="outlined"
+                        buttonColor={colors.white}
+                        textColor={colors.primary}
+                        style={styles.changeButton}
                         onPress={() => navigation.navigate("SelectMachines")}
                     >
                         Alterar máquinas
@@ -261,6 +266,9 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
 
                     <AppButton
                         mode="outlined"
+                        buttonColor={colors.white}
+                        textColor={colors.primary}
+                        style={styles.changeButton}
                         onPress={() => navigation.navigate("SelectTools")}
                     >
                         Alterar ferramentas
@@ -275,13 +283,12 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         Enviar solicitação
                     </AppButton>
 
-                    <AppButton 
+                    <AppDestructiveButton
                         loading={loading}
                         disabled={loading}
-                        mode="outlined" 
                         onPress={handleCancel}>
                         Cancelar solicitação
-                    </AppButton>
+                    </AppDestructiveButton>
                 </View>
             </ScrollView>
         </ScreenContainer>

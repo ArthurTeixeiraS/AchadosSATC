@@ -56,6 +56,11 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
 
+  changeButton: {
+    borderColor: colors.primary,
+    borderWidth: 1,
+  },
+
   priorityBadge: {
     marginTop: 6,
     borderRadius: 999,
