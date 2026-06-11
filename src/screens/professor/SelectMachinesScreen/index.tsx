@@ -96,14 +96,6 @@ export function SelectMachinesScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color={colors.white} />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Selecionar Máquinas</Text>
-      </View> */}
-
       <ScreenContainer style={styles.screenContent}>
         <AppInput
           value={search}
@@ -199,14 +191,6 @@ export function SelectMachinesScreen({ navigation }: Props) {
             Continuar para Ferramentas
           </AppButton>
 
-          <AppButton
-            mode="outlined"
-            buttonColor={colors.white}
-            textColor={colors.text}
-            onPress={() => navigation.goBack()}
-          >
-            Voltar para Informações
-          </AppButton>
         </View>
       </View>
     </View>

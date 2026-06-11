@@ -1,17 +1,40 @@
 import React from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import Feather from "@expo/vector-icons/Feather";
+import {
+  getFocusedRouteNameFromRoute,
+  NavigatorScreenParams,
+} from "@react-navigation/native";
+import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/ProfessorHomeScreen";
-import { NovaSolicitacaoStackRoutes } from "./NovaSolicitacaoStackRoutes";
 import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
-import { ProfileStackRoutes } from "./ProfileStackRoutes";
-import { colors } from "../styles/colors";
-import Feather from '@expo/vector-icons/Feather';
-import { typography } from "../styles/typography";
+import { AppDrawerContent } from "../components/AppDrawerContent";
 import { SolicitationDraftProvider } from "../contexts/SolicitationDraftContext";
-import { MinhasSolicitacoesStackRoutes } from "./MinhasSolicitacoesStackRoutes";
+import {
+  MinhasSolicitacoesStackParamList,
+  MinhasSolicitacoesStackRoutes,
+} from "./MinhasSolicitacoesStackRoutes";
+import {
+  NovaSolicitacaoStackParamList,
+  NovaSolicitacaoStackRoutes,
+} from "./NovaSolicitacaoStackRoutes";
+import {
+  ProfileStackParamList,
+  ProfileStackRoutes,
+} from "./ProfileStackRoutes";
+import { getDrawerHeaderOptions } from "./drawerHelpers";
+import { colors } from "../styles/colors";
+import { typography } from "../styles/typography";
 
-const Tab = createBottomTabNavigator();
+export type ProfessorDrawerParamList = {
+  Home: undefined;
+  "Nova Solicitação": NavigatorScreenParams<NovaSolicitacaoStackParamList>;
+  "Minhas Solicitações": NavigatorScreenParams<MinhasSolicitacoesStackParamList>;
+  Ocorrências: undefined;
+  Perfil: NavigatorScreenParams<ProfileStackParamList>;
+};
+
+const Drawer = createDrawerNavigator<ProfessorDrawerParamList>();
 
 function NovaSolicitacaoFlow() {
   return (
@@ -21,63 +44,173 @@ function NovaSolicitacaoFlow() {
   );
 }
 
-//Módulo exclusivo para rotas de professores
 export function ProfessorRoutes() {
   return (
-    <Tab.Navigator
+    <Drawer.Navigator
+      drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
-        headerShown: true,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
-
-        tabBarStyle: {
-          height: 70,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontFamily: typography.fontFamily.medium,
-        },
-
         headerStyle: {
           backgroundColor: colors.primary,
         },
-
         headerTintColor: colors.white,
-
         headerTitleStyle: {
           fontFamily: typography.fontFamily.bold,
         },
+        headerLeftContainerStyle: {
+          paddingLeft: 16,
+        },
+        drawerActiveTintColor: colors.primary,
+        drawerActiveBackgroundColor: "#E8F5EE",
+        drawerInactiveTintColor: colors.textSecondary,
+        drawerLabelStyle: {
+          marginLeft: 8,
+          fontFamily: typography.fontFamily.medium,
+        },
       }}
     >
-      <Tab.Screen name="Home" component={ProfessorHomeScreen} options={{
-        tabBarIcon: ({ color, size }) => (
-          <Feather name="home" size={size} color={color} />
-        ),
-      }} />
-      <Tab.Screen name="Nova Solicitação" component={NovaSolicitacaoFlow} options={{
-        tabBarIcon: ({ color, size }) => (
-          <Feather name="plus" size={size} color={color} />
-        ),
-      }} />
-      <Tab.Screen name="Minhas Solicitações" component={MinhasSolicitacoesStackRoutes} options={{
-        tabBarIcon: ({ color, size }) => (
-          <Feather name="file" size={size} color={color} />
-        ),
-      }} />
-      <Tab.Screen name="Ocorrências" component={OcorrenciasScreen} options={{
-        tabBarIcon: ({ color, size }) => (
-          <Feather name="tool" size={size} color={color} />
-        ),
-      }} />
-      <Tab.Screen name="Perfil" component={ProfileStackRoutes} options={{
-        headerShown: false,
-        tabBarIcon: ({ color, size }) => (
-          <Feather name="user" size={size} color={color} />
-        ),
-      }} />
-    </Tab.Navigator>
+      <Drawer.Screen
+        name="Home"
+        component={ProfessorHomeScreen}
+        options={({ navigation }) => ({
+          ...getDrawerHeaderOptions(navigation, {
+            title: "Início",
+            subtitle: "Visão geral da ferramentaria",
+          }),
+          drawerIcon: ({ color, size }) => (
+            <Feather name="home" size={size} color={color} />
+          ),
+        })}
+      />
+
+      <Drawer.Screen
+        name="Nova Solicitação"
+        component={NovaSolicitacaoFlow}
+        options={({ navigation, route }) => {
+          const routeName =
+            getFocusedRouteNameFromRoute(route) ?? "SolicitationInfo";
+
+          const config = {
+            SolicitationInfo: {
+              title: "Nova solicitação",
+              subtitle: "Etapa 1 de 4 · Informações básicas",
+              showMenu: true,
+            },
+            SelectMachines: {
+              title: "Nova solicitação",
+              subtitle: "Etapa 2 de 4 · Selecionar máquinas",
+              onBack: () =>
+                navigation.navigate("Nova Solicitação", {
+                  screen: "SolicitationInfo",
+                }),
+            },
+            SelectTools: {
+              title: "Nova solicitação",
+              subtitle: "Etapa 3 de 4 · Selecionar ferramentas",
+              onBack: () =>
+                navigation.navigate("Nova Solicitação", {
+                  screen: "SelectMachines",
+                }),
+            },
+            ReviewSolicitation: {
+              title: "Nova solicitação",
+              subtitle: "Etapa 4 de 4 · Revisão",
+              onBack: () =>
+                navigation.navigate("Nova Solicitação", {
+                  screen: "SelectTools",
+                }),
+            },
+          }[routeName] ?? {
+            title: "Nova solicitação",
+            subtitle: "Preencha os dados da solicitação",
+            onBack: () => navigation.navigate("Home"),
+          };
+
+          return {
+            ...getDrawerHeaderOptions(navigation, {
+              ...config,
+              showMenu: config.showMenu ?? false,
+            }),
+            drawerIcon: ({ color, size }) => (
+              <Feather name="plus-circle" size={size} color={color} />
+            ),
+            popToTopOnBlur: true,
+          };
+        }}
+      />
+
+      <Drawer.Screen
+        name="Minhas Solicitações"
+        component={MinhasSolicitacoesStackRoutes}
+        options={({ navigation, route }) => {
+          const routeName =
+            getFocusedRouteNameFromRoute(route) ?? "MinhasSolicitacoesList";
+          const isDetails = routeName === "ProfessorSolicitationDetails";
+
+          return {
+            ...getDrawerHeaderOptions(navigation, {
+              title: isDetails
+                ? "Detalhes da solicitação"
+                : "Minhas solicitações",
+              subtitle: isDetails
+                ? "Acompanhe os recursos solicitados"
+                : "Acompanhe seus pedidos",
+              showMenu: !isDetails,
+              onBack: () =>
+                navigation.navigate("Minhas Solicitações", {
+                  screen: "MinhasSolicitacoesList",
+                }),
+            }),
+            drawerIcon: ({ color, size }) => (
+              <Feather name="file-text" size={size} color={color} />
+            ),
+            popToTopOnBlur: true,
+          };
+        }}
+      />
+
+      <Drawer.Screen
+        name="Ocorrências"
+        component={OcorrenciasScreen}
+        options={({ navigation }) => ({
+          ...getDrawerHeaderOptions(navigation, {
+            title: "Ocorrências",
+            subtitle: "Registre e acompanhe problemas",
+          }),
+          drawerIcon: ({ color, size }) => (
+            <Feather name="alert-triangle" size={size} color={color} />
+          ),
+        })}
+      />
+
+      <Drawer.Screen
+        name="Perfil"
+        component={ProfileStackRoutes}
+        options={({ navigation, route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "Profile";
+          const isEditing = routeName === "EditProfile";
+
+          return {
+            drawerItemStyle: {
+              display: "none",
+            },
+            ...getDrawerHeaderOptions(navigation, {
+              title: isEditing ? "Editar perfil" : "Perfil",
+              subtitle: isEditing
+                ? "Atualize seus dados pessoais"
+                : "Dados da sua conta",
+              showMenu: !isEditing,
+              onBack: () =>
+                navigation.navigate("Perfil", {
+                  screen: "Profile",
+                }),
+            }),
+            drawerIcon: ({ color, size }) => (
+              <Feather name="user" size={size} color={color} />
+            ),
+            popToTopOnBlur: true,
+          };
+        }}
+      />
+    </Drawer.Navigator>
   );
 }

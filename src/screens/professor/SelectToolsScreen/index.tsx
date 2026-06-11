@@ -215,14 +215,6 @@ export function SelectToolsScreen({ navigation }: Props) {
             Revisar Solicitação
           </AppButton>
 
-          <AppButton
-            mode="outlined"
-            buttonColor={colors.white}
-            textColor={colors.text}
-            onPress={() => navigation.goBack()}
-          >
-            Voltar para Máquinas
-          </AppButton>
         </View>
       </View>
     </View>

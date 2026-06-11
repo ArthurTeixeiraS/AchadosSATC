@@ -12,7 +12,6 @@ import * as ImagePicker from "expo-image-picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
-import { PageTitle } from "../../../components/PageTitle";
 import { AppInput } from "../../../components/AppInput";
 import { AppButton } from "../../../components/AppButton";
 import { AppSelect } from "../../../components/AppSelect";
@@ -84,7 +83,10 @@ export function EditResourceScreen({ route, navigation }: Props) {
                     [
                         {
                             text: "OK",
-                            onPress: () => navigation.goBack(),
+                            onPress: () =>
+                                navigation.navigate("ResourceDetails", {
+                                    resource,
+                                }),
                         },
                     ]
                 );
@@ -199,7 +201,9 @@ export function EditResourceScreen({ route, navigation }: Props) {
                     : undefined,
             });
 
-            navigation.goBack();
+            navigation.navigate("ResourceDetails", {
+                resource,
+            });
         } catch (error) {
             console.log("Erro ao editar recurso:", error);
             setErro("Não foi possível editar o recurso.");
@@ -211,11 +215,6 @@ export function EditResourceScreen({ route, navigation }: Props) {
     return (
         <ScreenContainer>
             <ScrollView showsVerticalScrollIndicator={false}>
-                <PageTitle
-                    title="Editar recurso"
-                    subtitle="Atualize as informações do recurso cadastrado."
-                />
-
                 <View style={styles.typeBox}>
                     <Text style={styles.typeLabel}>Tipo do recurso</Text>
                     <Text style={styles.typeValue}>{resource.tipo}</Text>
@@ -342,13 +341,6 @@ export function EditResourceScreen({ route, navigation }: Props) {
                     Salvar alterações
                 </AppButton>
 
-                <AppButton
-                    mode="outlined"
-                    disabled={loading}
-                    onPress={() => navigation.goBack()}
-                >
-                    Cancelar
-                </AppButton>
             </ScrollView>
         </ScreenContainer>
     );

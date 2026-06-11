@@ -4,7 +4,6 @@ import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
-import { PageTitle } from "../../../components/PageTitle";
 import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
 import { EmptyState } from "../../../components/EmptyState";
@@ -148,11 +147,6 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.content}
             >
-                <PageTitle
-                    title="Revisar solicitação"
-                    subtitle="Confira os dados antes de enviar para aprovação."
-                />
-
                 <AppCard>
                     <Text style={styles.sectionTitle}>Informações básicas</Text>
 

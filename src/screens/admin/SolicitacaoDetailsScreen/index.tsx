@@ -434,13 +434,6 @@ export function FuncionarioSolicitationDetailsScreen({
                         </AppButton>
                     )}
 
-                    <AppButton
-                        mode="outlined"
-                        disabled={actionLoading}
-                        onPress={() => navigation.goBack()}
-                    >
-                        Voltar
-                    </AppButton>
                 </View>
             </ScrollView>
             <Modal
