@@ -1,3 +1,4 @@
+import "react-native-gesture-handler"; //Pra permitir o reconhecimento de gestos como arrastar, deslizar e zoom
 import { registerRootComponent } from 'expo';
 
 import App from './App';

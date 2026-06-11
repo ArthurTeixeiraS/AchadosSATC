@@ -5,7 +5,6 @@ import Feather from "@expo/vector-icons/Feather";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
-import { PageTitle } from "../../../components/PageTitle";
 import { AppInput } from "../../../components/AppInput";
 import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
@@ -244,11 +243,6 @@ export function SolicitacoesRecebidasScreen() {
 
   return (
     <ScreenContainer>
-      <PageTitle
-        title="Itens a aprovar"
-        subtitle="Acompanhe e gerencie as solicitações recebidas."
-      />
-
       <AppInput
         value={search}
         onChangeText={setSearch}

@@ -5,7 +5,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
-import { PageTitle } from "../../../components/PageTitle";
 import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
@@ -96,11 +95,6 @@ export function ResourceScreen() {
 
   return (
     <ScreenContainer>
-      <PageTitle
-        title="Recursos"
-        subtitle="Gerencie ferramentas, máquinas e laboratórios."
-      />
-
       <AppCard>
         <AllFilters
           filters={statusFilters}

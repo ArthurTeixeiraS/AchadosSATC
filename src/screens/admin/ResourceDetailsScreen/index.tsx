@@ -112,7 +112,7 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                     onPress: async () => {
                         try {
                             await deleteResource(resource.id);
-                            navigation.goBack();
+                            navigation.navigate("ResourceList");
                         } catch (error) {
                             console.log("Erro ao excluir recurso:", error);
                             Alert.alert(

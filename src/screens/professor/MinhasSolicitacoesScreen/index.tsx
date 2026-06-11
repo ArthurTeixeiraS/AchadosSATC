@@ -6,7 +6,6 @@ import { useCallback } from "react";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
-import { PageTitle } from "../../../components/PageTitle";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
 import { AppAlert } from "../../../components/AppAlert";

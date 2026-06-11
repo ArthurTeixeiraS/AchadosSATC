@@ -43,7 +43,7 @@ export function EditProfileScreen({ navigation }: Props) {
       await reloadUser();
 
       Alert.alert("Sucesso", "Dados atualizados com sucesso!", [
-        { text: "OK", onPress: () => navigation.goBack() },
+        { text: "OK", onPress: () => navigation.navigate("Profile") },
       ]);
     } catch (error) {
       console.log("Erro ao atualizar perfil:", error);

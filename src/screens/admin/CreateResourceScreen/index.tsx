@@ -4,7 +4,6 @@ import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
-import { PageTitle } from "../../../components/PageTitle";
 import { AppInput } from "../../../components/AppInput";
 import { AppButton } from "../../../components/AppButton";
 
@@ -199,7 +198,7 @@ export function CreateResourceScreen({ navigation, route }: Props) {
         laboratorioId: isMaquina ? laboratorioId : undefined,
       });
 
-      navigation.goBack();
+      navigation.navigate("ResourceList");
     } catch (error) {
       console.log("Erro ao cadastrar recurso:", error);
       setErro("Não foi possível cadastrar o recurso.");
@@ -211,11 +210,6 @@ export function CreateResourceScreen({ navigation, route }: Props) {
   return (
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <PageTitle
-          title="Novo recurso"
-          subtitle="Cadastre ferramentas, máquinas ou laboratórios."
-        />
-
         <AppCard>
           <AppSelect
             label="Tipo"
@@ -331,13 +325,6 @@ export function CreateResourceScreen({ navigation, route }: Props) {
           Cadastrar recurso
         </AppButton>
 
-        <AppButton
-          mode="outlined"
-          disabled={loading}
-          onPress={() => navigation.goBack()}
-        >
-          Cancelar
-        </AppButton>
       </ScrollView>
     </ScreenContainer>
   );

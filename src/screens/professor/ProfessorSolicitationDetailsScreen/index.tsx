@@ -135,7 +135,8 @@ export function ProfessorSolicitationDetailsScreen({
                 [
                   {
                     text: "OK",
-                    onPress: () => navigation.goBack(),
+                    onPress: () =>
+                      navigation.navigate("MinhasSolicitacoesList"),
                   },
                 ]
               );
@@ -319,12 +320,6 @@ export function ProfessorSolicitationDetailsScreen({
             </AppButton>
           )}
 
-          <AppButton
-            mode="outlined"
-            onPress={() => navigation.goBack()}
-          >
-            Voltar
-          </AppButton>
         </View>
       </ScrollView>
     </ScreenContainer>
