@@ -10,6 +10,7 @@ import { ScreenContainer } from "../../../components/ScreenContainer";
 import { PageTitle } from "../../../components/PageTitle";
 import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
+import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 
 import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { colors } from "../../../styles/colors";
@@ -249,18 +250,14 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                         Duplicar recurso
                     </AppButton>
 
-                    <AppButton
-                        mode="outlined"
+                    <AppDestructiveButton
                         icon={() => (
                             <Feather name="trash-2" size={18} color={colors.error} />
                         )}
-                        textColor={colors.error}
-                        buttonColor={colors.white}
-                        style={styles.deleteButton}
                         onPress={handleDeleteResource}
                     >
                         Excluir recurso
-                    </AppButton>
+                    </AppDestructiveButton>
                 </AppCard>
             </ScrollView>
         </ScreenContainer>

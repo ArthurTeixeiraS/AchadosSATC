@@ -205,7 +205,7 @@ export function EditResourceScreen({ route, navigation }: Props) {
                 resource,
             });
         } catch (error) {
-            console.log("Erro ao editar recurso:", error);
+            console.error("Erro ao editar recurso:", error);
             setErro("Não foi possível editar o recurso.");
         } finally {
             setLoading(false);

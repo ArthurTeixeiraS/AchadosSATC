@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, Button, ButtonProps } from "react-native-paper";
+import { Button, ButtonProps } from "react-native-paper";
 
 import { colors } from "../../styles/colors";
 import { styles } from "./styles";
@@ -9,18 +9,29 @@ interface AppButtonProps extends ButtonProps {
 }
 
 //Componente padrão de botão para aplicação
-export function AppButton({ loading, children, ...props }: AppButtonProps) {
+export function AppButton({
+  loading,
+  children,
+  style,
+  contentStyle,
+  labelStyle,
+  mode,
+  buttonColor,
+  textColor,
+  disabled,
+  ...props
+}: AppButtonProps) {
   return (
     <Button
-      mode="contained"
-      buttonColor={colors.primary}
-      textColor={colors.white}
-      style={styles.button}
-      contentStyle={styles.content}
-      labelStyle={styles.label}
-      loading={loading}
-      disabled={loading || props.disabled}
       {...props}
+      mode={mode ?? "contained"}
+      buttonColor={buttonColor ?? colors.primary}
+      textColor={textColor ?? colors.white}
+      style={[styles.button, style]}
+      contentStyle={[styles.content, contentStyle]}
+      labelStyle={[styles.label, labelStyle]}
+      loading={loading}
+      disabled={loading || disabled}
     >
       {children}
     </Button>

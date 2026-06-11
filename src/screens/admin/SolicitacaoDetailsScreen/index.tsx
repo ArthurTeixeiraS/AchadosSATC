@@ -6,6 +6,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
+import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { AppAlert } from "../../../components/AppAlert";
 import { Loading } from "../../../components/Loading";
 import { EmptyState } from "../../../components/EmptyState";
@@ -402,15 +403,13 @@ export function FuncionarioSolicitationDetailsScreen({
                                 Aprovar
                             </AppButton>
 
-                            <AppButton
-                                mode="contained"
+                            <AppDestructiveButton
                                 disabled={actionLoading}
-                                buttonColor="#991B1B"
                                 onPress={handleReject}
                                 style={styles.actionButton}
                             >
                                 Recusar
-                            </AppButton>
+                            </AppDestructiveButton>
                         </View>
                     )}
 
@@ -458,21 +457,20 @@ export function FuncionarioSolicitationDetailsScreen({
                         />
 
                         <View style={styles.modalActions}>
+                            <AppDestructiveButton
+                                disabled={actionLoading}
+                                loading={actionLoading}
+                                onPress={handleConfirmReject}
+                            >
+                                Confirmar recusa
+                            </AppDestructiveButton>
+
                             <AppButton
                                 mode="outlined"
                                 disabled={actionLoading}
                                 onPress={() => setRejectModalVisible(false)}
                             >
                                 Cancelar
-                            </AppButton>
-
-                            <AppButton
-                                disabled={actionLoading}
-                                loading={actionLoading}
-                                buttonColor="#991B1B"
-                                onPress={handleConfirmReject}
-                            >
-                                Confirmar recusa
                             </AppButton>
                         </View>
                     </View>

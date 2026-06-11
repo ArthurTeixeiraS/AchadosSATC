@@ -6,6 +6,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
+import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { AppAlert } from "../../../components/AppAlert";
 import { EmptyState } from "../../../components/EmptyState";
 import { getResourceById } from "../../../services/resources/resourceServices";
@@ -310,14 +311,13 @@ export function ProfessorSolicitationDetailsScreen({
 
         <View style={styles.buttonContainer}>
           {canCancel && (
-            <AppButton
-              mode="outlined"
+            <AppDestructiveButton
               loading={loading}
               disabled={loading}
               onPress={handleCancelSolicitation}
             >
               Cancelar solicitação
-            </AppButton>
+            </AppDestructiveButton>
           )}
 
         </View>

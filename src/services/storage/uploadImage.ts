@@ -11,7 +11,9 @@ export async function uploadImageAsync(
 
   const storageRef = ref(storage, path);
 
-  await uploadBytes(storageRef, blob);
+  await uploadBytes(storageRef, blob, {
+    contentType: blob.type || "image/jpeg",
+  });
 
   const downloadURL = await getDownloadURL(storageRef);
 

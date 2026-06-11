@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 
+import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
 import { subscribeDashboardStats } from "../../../services/solicitations/solicitationServices";
 import { styles } from "./styles";
@@ -36,8 +37,9 @@ export function DashboardScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+    <ScreenContainer style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.header}>
         <View style={styles.avatar}>
           <Feather name="user" size={22} color="#fff" />
         </View>
@@ -137,7 +139,8 @@ export function DashboardScreen() {
           <Text style={styles.menuTitle}>Relatórios</Text>
           <Text style={styles.menuSubtitle}>Estatísticas e métricas</Text>
         </View>
-      </TouchableOpacity>
-    </ScrollView>
+        </TouchableOpacity>
+      </ScrollView>
+    </ScreenContainer>
   );
 }
