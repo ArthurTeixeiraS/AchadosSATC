@@ -37,14 +37,10 @@ export type ProfessorDrawerParamList = {
 const Drawer = createDrawerNavigator<ProfessorDrawerParamList>();
 
 function NovaSolicitacaoFlow() {
-  return (
-    <SolicitationDraftProvider>
-      <NovaSolicitacaoStackRoutes />
-    </SolicitationDraftProvider>
-  );
+  return <NovaSolicitacaoStackRoutes />;
 }
 
-export function ProfessorRoutes() {
+function ProfessorDrawerRoutes() {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <AppDrawerContent {...props} />}
@@ -212,5 +208,13 @@ export function ProfessorRoutes() {
         }}
       />
     </Drawer.Navigator>
+  );
+}
+
+export function ProfessorRoutes() {
+  return (
+    <SolicitationDraftProvider>
+      <ProfessorDrawerRoutes />
+    </SolicitationDraftProvider>
   );
 }

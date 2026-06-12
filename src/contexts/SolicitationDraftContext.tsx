@@ -25,6 +25,7 @@ interface SolicitationDraftContextData {
   updateToolQuantity: (resourceId: string, quantidade: number) => void;
 
   setObservacoes: (observacoes: string) => void;
+  replaceDraft: (draft: SolicitationDraft) => void;
   clearDraft: () => void;
 }
 
@@ -152,6 +153,10 @@ export function SolicitationDraftProvider({
     }));
   }
 
+  function replaceDraft(newDraft: SolicitationDraft) {
+    setDraft(newDraft);
+  }
+
   function clearDraft() {
     setDraft(initialDraft);
   }
@@ -167,6 +172,7 @@ export function SolicitationDraftProvider({
         removeTool,
         updateToolQuantity,
         setObservacoes,
+        replaceDraft,
         clearDraft,
       }}
     >

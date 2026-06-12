@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
@@ -17,6 +18,9 @@ import {
 } from "../../../services/solicitations/solicitationServices";
 
 import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicitacoesStackRoutes";
+import type { ProfessorDrawerParamList } from "../../../routes/ProfessorRoutes";
+import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
+import type { SolicitationDraft } from "../../../types/Solicitation";
 
 import { styles } from "./styles";
 
@@ -81,9 +85,11 @@ export function ProfessorSolicitationDetailsScreen({
   const { solicitation } = route.params;
 
   const canCancel = solicitation.status === "PENDENTE";
+  const { draft, replaceDraft } = useSolicitationDraft();
 
   const [laboratoryNames, setLaboratoryNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -152,6 +158,140 @@ export function ProfessorSolicitationDetailsScreen({
               setLoading(false);
             }
           },
+        },
+      ]
+    );
+  }
+
+  function hasExistingDraft() {
+    return (
+      !!draft.dataUtilizacao ||
+      !!draft.turno ||
+      !!draft.atividade ||
+      !!draft.observacoes ||
+      draft.maquinasSelecionadas.length > 0 ||
+      draft.ferramentasSelecionadas.length > 0
+    );
+  }
+
+  async function duplicateSolicitation() {
+    if (duplicating) return;
+
+    try {
+      setDuplicating(true);
+
+      const [machines, tools] = await Promise.all([
+        Promise.all(
+          (solicitation.maquinas ?? []).map(async (machine) => ({
+            snapshot: machine,
+            resource: await getResourceById(machine.recursoId),
+          }))
+        ),
+        Promise.all(
+          (solicitation.ferramentas ?? []).map(async (tool) => ({
+            snapshot: tool,
+            resource: await getResourceById(tool.recursoId),
+          }))
+        ),
+      ]);
+
+      const invalidResources: string[] = [];
+      const resourcesToReview: string[] = [];
+
+      const selectedMachines = machines.flatMap(({ snapshot, resource }) => {
+        if (!resource || resource.tipo !== "MAQUINA") {
+          invalidResources.push(snapshot.nome);
+          return [];
+        }
+
+        if (resource.status !== "DISPONIVEL") {
+          resourcesToReview.push(snapshot.nome);
+        }
+
+        return [{ resource }];
+      });
+
+      const selectedTools = tools.flatMap(({ snapshot, resource }) => {
+        if (!resource || resource.tipo !== "FERRAMENTA") {
+          invalidResources.push(snapshot.nome);
+          return [];
+        }
+
+        const quantidade = Math.max(1, Number(snapshot.quantidade) || 1);
+
+        if (
+          resource.status !== "DISPONIVEL" ||
+          (resource.quantidadeDisponivel ?? 0) < quantidade
+        ) {
+          resourcesToReview.push(snapshot.nome);
+        }
+
+        return [{ resource, quantidade }];
+      });
+
+      const duplicatedDraft: SolicitationDraft = {
+        dataUtilizacao: "",
+        turno: solicitation.turno,
+        atividade: solicitation.atividade ?? "",
+        observacoes: solicitation.observacoes ?? "",
+        maquinasSelecionadas: selectedMachines,
+        ferramentasSelecionadas: selectedTools,
+      };
+
+      replaceDraft(duplicatedDraft);
+
+      const drawerNavigation =
+        navigation.getParent<DrawerNavigationProp<ProfessorDrawerParamList>>();
+
+      drawerNavigation?.navigate("Nova Solicitação", {
+        screen: "SolicitationInfo",
+      });
+
+      const warnings = [
+        invalidResources.length
+          ? `Não encontrados: ${invalidResources.join(", ")}.`
+          : "",
+        resourcesToReview.length
+          ? `Precisam ser revisados: ${resourcesToReview.join(", ")}.`
+          : "",
+      ].filter(Boolean);
+
+      if (warnings.length) {
+        Alert.alert(
+          "Revise os recursos",
+          `O rascunho foi criado, mas alguns recursos mudaram desde a solicitação original.\n\n${warnings.join("\n")}`
+        );
+      }
+    } catch (error) {
+      console.log("Erro ao duplicar solicitação:", error);
+
+      Alert.alert(
+        "Erro ao duplicar",
+        "Não foi possível preparar a nova solicitação. Tente novamente."
+      );
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
+  function handleDuplicateSolicitation() {
+    if (!hasExistingDraft()) {
+      void duplicateSolicitation();
+      return;
+    }
+
+    Alert.alert(
+      "Substituir rascunho?",
+      "Já existe uma solicitação em preenchimento. Ao continuar, os dados atuais serão substituídos.",
+      [
+        {
+          text: "Voltar",
+          style: "cancel",
+        },
+        {
+          text: "Substituir",
+          style: "destructive",
+          onPress: () => void duplicateSolicitation(),
         },
       ]
     );
@@ -310,10 +450,18 @@ export function ProfessorSolicitationDetailsScreen({
         </AppCard>
 
         <View style={styles.buttonContainer}>
+          <AppButton
+            loading={duplicating}
+            disabled={loading || duplicating}
+            onPress={handleDuplicateSolicitation}
+          >
+            Duplicar solicitação
+          </AppButton>
+
           {canCancel && (
             <AppDestructiveButton
               loading={loading}
-              disabled={loading}
+              disabled={loading || duplicating}
               onPress={handleCancelSolicitation}
             >
               Cancelar solicitação

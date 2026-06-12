@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -32,13 +32,26 @@ function getShiftLabel(shift: SolicitationShift) {
 }
 
 export function SolicitationInfoScreen({ navigation }: Props) {
-  const { draft, setBasicInfo } = useSolicitationDraft();
+  const { draft, setBasicInfo, setObservacoes } = useSolicitationDraft();
 
   const [dataUtilizacao, setDataUtilizacao] = useState(draft.dataUtilizacao);
   const [turno, setTurno] = useState<SolicitationShift>(
     draft.turno || "TARDE"
   );
   const [atividade, setAtividade] = useState(draft.atividade);
+  const [observacoes, setObservacoesValue] = useState(draft.observacoes);
+
+  useEffect(() => {
+    setDataUtilizacao(draft.dataUtilizacao);
+    setTurno(draft.turno || "TARDE");
+    setAtividade(draft.atividade);
+    setObservacoesValue(draft.observacoes);
+  }, [
+    draft.dataUtilizacao,
+    draft.turno,
+    draft.atividade,
+    draft.observacoes,
+  ]);
 
   function handleContinue() {
     if (!dataUtilizacao.trim()) {
@@ -56,6 +69,7 @@ export function SolicitationInfoScreen({ navigation }: Props) {
       turno,
       atividade: atividade.trim(),
     });
+    setObservacoes(observacoes.trim());
 
     navigation.navigate("SelectMachines");
   }
@@ -118,6 +132,17 @@ export function SolicitationInfoScreen({ navigation }: Props) {
             value={atividade}
             onChangeText={setAtividade}
             placeholder="Adicione uma descrição sobre a atividade a ser desenvolvida"
+            multiline
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Observações</Text>
+
+          <AppInput
+            value={observacoes}
+            onChangeText={setObservacoesValue}
+            placeholder="Adicione informações complementares (opcional)"
             multiline
           />
         </View>
