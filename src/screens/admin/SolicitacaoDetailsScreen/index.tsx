@@ -28,7 +28,6 @@ import {
     approveSolicitation,
     getSolicitationById,
     isSolicitationOverdue,
-    registerSolicitationReturn,
     registerSolicitationWithdrawal,
     rejectSolicitation,
     SolicitationBusinessError,
@@ -225,30 +224,11 @@ export function FuncionarioSolicitationDetailsScreen({
     }
 
     function handleReturn() {
-        if (!solicitation || !appUser) return;
+        if (!solicitation) return;
 
-        const solicitationId = solicitation.id;
-        const employee = appUser;
-
-        Alert.alert(
-            "Registrar devolução",
-            "Confirma que os itens foram devolvidos?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Confirmar",
-                    onPress: () =>
-                        executeAction(
-                            () =>
-                                registerSolicitationReturn(
-                                    solicitationId,
-                                    employee
-                                ),
-                            "Devolução registrada com sucesso."
-                        ),
-                },
-            ]
-        );
+        navigation.navigate("RegisterSolicitationReturn", {
+            solicitationId: solicitation.id,
+        });
     }
 
     if (loading) {
@@ -270,6 +250,9 @@ export function FuncionarioSolicitationDetailsScreen({
     const canApproveOrReject = solicitation.status === "PENDENTE";
     const canRegisterWithdrawal = solicitation.status === "APROVADA";
     const canRegisterReturn = solicitation.status === "EM_USO";
+    const showReturnProgress = ["EM_USO", "ENCERRADA"].includes(
+        solicitation.status
+    );
 
     return (
         <ScreenContainer>
@@ -361,6 +344,21 @@ export function FuncionarioSolicitationDetailsScreen({
                                             machine.laboratorioId ??
                                             "Não informado"}
                                     </Text>
+
+                                    {showReturnProgress && (
+                                        <Text
+                                            style={[
+                                                styles.returnStatus,
+                                                machine.devolvida
+                                                    ? styles.returnedStatus
+                                                    : styles.pendingStatus,
+                                            ]}
+                                        >
+                                            {machine.devolvida
+                                                ? "Devolvida"
+                                                : "Pendente de devolução"}
+                                        </Text>
+                                    )}
                                 </View>
                             ))}
                         </>
@@ -381,6 +379,31 @@ export function FuncionarioSolicitationDetailsScreen({
                                                 {tool.quantidade}
                                             </Text>
                                         </Text>
+
+                                        {showReturnProgress && (
+                                            <>
+                                                <Text style={styles.quantityText}>
+                                                    Devolvida:{" "}
+                                                    <Text style={styles.quantityStrong}>
+                                                        {tool.quantidadeDevolvida ?? 0}
+                                                    </Text>
+                                                </Text>
+
+                                                <Text style={styles.quantityText}>
+                                                    Pendente:{" "}
+                                                    <Text style={styles.quantityStrong}>
+                                                        {Math.max(
+                                                            Number(tool.quantidade) -
+                                                                Number(
+                                                                    tool.quantidadeDevolvida ??
+                                                                        0
+                                                                ),
+                                                            0
+                                                        )}
+                                                    </Text>
+                                                </Text>
+                                            </>
+                                        )}
                                     </View>
                                 </View>
                             ))}
@@ -428,7 +451,7 @@ export function FuncionarioSolicitationDetailsScreen({
                             disabled={actionLoading}
                             onPress={handleReturn}
                         >
-                            Registrar devolução
+                            Registrar devolução de recursos
                         </AppButton>
                     )}
 

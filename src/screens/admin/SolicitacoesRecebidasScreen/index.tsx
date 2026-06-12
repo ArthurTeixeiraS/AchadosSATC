@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import { Text } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
@@ -33,6 +34,12 @@ import { Solicitation } from "../../../types/Solicitation";
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { FuncionarioSolicitacaoStackParamList } from "../../../routes/FuncionarioSolicitacaoStackRoutes";
+
+type Props = NativeStackScreenProps<
+  FuncionarioSolicitacaoStackParamList,
+  "ReceivedSolicitations"
+>;
 
 type SolicitationGroup = {
   date: string;
@@ -89,7 +96,24 @@ function parseBrazilianDate(value: string) {
   return new Date(year, month - 1, day).getTime();
 }
 
+function isFromToday(value: string) {
+  const useDate = parseBrazilianDate(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return Number.isFinite(useDate) && useDate >= today.getTime();
+}
+
 const solicitationFilters: readonly FilterDefinition<Solicitation>[] = [
+  {
+    key: "fromToday",
+    label: "A partir de hoje",
+    type: "boolean",
+    placeholder: "Ocultar solicitações com data de uso anterior a hoje.",
+    predicate: (item, value) =>
+      value !== "true" || isFromToday(item.dataUtilizacao),
+    formatValue: () => "Ativo",
+  },
   {
     key: "status",
     label: "Status",
@@ -178,18 +202,34 @@ function searchSolicitation(item: Solicitation, search: string) {
   ].some((value) => normalizeFilterText(value).includes(search));
 }
 
-export function SolicitacoesRecebidasScreen() {
-  const navigation = useNavigation<any>();
-
+export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
   const [solicitations, setSolicitations] = useState<Solicitation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({});
+    useState<ActiveListFilters>({
+      fromToday: "true",
+    });
   const [activeSort, setActiveSort] = useState("");
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const initialStatus = route.params?.initialStatus;
+
+    if (!initialStatus) {
+      return;
+    }
+
+    setActiveFilters((current) => ({
+      ...current,
+      status: initialStatus,
+    }));
+    navigation.setParams({
+      initialStatus: undefined,
+    });
+  }, [route.params?.initialStatus, navigation]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -238,8 +278,14 @@ export function SolicitacoesRecebidasScreen() {
   }
 
   const overdueSolicitations = useMemo(() => {
-    return solicitations.filter((item) => isOverdue(item, currentTime));
-  }, [solicitations, currentTime]);
+    const onlyFromToday = activeFilters.fromToday === "true";
+
+    return solicitations.filter(
+      (item) =>
+        isOverdue(item, currentTime) &&
+        (!onlyFromToday || isFromToday(item.dataUtilizacao))
+    );
+  }, [solicitations, currentTime, activeFilters.fromToday]);
 
   const availableSolicitations = useMemo(
     () => solicitations.filter((item) => !isOverdue(item, currentTime)),

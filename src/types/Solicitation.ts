@@ -79,6 +79,7 @@ export interface SolicitationMachine {
   nome: string;
   laboratorioId?: string | null;
   laboratorioNome?: string;
+  devolvida?: boolean;
 }
 
 export interface SolicitationTool {
@@ -87,6 +88,15 @@ export interface SolicitationTool {
   quantidade: number;
   descricao?: string;
   quantidadeDisponivel?: number;
+  quantidadeDevolvida?: number;
+}
+
+export interface SolicitationReturnInput {
+  maquinasIds: string[];
+  ferramentas: {
+    recursoId: string;
+    quantidade: number;
+  }[];
 }
 
 export interface Solicitation {

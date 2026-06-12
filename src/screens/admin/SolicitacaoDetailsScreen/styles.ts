@@ -98,6 +98,7 @@ export const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 12,
         backgroundColor: colors.background,
+        gap: 6,
     },
 
     quantityText: {
@@ -109,6 +110,21 @@ export const styles = StyleSheet.create({
     quantityStrong: {
         fontFamily: typography.fontFamily.bold,
         color: colors.text,
+    },
+
+    returnStatus: {
+        alignSelf: "flex-start",
+        marginTop: 8,
+        fontSize: 13,
+        fontFamily: typography.fontFamily.semiBold,
+    },
+
+    returnedStatus: {
+        color: colors.success,
+    },
+
+    pendingStatus: {
+        color: colors.warning,
     },
 
     buttonContainer: {

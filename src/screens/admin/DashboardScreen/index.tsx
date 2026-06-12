@@ -56,6 +56,15 @@ export function DashboardScreen() {
     navigation.navigate(aba);
   }
 
+  function irParaDevolucoes() {
+    navigation.navigate("Solicitações", {
+      screen: "ReceivedSolicitations",
+      params: {
+        initialStatus: "EM_USO",
+      },
+    });
+  }
+
   function emBreve() {
     Alert.alert("Em breve", "Esta funcionalidade ainda não está disponível.");
   }
@@ -139,6 +148,21 @@ export function DashboardScreen() {
         <View style={styles.menuTextWrapper}>
           <Text style={styles.menuTitle}>Recursos</Text>
           <Text style={styles.menuSubtitle}>Controle de ferramentas</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={irParaDevolucoes}
+      >
+        <View style={styles.menuIconWrapper}>
+          <Feather name="corner-down-left" size={20} color="#fff" />
+        </View>
+        <View style={styles.menuTextWrapper}>
+          <Text style={styles.menuTitle}>Registrar devoluções</Text>
+          <Text style={styles.menuSubtitle}>
+            Solicitações com recursos em uso
+          </Text>
         </View>
       </TouchableOpacity>
 

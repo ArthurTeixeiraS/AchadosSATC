@@ -88,6 +88,9 @@ export function ProfessorSolicitationDetailsScreen({
   const { appUser } = useAuth();
 
   const canCancel = solicitation.status === "PENDENTE";
+  const showReturnProgress = ["EM_USO", "ENCERRADA"].includes(
+    solicitation.status
+  );
   const { draft, replaceDraft } = useSolicitationDraft();
 
   const [laboratoryNames, setLaboratoryNames] = useState<string[]>([]);
@@ -405,6 +408,21 @@ export function ProfessorSolicitationDetailsScreen({
                       ? ` • ${machine.laboratorioNome}`
                       : ""}
                   </Text>
+
+                  {showReturnProgress && (
+                    <Text
+                      style={[
+                        styles.returnStatus,
+                        machine.devolvida
+                          ? styles.returnedStatus
+                          : styles.pendingStatus,
+                      ]}
+                    >
+                      {machine.devolvida
+                        ? "Devolvida"
+                        : "Pendente de devolução"}
+                    </Text>
+                  )}
                 </View>
               ))}
             </>
@@ -439,6 +457,28 @@ export function ProfessorSolicitationDetailsScreen({
                           {tool.quantidadeDisponivel}
                         </Text>
                       </Text>
+                    )}
+
+                    {showReturnProgress && (
+                      <>
+                        <Text style={styles.quantityText}>
+                          Devolvida:{" "}
+                          <Text style={styles.quantityStrong}>
+                            {tool.quantidadeDevolvida ?? 0}
+                          </Text>
+                        </Text>
+
+                        <Text style={styles.quantityText}>
+                          Pendente:{" "}
+                          <Text style={styles.quantityStrong}>
+                            {Math.max(
+                              Number(tool.quantidade) -
+                                Number(tool.quantidadeDevolvida ?? 0),
+                              0
+                            )}
+                          </Text>
+                        </Text>
+                      </>
                     )}
                   </View>
                 </View>

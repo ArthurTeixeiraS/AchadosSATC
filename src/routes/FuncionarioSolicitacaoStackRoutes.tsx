@@ -3,10 +3,19 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { SolicitacoesRecebidasScreen } from "../screens/admin/SolicitacoesRecebidasScreen";
 import { FuncionarioSolicitationDetailsScreen } from "../screens/admin/SolicitacaoDetailsScreen";
+import { RegisterSolicitationReturnScreen } from "../screens/admin/RegisterSolicitationReturnScreen";
+import type { SolicitationStatus } from "../types/Solicitation";
 
 export type FuncionarioSolicitacaoStackParamList = {
-  ReceivedSolicitations: undefined;
+  ReceivedSolicitations:
+    | {
+        initialStatus?: SolicitationStatus;
+      }
+    | undefined;
   FuncionarioSolicitationDetails: {
+    solicitationId: string;
+  };
+  RegisterSolicitationReturn: {
     solicitationId: string;
   };
 };
@@ -25,6 +34,11 @@ export function FuncionarioSolicitacaoStackRoutes() {
       <Stack.Screen
         name="FuncionarioSolicitationDetails"
         component={FuncionarioSolicitationDetailsScreen}
+      />
+
+      <Stack.Screen
+        name="RegisterSolicitationReturn"
+        component={RegisterSolicitationReturnScreen}
       />
     </Stack.Navigator>
   );
