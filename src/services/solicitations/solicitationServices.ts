@@ -27,6 +27,12 @@ import {
 const COLLECTION_NAME = "solicitacoes";
 const RESOURCE_COLLECTION_NAME = "recursos";
 
+export type DashboardStats = {
+  pendentes: number;
+  novas: number;
+  encerradas: number;
+};
+
 const SHIFT_END_TIME: Record<
   SolicitationShift,
   { hours: number; minutes: number }
@@ -401,41 +407,60 @@ export async function listSolicitations(): Promise<Solicitation[]> {
   );
 }
 
+function getCurrentWeekRange() {
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  return { startOfWeek, endOfWeek };
+}
+
+function calculateDashboardStats(
+  documents: readonly { data: () => DocumentData }[]
+): DashboardStats {
+  const { startOfWeek, endOfWeek } = getCurrentWeekRange();
+  const currentWeek = documents.filter((document) => {
+    const data = document.data();
+
+    if (!data.createdAt) {
+      return false;
+    }
+
+    const createdAt = data.createdAt.toDate();
+    return createdAt >= startOfWeek && createdAt <= endOfWeek;
+  });
+
+  return {
+    pendentes: currentWeek.filter(
+      (document) => document.data().status === "PENDENTE"
+    ).length,
+    novas: currentWeek.filter(
+      (document) => document.data().status === "APROVADA"
+    ).length,
+    encerradas: currentWeek.filter(
+      (document) => document.data().status === "ENCERRADA"
+    ).length,
+  };
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+
+  return calculateDashboardStats(snapshot.docs);
+}
+
 export function subscribeDashboardStats(
-  callback: (stats: { pendentes: number; novas: number; encerradas: number }) => void
+  callback: (stats: DashboardStats) => void
 ) {
   const solicitacoesRef = collection(db, COLLECTION_NAME);
 
-  const hoje = new Date();
-  const inicioDaSemana = new Date(hoje);
-  inicioDaSemana.setDate(hoje.getDate() - hoje.getDay());
-  inicioDaSemana.setHours(0, 0, 0, 0);
-
-  const fimDaSemana = new Date(inicioDaSemana);
-  fimDaSemana.setDate(inicioDaSemana.getDate() + 6);
-  fimDaSemana.setHours(23, 59, 59, 999);
-
   return onSnapshot(solicitacoesRef, (snapshot) => {
-    const daSemana = snapshot.docs.filter((doc) => {
-      const data = doc.data();
-      if (!data.createdAt) return false;
-      const createdAt = data.createdAt.toDate();
-      return createdAt >= inicioDaSemana && createdAt <= fimDaSemana;
-    });
-
-    const pendentes = daSemana.filter(
-      (doc) => doc.data().status === "PENDENTE"
-    ).length;
-
-    const novas = daSemana.filter(
-      (doc) => doc.data().status === "APROVADA"
-    ).length;
-
-    const encerradas = daSemana.filter(
-      (doc) => doc.data().status === "ENCERRADA"
-    ).length;
-
-    callback({ pendentes, novas, encerradas });
+    callback(calculateDashboardStats(snapshot.docs));
   });
 }
 

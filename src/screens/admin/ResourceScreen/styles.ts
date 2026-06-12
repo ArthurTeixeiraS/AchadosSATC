@@ -4,6 +4,14 @@ import { colors } from "../../../styles/colors";
 import { typography } from "../../../styles/typography";
 
 export const styles = StyleSheet.create({
+  emptyList: {
+    flex: 1,
+  },
+
+  emptyListContent: {
+    flexGrow: 1,
+  },
+
   listContent: {
     paddingBottom: 24,
   },

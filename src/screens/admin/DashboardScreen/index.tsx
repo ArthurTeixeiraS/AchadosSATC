@@ -1,11 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
-import { subscribeDashboardStats } from "../../../services/solicitations/solicitationServices";
+import {
+  DashboardStats,
+  getDashboardStats,
+  subscribeDashboardStats,
+} from "../../../services/solicitations/solicitationServices";
+import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
 
 export function DashboardScreen() {
@@ -18,15 +31,26 @@ export function DashboardScreen() {
   const [novas, setNovas] = useState(0);
   const [encerradas, setEncerradas] = useState(0);
 
+  function updateStats(stats: DashboardStats) {
+    setPendentes(stats.pendentes);
+    setNovas(stats.novas);
+    setEncerradas(stats.encerradas);
+  }
+
   useEffect(() => {
-    const unsubscribe = subscribeDashboardStats((stats) => {
-      setPendentes(stats.pendentes);
-      setNovas(stats.novas);
-      setEncerradas(stats.encerradas);
-    });
+    const unsubscribe = subscribeDashboardStats(updateStats);
 
     return unsubscribe;
   }, []);
+
+  const { refreshing, refresh } = useManualRefresh({
+    onRefresh: async () => {
+      const stats = await getDashboardStats();
+      updateStats(stats);
+    },
+    errorMessage:
+      "Não foi possível atualizar os dados do dashboard. Tente novamente.",
+  });
 
   function irPara(aba: string) {
     navigation.navigate(aba);
@@ -38,7 +62,17 @@ export function DashboardScreen() {
 
   return (
     <ScreenContainer style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <View style={styles.header}>
         <View style={styles.avatar}>
           <Feather name="user" size={22} color="#fff" />
