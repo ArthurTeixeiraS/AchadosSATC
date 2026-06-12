@@ -11,6 +11,7 @@ import { AppAlert } from "../../../components/AppAlert";
 import { Loading } from "../../../components/Loading";
 import { EmptyState } from "../../../components/EmptyState";
 import { AppInput } from "../../../components/AppInput";
+import { SolicitationAuditTimeline } from "../../../components/SolicitationAuditTimeline";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { FuncionarioSolicitacaoStackParamList } from "../../../routes/FuncionarioSolicitacaoStackRoutes";
@@ -161,8 +162,7 @@ export function FuncionarioSolicitationDetailsScreen({
                             () =>
                                 approveSolicitation(
                                     solicitationId,
-                                    employee.id,
-                                    employee.nomeCompleto
+                                    employee
                                 ),
                             "Solicitação aprovada com sucesso."
                         ),
@@ -185,8 +185,7 @@ export function FuncionarioSolicitationDetailsScreen({
             () =>
                 rejectSolicitation(
                     solicitation.id,
-                    appUser.id,
-                    appUser.nomeCompleto,
+                    appUser,
                     rejectReason.trim()
                 ),
             "Solicitação recusada com sucesso."
@@ -216,8 +215,7 @@ export function FuncionarioSolicitationDetailsScreen({
                             () =>
                                 registerSolicitationWithdrawal(
                                     solicitationId,
-                                    employee.id,
-                                    employee.nomeCompleto
+                                    employee
                                 ),
                             "Retirada registrada com sucesso."
                         ),
@@ -244,8 +242,7 @@ export function FuncionarioSolicitationDetailsScreen({
                             () =>
                                 registerSolicitationReturn(
                                     solicitationId,
-                                    employee.id,
-                                    employee.nomeCompleto
+                                    employee
                                 ),
                             "Devolução registrada com sucesso."
                         ),
@@ -390,6 +387,8 @@ export function FuncionarioSolicitationDetailsScreen({
                         </>
                     )}
                 </AppCard>
+
+                <SolicitationAuditTimeline solicitation={solicitation} />
 
                 <View style={styles.buttonContainer}>
                     {canApproveOrReject && (

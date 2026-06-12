@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { FirebaseError } from "firebase/app";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppCard } from "../../../components/AppCard";
@@ -130,12 +131,20 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
         } catch (error) {
             console.log("Erro ao criar solicitação:", error);
 
+            const isPermissionError =
+                error instanceof FirebaseError &&
+                error.code === "permission-denied";
+
             Alert.alert(
                 error instanceof SolicitationBusinessError
                     ? "Solicitação indisponível"
+                    : isPermissionError
+                    ? "Permissão não configurada"
                     : "Erro ao enviar",
                 error instanceof SolicitationBusinessError
                     ? error.message
+                    : isPermissionError
+                    ? "As regras de auditoria do Firebase ainda não foram publicadas. Atualize as regras do Firestore e tente novamente."
                     : "Não foi possível enviar a solicitação. Tente novamente."
             );
         } finally {
@@ -212,7 +221,6 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         <EmptyState
                             icon="tool"
                             title="Nenhuma máquina selecionada"
-                            message="A solicitação pode conter apenas ferramentas."
                         />
                     ) : (
                         draft.maquinasSelecionadas.map((item) => (
@@ -246,7 +254,6 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         <EmptyState
                             icon="briefcase"
                             title="Nenhuma ferramenta selecionada"
-                            message="A solicitação pode conter apenas máquinas."
                         />
                     ) : (
                         draft.ferramentasSelecionadas.map((item) => (
