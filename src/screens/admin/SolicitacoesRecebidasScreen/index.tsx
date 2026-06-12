@@ -1,39 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, TouchableOpacity, View } from "react-native";
-import { Text, TextInput } from "react-native-paper";
+import { Text } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
-import { AppInput } from "../../../components/AppInput";
 import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
-import { AllFilters } from "../../../components/Allfilters";
 import { AppAlert } from "../../../components/AppAlert";
+import {
+  ActiveListFilters,
+  AppListFilter,
+  FilterDefinition,
+  normalizeFilterText,
+  SortDefinition,
+  useListFilter,
+} from "../../../components/AppListFilter";
 
 import {
   isSolicitationOverdue,
   listSolicitations,
 } from "../../../services/solicitations/solicitationServices";
+import { Solicitation } from "../../../types/Solicitation";
 
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
-
-type Solicitation = any;
 
 type SolicitationGroup = {
   date: string;
   items: Solicitation[];
 };
-
-const statusFilters = [
-  "Todos",
-  "Pendente",
-  "Imediata",
-  "Aprovada",
-  "Em uso",
-];
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -76,6 +73,104 @@ function isOverdue(item: Solicitation, now: Date) {
   return isSolicitationOverdue(item, now);
 }
 
+function getCreatedAtSeconds(item: Solicitation) {
+  return item.createdAt?.seconds ?? 0;
+}
+
+function parseBrazilianDate(value: string) {
+  const [day, month, year] = value.split("/").map(Number);
+  return new Date(year, month - 1, day).getTime();
+}
+
+const solicitationFilters: readonly FilterDefinition<Solicitation>[] = [
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: [
+      { label: "Pendente", value: "PENDENTE" },
+      { label: "Aprovada", value: "APROVADA" },
+      { label: "Recusada", value: "RECUSADA" },
+      { label: "Em uso", value: "EM_USO" },
+      { label: "Encerrada", value: "ENCERRADA" },
+      { label: "Cancelada", value: "CANCELADA" },
+    ],
+    predicate: (item, value) => item.status === value,
+  },
+  {
+    key: "prioridade",
+    label: "Prioridade",
+    type: "select",
+    options: [
+      { label: "Normal", value: "NORMAL" },
+      { label: "Imediata", value: "IMEDIATA" },
+    ],
+    predicate: (item, value) => item.prioridade === value,
+  },
+  {
+    key: "dataUtilizacao",
+    label: "Data de uso",
+    type: "date",
+    predicate: (item, value) => item.dataUtilizacao === value,
+  },
+  {
+    key: "turno",
+    label: "Turno",
+    type: "select",
+    options: [
+      { label: "Tarde", value: "TARDE" },
+      { label: "Noite", value: "NOITE" },
+    ],
+    predicate: (item, value) => item.turno === value,
+  },
+];
+
+const solicitationSorts: readonly SortDefinition<Solicitation>[] = [
+  {
+    key: "use-date-asc",
+    label: "Data de uso mais próxima",
+    compare: (a, b) =>
+      parseBrazilianDate(a.dataUtilizacao) -
+      parseBrazilianDate(b.dataUtilizacao),
+  },
+  {
+    key: "use-date-desc",
+    label: "Data de uso mais distante",
+    compare: (a, b) =>
+      parseBrazilianDate(b.dataUtilizacao) -
+      parseBrazilianDate(a.dataUtilizacao),
+  },
+  {
+    key: "created-desc",
+    label: "Criadas recentemente",
+    compare: (a, b) => getCreatedAtSeconds(b) - getCreatedAtSeconds(a),
+  },
+  {
+    key: "created-asc",
+    label: "Criadas há mais tempo",
+    compare: (a, b) => getCreatedAtSeconds(a) - getCreatedAtSeconds(b),
+  },
+  {
+    key: "professor-asc",
+    label: "Professor de A a Z",
+    compare: (a, b) => a.professorNome.localeCompare(b.professorNome),
+  },
+  {
+    key: "professor-desc",
+    label: "Professor de Z a A",
+    compare: (a, b) => b.professorNome.localeCompare(a.professorNome),
+  },
+];
+
+function searchSolicitation(item: Solicitation, search: string) {
+  return [
+    item.professorNome,
+    item.professorCracha,
+    item.id,
+    getSolicitationCode(item.id),
+  ].some((value) => normalizeFilterText(value).includes(search));
+}
+
 export function SolicitacoesRecebidasScreen() {
   const navigation = useNavigation<any>();
 
@@ -83,7 +178,9 @@ export function SolicitacoesRecebidasScreen() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
+  const [activeFilters, setActiveFilters] =
+    useState<ActiveListFilters>({});
+  const [activeSort, setActiveSort] = useState("");
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -129,37 +226,25 @@ export function SolicitacoesRecebidasScreen() {
     return solicitations.filter((item) => isOverdue(item, currentTime));
   }, [solicitations, currentTime]);
 
+  const availableSolicitations = useMemo(
+    () => solicitations.filter((item) => !isOverdue(item, currentTime)),
+    [solicitations, currentTime]
+  );
+
+  const filteredSolicitations = useListFilter({
+    data: availableSolicitations,
+    search,
+    filters: solicitationFilters,
+    activeFilters,
+    sorts: solicitationSorts,
+    activeSort,
+    searchPredicate: searchSolicitation,
+  });
+
   const groupedSolicitations = useMemo<SolicitationGroup[]>(() => {
-    let data = solicitations.filter(
-      (item) => !isOverdue(item, currentTime)
-    );
-
-    data = data.filter((item) => {
-      if (statusFilter === "Todos") return true;
-      if (statusFilter === "Pendente") return item.status === "PENDENTE";
-      if (statusFilter === "Imediata") return item.prioridade === "IMEDIATA";
-      if (statusFilter === "Aprovada") return item.status === "APROVADA";
-      if (statusFilter === "Em uso") return item.status === "EM_USO";
-
-      return true;
-    });
-
-    data = data.filter((item) => {
-      if (!search.trim()) return true;
-
-      const text = search.toLowerCase();
-
-      return (
-        item.professorNome?.toLowerCase().includes(text) ||
-        item.professorCracha?.toLowerCase().includes(text) ||
-        item.id?.toLowerCase().includes(text) ||
-        getSolicitationCode(item.id).toLowerCase().includes(text)
-      );
-    });
-
     const groups: Record<string, Solicitation[]> = {};
 
-    data.forEach((item) => {
+    filteredSolicitations.forEach((item) => {
       const date = item.dataUtilizacao || "Sem data";
 
       if (!groups[date]) {
@@ -174,8 +259,8 @@ export function SolicitacoesRecebidasScreen() {
         date,
         items,
       }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [solicitations, search, statusFilter, currentTime]);
+      .sort((a, b) => parseBrazilianDate(a.date) - parseBrazilianDate(b.date));
+  }, [filteredSolicitations]);
 
   function renderSolicitationCard(item: Solicitation) {
     return (
@@ -243,23 +328,17 @@ export function SolicitacoesRecebidasScreen() {
 
   return (
     <ScreenContainer>
-      <AppInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Buscar por professor, crachá ou código"
-        left={<TextInput.Icon icon="magnify" />}
-        style={styles.searchInput}
+      <AppListFilter
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por professor, crachá ou código"
+        filters={solicitationFilters}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sorts={solicitationSorts}
+        activeSort={activeSort}
+        onSortChange={setActiveSort}
       />
-
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterTitle}>Status</Text>
-
-        <AllFilters
-          filters={statusFilters}
-          selectedFilter={statusFilter}
-          onSelectFilter={setStatusFilter}
-        />
-      </View>
 
       {overdueSolicitations.length > 0 && (
         <View style={styles.overdueSection}>
@@ -280,7 +359,11 @@ export function SolicitacoesRecebidasScreen() {
           <EmptyState
             icon="file-text"
             title="Nenhuma solicitação encontrada"
-            message="As solicitações dos professores aparecerão aqui."
+            message={
+              solicitations.length === 0
+                ? "As solicitações dos professores aparecerão aqui."
+                : "Tente alterar a busca ou os filtros aplicados."
+            }
           />
         </AppCard>
       ) : (

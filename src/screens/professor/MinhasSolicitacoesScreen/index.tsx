@@ -9,7 +9,14 @@ import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
 import { AppAlert } from "../../../components/AppAlert";
-import { AllFilters } from "../../../components/Allfilters";
+import {
+  ActiveListFilters,
+  AppListFilter,
+  FilterDefinition,
+  normalizeFilterText,
+  SortDefinition,
+  useListFilter,
+} from "../../../components/AppListFilter";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import {
@@ -20,32 +27,9 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicitacoesStackRoutes";
+import { Solicitation } from "../../../types/Solicitation";
 
 import { styles } from "./styles";
-
-type Solicitation = any;
-
-const statusFilters = [
-  "Todos",
-  "Pendente",
-  "Aprovada",
-  "Recusada",
-  "Em uso",
-  "Encerrada",
-  "Cancelada",
-];
-
-const priorityFilters = [
-  "Todas",
-  "Normal",
-  "Imediata",
-];
-
-const orderFilters = [
-  "Status",
-  "Data de uso",
-  "Criados recentemente",
-];
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -114,15 +98,82 @@ function getStatusPriority(item: Solicitation, now: Date) {
   return priorities[item.status] ?? 99;
 }
 
+function getCreatedAtSeconds(item: Solicitation) {
+  return item.createdAt?.seconds ?? 0;
+}
+
+function parseBrazilianDate(value: string) {
+  const [day, month, year] = value.split("/").map(Number);
+  return new Date(year, month - 1, day).getTime();
+}
+
+const mySolicitationFilters: readonly FilterDefinition<Solicitation>[] = [
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    options: [
+      { label: "Pendente", value: "PENDENTE" },
+      { label: "Aprovada", value: "APROVADA" },
+      { label: "Recusada", value: "RECUSADA" },
+      { label: "Em uso", value: "EM_USO" },
+      { label: "Encerrada", value: "ENCERRADA" },
+      { label: "Cancelada", value: "CANCELADA" },
+    ],
+    predicate: (item, value) => item.status === value,
+  },
+  {
+    key: "prioridade",
+    label: "Prioridade",
+    type: "select",
+    options: [
+      { label: "Normal", value: "NORMAL" },
+      { label: "Imediata", value: "IMEDIATA" },
+    ],
+    predicate: (item, value) => item.prioridade === value,
+  },
+  {
+    key: "dataUtilizacao",
+    label: "Data de uso",
+    type: "date",
+    predicate: (item, value) => item.dataUtilizacao === value,
+  },
+  {
+    key: "turno",
+    label: "Turno",
+    type: "select",
+    options: [
+      { label: "Tarde", value: "TARDE" },
+      { label: "Noite", value: "NOITE" },
+    ],
+    predicate: (item, value) => item.turno === value,
+  },
+];
+
+function searchMySolicitation(item: Solicitation, search: string) {
+  const resourceNames = [
+    ...item.maquinas.map((machine) => machine.nome),
+    ...item.ferramentas.map((tool) => tool.nome),
+  ];
+
+  return [
+    item.id,
+    `SL-${item.id.slice(0, 4).toUpperCase()}`,
+    item.atividade,
+    ...resourceNames,
+  ].some((value) => normalizeFilterText(value).includes(search));
+}
+
 export function MinhasSolicitacoesScreen() {
   const { appUser } = useAuth();
 
   const [solicitations, setSolicitations] = useState<Solicitation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [statusFilter, setStatusFilter] = useState("Todos");
-  const [orderFilter, setOrderFilter] = useState("Status");
-  const [priorityFilter, setPriorityFilter] = useState("Todas");
+  const [search, setSearch] = useState("");
+  const [activeFilters, setActiveFilters] =
+    useState<ActiveListFilters>({});
+  const [activeSort, setActiveSort] = useState("status-priority");
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
@@ -158,67 +209,54 @@ export function MinhasSolicitacoesScreen() {
     }, [appUser])
   );
 
-  const filteredSolicitations = useMemo(() => {
-    let data = [...solicitations];
-
-    data = data.filter((item) => {
-      if (statusFilter === "Todos") return true;
-      if (statusFilter === "Pendente") return item.status === "PENDENTE";
-      if (statusFilter === "Aprovada") return item.status === "APROVADA";
-      if (statusFilter === "Recusada") return item.status === "RECUSADA";
-      if (statusFilter === "Em uso") return item.status === "EM_USO";
-      if (statusFilter === "Encerrada") return item.status === "ENCERRADA";
-      if (statusFilter === "Cancelada") return item.status === "CANCELADA";
-
-      return true;
-    });
-
-    data = data.filter((item) => {
-      if (priorityFilter === "Todas") return true;
-      if (priorityFilter === "Normal") return item.prioridade === "NORMAL";
-      if (priorityFilter === "Imediata") return item.prioridade === "IMEDIATA";
-
-      return true;
-    });
-
-    data.sort((a, b) => {
-      const overdueDiff =
-        Number(isOverdue(b, currentTime)) -
-        Number(isOverdue(a, currentTime));
-
-      if (overdueDiff !== 0) {
-        return overdueDiff;
-      }
-
-      if (orderFilter === "Status") {
-        return (
+  const mySolicitationSorts = useMemo<
+    readonly SortDefinition<Solicitation>[]
+  >(
+    () => [
+      {
+        key: "status-priority",
+        label: "Prioridade por status",
+        compare: (a, b) =>
           getStatusPriority(a, currentTime) -
-          getStatusPriority(b, currentTime)
-        );
-      }
+          getStatusPriority(b, currentTime),
+      },
+      {
+        key: "use-date-asc",
+        label: "Data de uso mais próxima",
+        compare: (a, b) =>
+          parseBrazilianDate(a.dataUtilizacao) -
+          parseBrazilianDate(b.dataUtilizacao),
+      },
+      {
+        key: "use-date-desc",
+        label: "Data de uso mais distante",
+        compare: (a, b) =>
+          parseBrazilianDate(b.dataUtilizacao) -
+          parseBrazilianDate(a.dataUtilizacao),
+      },
+      {
+        key: "created-desc",
+        label: "Criadas recentemente",
+        compare: (a, b) => getCreatedAtSeconds(b) - getCreatedAtSeconds(a),
+      },
+      {
+        key: "created-asc",
+        label: "Criadas há mais tempo",
+        compare: (a, b) => getCreatedAtSeconds(a) - getCreatedAtSeconds(b),
+      },
+    ],
+    [currentTime]
+  );
 
-      if (orderFilter === "Data de uso") {
-        return String(b.dataUtilizacao).localeCompare(String(a.dataUtilizacao));
-      }
-
-      if (orderFilter === "Criados recentemente") {
-        const aSeconds = a.createdAt?.seconds ?? 0;
-        const bSeconds = b.createdAt?.seconds ?? 0;
-
-        return bSeconds - aSeconds;
-      }
-
-      return 0;
-    });
-
-    return data;
-  }, [
-    solicitations,
-    statusFilter,
-    priorityFilter,
-    orderFilter,
-    currentTime,
-  ]);
+  const filteredSolicitations = useListFilter({
+    data: solicitations,
+    search,
+    filters: mySolicitationFilters,
+    activeFilters,
+    sorts: mySolicitationSorts,
+    activeSort,
+    searchPredicate: searchMySolicitation,
+  });
 
   if (loading) {
     return <Loading message="Carregando solicitações..." />;
@@ -232,42 +270,28 @@ export function MinhasSolicitacoesScreen() {
         message="A devolução é obrigatória ao final do mesmo turno."
       />
 
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterTitle}>Status</Text>
-
-        <AllFilters
-          filters={statusFilters}
-          selectedFilter={statusFilter}
-          onSelectFilter={setStatusFilter}
-        />
-      </View>
-
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterTitle}>Prioridade</Text>
-
-        <AllFilters
-          filters={priorityFilters}
-          selectedFilter={priorityFilter}
-          onSelectFilter={setPriorityFilter}
-        />
-      </View>
-
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterTitle}>Ordenar por</Text>
-
-        <AllFilters
-          filters={orderFilters}
-          selectedFilter={orderFilter}
-          onSelectFilter={setOrderFilter}
-        />
-      </View>
+      <AppListFilter
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por código, atividade ou recurso"
+        filters={mySolicitationFilters}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sorts={mySolicitationSorts}
+        activeSort={activeSort}
+        onSortChange={setActiveSort}
+      />
 
       {filteredSolicitations.length === 0 ? (
         <AppCard>
           <EmptyState
             icon="file-text"
             title="Nenhuma solicitação encontrada"
-            message="Suas solicitações aparecerão aqui."
+            message={
+              solicitations.length === 0
+                ? "Suas solicitações aparecerão aqui."
+                : "Tente alterar a busca ou os filtros aplicados."
+            }
           />
         </AppCard>
       ) : (

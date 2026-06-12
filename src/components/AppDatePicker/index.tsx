@@ -18,18 +18,34 @@ type Props = {
   label?: string;
   value: string;
   onChange: (date: string) => void;
+  minimumDate?: Date;
+  maximumDate?: Date;
+  allowPastDates?: boolean;
 };
 
 export function AppDatePicker({
   label,
   value,
   onChange,
+  minimumDate,
+  maximumDate,
+  allowPastDates = false,
 }: Props) {
   const [showPicker, setShowPicker] =
     useState(false);
 
   function formatDate(date: Date) {
     return date.toLocaleDateString("pt-BR");
+  }
+
+  function getPickerValue() {
+    const [day, month, year] = value.split("/").map(Number);
+
+    if (day && month && year) {
+      return new Date(year, month - 1, day);
+    }
+
+    return new Date();
   }
 
   function handleChange(_: any, selectedDate?: Date) {
@@ -70,7 +86,7 @@ export function AppDatePicker({
 
       {showPicker && (
         <DateTimePicker
-          value={new Date()}
+          value={getPickerValue()}
           mode="date"
           display={
             Platform.OS === "ios"
@@ -78,7 +94,10 @@ export function AppDatePicker({
               : "default"
           }
           onChange={handleChange}
-          minimumDate={new Date()}
+          minimumDate={
+            minimumDate ?? (allowPastDates ? undefined : new Date())
+          }
+          maximumDate={maximumDate}
         />
       )}
     </View>

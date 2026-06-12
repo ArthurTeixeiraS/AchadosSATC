@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FlatList, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
@@ -9,12 +9,19 @@ import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
 import Feather from "@expo/vector-icons/Feather";
+import {
+  ActiveListFilters,
+  AppListFilter,
+  FilterDefinition,
+  normalizeFilterText,
+  SortDefinition,
+  useListFilter,
+} from "../../../components/AppListFilter";
 
 import { listResources } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
 
 import { styles } from "./styles";
-import { AllFilters } from "../../../components/Allfilters";
 import { FAB } from "react-native-paper";
 import { colors } from "../../../styles/colors";
 import { useNavigation } from "@react-navigation/native";
@@ -23,15 +30,58 @@ import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 
 // Seria interessante exibir os laboratórios aos quais as máquinas estão associadas
 
+const resourceSorts: readonly SortDefinition<Resource>[] = [
+  {
+    key: "name-asc",
+    label: "Nome de A a Z",
+    compare: (a, b) => a.nome.localeCompare(b.nome),
+  },
+  {
+    key: "name-desc",
+    label: "Nome de Z a A",
+    compare: (a, b) => b.nome.localeCompare(a.nome),
+  },
+  {
+    key: "type-asc",
+    label: "Tipo de recurso",
+    compare: (a, b) => a.tipo.localeCompare(b.tipo),
+  },
+  {
+    key: "status-asc",
+    label: "Status",
+    compare: (a, b) => a.status.localeCompare(b.status),
+  },
+  {
+    key: "quantity-asc",
+    label: "Menor quantidade disponível",
+    compare: (a, b) =>
+      (a.quantidadeDisponivel ?? 0) - (b.quantidadeDisponivel ?? 0),
+  },
+  {
+    key: "quantity-desc",
+    label: "Maior quantidade disponível",
+    compare: (a, b) =>
+      (b.quantidadeDisponivel ?? 0) - (a.quantidadeDisponivel ?? 0),
+  },
+];
+
+function searchResource(item: Resource, search: string) {
+  return [
+    item.nome,
+    item.descricao,
+    item.patrimonio,
+    item.localizacao,
+  ].some((value) => normalizeFilterText(value).includes(search));
+}
+
 export function ResourceScreen() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("Todos");
-  const [typeFilter, setTypeFilter] = useState("Todos");
+  const [search, setSearch] = useState("");
+  const [activeFilters, setActiveFilters] =
+    useState<ActiveListFilters>({});
+  const [activeSort, setActiveSort] = useState("name-asc");
   const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
-
-  const statusFilters = ["Todos", "Disponíveis", "Em Uso", "Manutenção"];
-  const typeFilters = ["Todos", "Ferramenta", "Máquina", "Laboratório"];
 
   async function loadResources() {
     try {
@@ -53,25 +103,71 @@ export function ResourceScreen() {
     }, [])
   );
 
+  const resourceFilters = useMemo<
+    readonly FilterDefinition<Resource>[]
+  >(() => {
+    const laboratories = resources
+      .filter((resource) => resource.tipo === "LABORATORIO")
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+
+    return [
+      {
+        key: "tipo",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { label: "Ferramenta", value: "FERRAMENTA" },
+          { label: "Máquina", value: "MAQUINA" },
+          { label: "Laboratório", value: "LABORATORIO" },
+        ],
+        predicate: (item, value) => item.tipo === value,
+      },
+      {
+        key: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { label: "Disponível", value: "DISPONIVEL" },
+          { label: "Em uso", value: "EM_USO" },
+          { label: "Manutenção", value: "MANUTENCAO" },
+        ],
+        predicate: (item, value) => item.status === value,
+      },
+      {
+        key: "laboratorio",
+        label: "Laboratório relacionado",
+        type: "select",
+        options: laboratories.map((laboratory) => ({
+          label: laboratory.nome,
+          value: laboratory.id,
+        })),
+        predicate: (item, value) =>
+          item.id === value || item.laboratorioId === value,
+      },
+      {
+        key: "quantidadeDisponivel",
+        label: "Quantidade disponível",
+        type: "number",
+        placeholder: "Informe a quantidade exata",
+        predicate: (item, value) =>
+          (item.quantidadeDisponivel ?? 0) === Number(value),
+      },
+    ];
+  }, [resources]);
+
+  const filteredResources = useListFilter({
+    data: resources,
+    search,
+    filters: resourceFilters,
+    activeFilters,
+    sorts: resourceSorts,
+    activeSort,
+    searchPredicate: searchResource,
+  });
+
   if (loading) {
     return <Loading message="Carregando recursos..." />;
   }
-
-  const filteredResources = resources.filter((resource) => {
-    const matchesStatus =
-      statusFilter === "Todos" ||
-      (statusFilter === "Disponíveis" && resource.status === "DISPONIVEL") ||
-      (statusFilter === "Em Uso" && resource.status === "EM_USO") ||
-      (statusFilter === "Manutenção" && resource.status === "MANUTENCAO");
-
-    const matchesType =
-      typeFilter === "Todos" ||
-      (typeFilter === "Ferramenta" && resource.tipo === "FERRAMENTA") ||
-      (typeFilter === "Máquina" && resource.tipo === "MAQUINA") ||
-      (typeFilter === "Laboratório" && resource.tipo === "LABORATORIO");
-
-    return matchesStatus && matchesType;
-  });
 
   function getStatusLabel(status: string) {
     const labels: Record<string, string> = {
@@ -95,21 +191,17 @@ export function ResourceScreen() {
 
   return (
     <ScreenContainer>
-      <AppCard>
-        <AllFilters
-          filters={statusFilters}
-          selectedFilter={statusFilter}
-          onSelectFilter={setStatusFilter}
-        />
-      </AppCard>
-
-      <AppCard>
-        <AllFilters
-          filters={typeFilters}
-          selectedFilter={typeFilter}
-          onSelectFilter={setTypeFilter}
-        />
-      </AppCard>
+      <AppListFilter
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nome, patrimônio ou localização"
+        filters={resourceFilters}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sorts={resourceSorts}
+        activeSort={activeSort}
+        onSortChange={setActiveSort}
+      />
 
       {resources.length === 0 ? (
         <AppCard>
@@ -123,8 +215,8 @@ export function ResourceScreen() {
         <AppCard>
           <EmptyState
             icon="briefcase"
-            title="Nenhum recurso cadastrado"
-            message="Os recursos cadastrados aparecerão aqui."
+            title="Nenhum recurso encontrado"
+            message="Tente alterar a busca ou os filtros aplicados."
           />
         </AppCard>
       ) : (

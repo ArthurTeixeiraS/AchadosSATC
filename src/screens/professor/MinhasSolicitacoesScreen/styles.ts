@@ -4,17 +4,6 @@ import { colors } from "../../../styles/colors";
 import { typography } from "../../../styles/typography";
 
 export const styles = StyleSheet.create({
-  filterGroup: {
-    marginBottom: 5,
-  },
-
-  filterTitle: {
-    marginBottom: 6,
-    fontSize: 13,
-    fontFamily: typography.fontFamily.semiBold,
-    color: colors.textSecondary,
-  },
-
   listContent: {
     paddingBottom: 32,
   },
