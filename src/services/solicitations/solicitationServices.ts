@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   DocumentData,
   DocumentReference,
@@ -9,7 +8,7 @@ import {
   runTransaction,
   serverTimestamp,
   where,
-  updateDoc,
+  writeBatch,
   doc,
   getDoc,
 } from "firebase/firestore";
@@ -23,6 +22,11 @@ import {
   SolicitationStatus,
   SolicitationTool,
 } from "../../types/Solicitation";
+import {
+  AUDIT_COLLECTION_NAME,
+  createAuditEventData,
+  getSolicitationAuditItems,
+} from "./solicitationAuditServices";
 
 const COLLECTION_NAME = "solicitacoes";
 const RESOURCE_COLLECTION_NAME = "recursos";
@@ -377,7 +381,13 @@ export async function createSolicitation(
     quantidade: item.quantidade,
   }));
 
-  const docRef = await addDoc(solicitacoesRef, {
+  const solicitationRef = doc(solicitacoesRef);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
+  const batch = writeBatch(db);
+
+  batch.set(solicitationRef, {
     professorId: professor.id,
     professorNome: professor.nomeCompleto,
     professorCracha: professor.cracha,
@@ -394,7 +404,37 @@ export async function createSolicitation(
     updatedAt: serverTimestamp(),
   });
 
-  return docRef.id;
+  batch.set(auditRef, {
+    ...createAuditEventData({
+      solicitationId: solicitationRef.id,
+      type: "CRIACAO",
+      actor: {
+        id: professor.id,
+        nome: professor.nomeCompleto,
+        perfil: professor.tipoUsuario,
+      },
+      newStatus: "PENDENTE",
+      items: [
+        ...maquinas.map((machine) => ({
+          recursoId: machine.recursoId,
+          nome: machine.nome,
+          tipo: "MAQUINA" as const,
+          quantidade: 1,
+        })),
+        ...ferramentas.map((tool) => ({
+          recursoId: tool.recursoId,
+          nome: tool.nome,
+          tipo: "FERRAMENTA" as const,
+          quantidade: tool.quantidade,
+        })),
+      ],
+    }),
+    createdAt: serverTimestamp(),
+  });
+
+  await batch.commit();
+
+  return solicitationRef.id;
 }
 
 export async function listSolicitations(): Promise<Solicitation[]> {
@@ -464,13 +504,54 @@ export function subscribeDashboardStats(
   });
 }
 
-export async function cancelSolicitation(id: string): Promise<void> {
+export async function cancelSolicitation(
+  id: string,
+  professor: AppUser
+): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
 
-  await updateDoc(solicitationRef, {
-    status: "CANCELADA",
-    canceladaEm: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(solicitation.status, "PENDENTE", "cancelar");
+
+    transaction.update(solicitationRef, {
+      status: "CANCELADA",
+      canceladaEm: serverTimestamp(),
+      canceladaPorId: professor.id,
+      canceladaPorNome: professor.nomeCompleto,
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: "CANCELAMENTO",
+        actor: {
+          id: professor.id,
+          nome: professor.nomeCompleto,
+          perfil: professor.tipoUsuario,
+        },
+        previousStatus: solicitation.status,
+        newStatus: "CANCELADA",
+      }),
+      createdAt: serverTimestamp(),
+    });
   });
 }
 
@@ -507,10 +588,12 @@ export async function getSolicitationById(
 
 export async function approveSolicitation(
   id: string,
-  funcionarioId: string,
-  funcionarioNome: string
+  funcionario: AppUser
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
 
   await runTransaction(db, async (transaction) => {
     const solicitationSnapshot = await transaction.get(solicitationRef);
@@ -733,37 +816,90 @@ export async function approveSolicitation(
     transaction.update(solicitationRef, {
       status: "APROVADA",
       aprovadaEm: serverTimestamp(),
-      aprovadaPorId: funcionarioId,
-      aprovadaPorNome: funcionarioNome,
+      aprovadaPorId: funcionario.id,
+      aprovadaPorNome: funcionario.nomeCompleto,
       updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: "APROVACAO",
+        actor: {
+          id: funcionario.id,
+          nome: funcionario.nomeCompleto,
+          perfil: funcionario.tipoUsuario,
+        },
+        previousStatus: solicitation.status,
+        newStatus: "APROVADA",
+      }),
+      createdAt: serverTimestamp(),
     });
   });
 }
 
 export async function rejectSolicitation(
   id: string,
-  funcionarioId: string,
-  funcionarioNome: string,
+  funcionario: AppUser,
   motivo: string
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
 
-  await updateDoc(solicitationRef, {
-    status: "RECUSADA",
-    motivoRecusa: motivo,
-    recusadaEm: serverTimestamp(),
-    recusadaPorId: funcionarioId,
-    recusadaPorNome: funcionarioNome,
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(solicitation.status, "PENDENTE", "recusar");
+
+    transaction.update(solicitationRef, {
+      status: "RECUSADA",
+      motivoRecusa: motivo,
+      recusadaEm: serverTimestamp(),
+      recusadaPorId: funcionario.id,
+      recusadaPorNome: funcionario.nomeCompleto,
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: "RECUSA",
+        actor: {
+          id: funcionario.id,
+          nome: funcionario.nomeCompleto,
+          perfil: funcionario.tipoUsuario,
+        },
+        previousStatus: solicitation.status,
+        newStatus: "RECUSADA",
+        reason: motivo,
+      }),
+      createdAt: serverTimestamp(),
+    });
   });
 }
 
 export async function registerSolicitationWithdrawal(
   id: string,
-  funcionarioId: string,
-  funcionarioNome: string
+  funcionario: AppUser
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
 
   await runTransaction(db, async (transaction) => {
     const solicitationSnapshot = await transaction.get(solicitationRef);
@@ -861,19 +997,37 @@ export async function registerSolicitationWithdrawal(
     transaction.update(solicitationRef, {
       status: "EM_USO",
       retiradaEm: serverTimestamp(),
-      retiradaPorId: funcionarioId,
-      retiradaPorNome: funcionarioNome,
+      retiradaPorId: funcionario.id,
+      retiradaPorNome: funcionario.nomeCompleto,
       updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: "RETIRADA",
+        actor: {
+          id: funcionario.id,
+          nome: funcionario.nomeCompleto,
+          perfil: funcionario.tipoUsuario,
+        },
+        previousStatus: solicitation.status,
+        newStatus: "EM_USO",
+        items: getSolicitationAuditItems(solicitation),
+      }),
+      createdAt: serverTimestamp(),
     });
   });
 }
 
 export async function registerSolicitationReturn(
   id: string,
-  funcionarioId: string,
-  funcionarioNome: string
+  funcionario: AppUser
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
 
   await runTransaction(db, async (transaction) => {
     const solicitationSnapshot = await transaction.get(solicitationRef);
@@ -968,9 +1122,25 @@ export async function registerSolicitationReturn(
     transaction.update(solicitationRef, {
       status: "ENCERRADA",
       devolvidaEm: serverTimestamp(),
-      devolvidaPorId: funcionarioId,
-      devolvidaPorNome: funcionarioNome,
+      devolvidaPorId: funcionario.id,
+      devolvidaPorNome: funcionario.nomeCompleto,
       updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: "DEVOLUCAO_INTEGRAL",
+        actor: {
+          id: funcionario.id,
+          nome: funcionario.nomeCompleto,
+          perfil: funcionario.tipoUsuario,
+        },
+        previousStatus: solicitation.status,
+        newStatus: "ENCERRADA",
+        items: getSolicitationAuditItems(solicitation),
+      }),
+      createdAt: serverTimestamp(),
     });
   });
 }

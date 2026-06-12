@@ -1,4 +1,5 @@
 import { Resource } from "./Resources";
+import type { UserRole } from "./User";
 
 export type SolicitationShift = "TARDE" | "NOITE"; //Turno (já que a ferramentaria só abre pela Tarde/Noite)
 
@@ -11,6 +12,49 @@ export type SolicitationStatus =
   | "CANCELADA";
 
 export type SolicitationPriority = "NORMAL" | "IMEDIATA";
+
+export type SolicitationAuditEventType =
+  | "CRIACAO"
+  | "ALTERACAO"
+  | "APROVACAO"
+  | "RECUSA"
+  | "CANCELAMENTO"
+  | "RETIRADA"
+  | "DEVOLUCAO_PARCIAL"
+  | "DEVOLUCAO_INTEGRAL";
+
+export interface AuditActor {
+  id: string;
+  nome: string;
+  perfil: UserRole;
+}
+
+export interface SolicitationAuditItem {
+  recursoId: string;
+  nome: string;
+  tipo: "MAQUINA" | "FERRAMENTA";
+  quantidade: number;
+}
+
+export interface SolicitationTimestamp {
+  seconds: number;
+  nanoseconds?: number;
+  toDate?: () => Date;
+}
+
+export interface SolicitationAuditEvent {
+  id: string;
+  solicitacaoId: string;
+  tipo: SolicitationAuditEventType;
+  resumo: string;
+  responsavel: AuditActor;
+  statusAnterior?: SolicitationStatus;
+  statusNovo?: SolicitationStatus;
+  itens?: SolicitationAuditItem[];
+  motivo?: string;
+  createdAt?: SolicitationTimestamp | null;
+  derivado?: boolean;
+}
 
 export interface SelectedMachine {
   resource: Resource;
@@ -60,10 +104,22 @@ export interface Solicitation {
   maquinas: SolicitationMachine[];
   ferramentas: SolicitationTool[];
   atrasada: boolean;
-  createdAt?: {
-    seconds: number;
-  };
-  updatedAt?: {
-    seconds: number;
-  };
+  createdAt?: SolicitationTimestamp;
+  updatedAt?: SolicitationTimestamp;
+  aprovadaEm?: SolicitationTimestamp;
+  aprovadaPorId?: string;
+  aprovadaPorNome?: string;
+  recusadaEm?: SolicitationTimestamp;
+  recusadaPorId?: string;
+  recusadaPorNome?: string;
+  motivoRecusa?: string;
+  canceladaEm?: SolicitationTimestamp;
+  canceladaPorId?: string;
+  canceladaPorNome?: string;
+  retiradaEm?: SolicitationTimestamp;
+  retiradaPorId?: string;
+  retiradaPorNome?: string;
+  devolvidaEm?: SolicitationTimestamp;
+  devolvidaPorId?: string;
+  devolvidaPorNome?: string;
 }

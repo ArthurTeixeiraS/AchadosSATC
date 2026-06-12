@@ -10,6 +10,7 @@ import { AppButton } from "../../../components/AppButton";
 import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { AppAlert } from "../../../components/AppAlert";
 import { EmptyState } from "../../../components/EmptyState";
+import { SolicitationAuditTimeline } from "../../../components/SolicitationAuditTimeline";
 import { getResourceById } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
 import {
@@ -20,6 +21,7 @@ import {
 import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicitacoesStackRoutes";
 import type { ProfessorDrawerParamList } from "../../../routes/ProfessorRoutes";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
+import { useAuth } from "../../../contexts/AuthContext";
 import type { SolicitationDraft } from "../../../types/Solicitation";
 
 import { styles } from "./styles";
@@ -83,6 +85,7 @@ export function ProfessorSolicitationDetailsScreen({
   navigation,
 }: Props) {
   const { solicitation } = route.params;
+  const { appUser } = useAuth();
 
   const canCancel = solicitation.status === "PENDENTE";
   const { draft, replaceDraft } = useSolicitationDraft();
@@ -134,7 +137,11 @@ export function ProfessorSolicitationDetailsScreen({
             try {
               setLoading(true);
 
-              await cancelSolicitation(solicitation.id);
+              if (!appUser) {
+                throw new Error("Usuário não encontrado.");
+              }
+
+              await cancelSolicitation(solicitation.id, appUser);
 
               Alert.alert(
                 "Solicitação cancelada",
@@ -448,6 +455,8 @@ export function ProfessorSolicitationDetailsScreen({
               />
             )}
         </AppCard>
+
+        <SolicitationAuditTimeline solicitation={solicitation} />
 
         <View style={styles.buttonContainer}>
           <AppButton
