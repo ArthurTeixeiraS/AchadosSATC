@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
@@ -30,6 +36,8 @@ import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicita
 import { Solicitation } from "../../../types/Solicitation";
 
 import { styles } from "./styles";
+import { colors } from "../../../styles/colors";
+import { useManualRefresh } from "../../../hooks/useManualRefresh";
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -187,15 +195,19 @@ export function MinhasSolicitacoesScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<MinhasSolicitacoesStackParamList>>();
 
+  async function fetchSolicitations() {
+    if (!appUser) return;
+
+    const data = await listSolicitationsByProfessor(appUser.id);
+    setSolicitations(data);
+  }
+
   async function loadSolicitations() {
     if (!appUser) return;
 
     try {
       setLoading(true);
-
-      const data = await listSolicitationsByProfessor(appUser.id);
-
-      setSolicitations(data);
+      await fetchSolicitations();
     } catch (error) {
       console.log("Erro ao buscar solicitações:", error);
     } finally {
@@ -208,6 +220,12 @@ export function MinhasSolicitacoesScreen() {
       loadSolicitations();
     }, [appUser])
   );
+
+  const { refreshing, refresh } = useManualRefresh({
+    onRefresh: fetchSolicitations,
+    errorMessage:
+      "Não foi possível atualizar suas solicitações. Tente novamente.",
+  });
 
   const mySolicitationSorts = useMemo<
     readonly SortDefinition<Solicitation>[]
@@ -262,6 +280,15 @@ export function MinhasSolicitacoesScreen() {
     return <Loading message="Carregando solicitações..." />;
   }
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={refresh}
+      colors={[colors.primary]}
+      tintColor={colors.primary}
+    />
+  );
+
   return (
     <ScreenContainer>
       <AppAlert
@@ -283,23 +310,31 @@ export function MinhasSolicitacoesScreen() {
       />
 
       {filteredSolicitations.length === 0 ? (
-        <AppCard>
-          <EmptyState
-            icon="file-text"
-            title="Nenhuma solicitação encontrada"
-            message={
-              solicitations.length === 0
-                ? "Suas solicitações aparecerão aqui."
-                : "Tente alterar a busca ou os filtros aplicados."
-            }
-          />
-        </AppCard>
+        <ScrollView
+          alwaysBounceVertical
+          style={styles.emptyList}
+          contentContainerStyle={styles.emptyListContent}
+          refreshControl={refreshControl}
+        >
+          <AppCard>
+            <EmptyState
+              icon="file-text"
+              title="Nenhuma solicitação encontrada"
+              message={
+                solicitations.length === 0
+                  ? "Suas solicitações aparecerão aqui."
+                  : "Tente alterar a busca ou os filtros aplicados."
+              }
+            />
+          </AppCard>
+        </ScrollView>
       ) : (
         <FlatList
           data={filteredSolicitations}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          refreshControl={refreshControl}
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() =>

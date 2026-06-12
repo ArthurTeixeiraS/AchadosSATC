@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Text } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -26,6 +32,7 @@ import { Solicitation } from "../../../types/Solicitation";
 
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
+import { useManualRefresh } from "../../../hooks/useManualRefresh";
 
 type SolicitationGroup = {
   date: string;
@@ -192,13 +199,15 @@ export function SolicitacoesRecebidasScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  async function fetchSolicitations() {
+    const data = await listSolicitations();
+    setSolicitations(data);
+  }
+
   async function loadSolicitations() {
     try {
       setLoading(true);
-
-      const data = await listSolicitations();
-
-      setSolicitations(data as Solicitation[]);
+      await fetchSolicitations();
     } catch (error) {
       console.log("Erro ao buscar solicitações recebidas:", error);
     } finally {
@@ -211,6 +220,12 @@ export function SolicitacoesRecebidasScreen() {
       loadSolicitations();
     }, [])
   );
+
+  const { refreshing, refresh } = useManualRefresh({
+    onRefresh: fetchSolicitations,
+    errorMessage:
+      "Não foi possível atualizar as solicitações recebidas. Tente novamente.",
+  });
 
   function toggleDate(date: string) {
     setExpandedDates((current) => {
@@ -326,6 +341,15 @@ export function SolicitacoesRecebidasScreen() {
     return <Loading message="Carregando solicitações..." />;
   }
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={refresh}
+      colors={[colors.primary]}
+      tintColor={colors.primary}
+    />
+  );
+
   return (
     <ScreenContainer>
       <AppListFilter
@@ -355,23 +379,31 @@ export function SolicitacoesRecebidasScreen() {
       )}
 
       {groupedSolicitations.length === 0 ? (
-        <AppCard>
-          <EmptyState
-            icon="file-text"
-            title="Nenhuma solicitação encontrada"
-            message={
-              solicitations.length === 0
-                ? "As solicitações dos professores aparecerão aqui."
-                : "Tente alterar a busca ou os filtros aplicados."
-            }
-          />
-        </AppCard>
+        <ScrollView
+          alwaysBounceVertical
+          style={styles.emptyList}
+          contentContainerStyle={styles.emptyListContent}
+          refreshControl={refreshControl}
+        >
+          <AppCard>
+            <EmptyState
+              icon="file-text"
+              title="Nenhuma solicitação encontrada"
+              message={
+                solicitations.length === 0
+                  ? "As solicitações dos professores aparecerão aqui."
+                  : "Tente alterar a busca ou os filtros aplicados."
+              }
+            />
+          </AppCard>
+        </ScrollView>
       ) : (
         <FlatList
           data={groupedSolicitations}
           keyExtractor={(item) => item.date}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          refreshControl={refreshControl}
           renderItem={({ item }) => {
             const isExpanded = expandedDates.includes(item.date);
 

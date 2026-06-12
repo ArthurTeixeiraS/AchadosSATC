@@ -1,5 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
@@ -27,6 +33,7 @@ import { colors } from "../../../styles/colors";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
+import { useManualRefresh } from "../../../hooks/useManualRefresh";
 
 // Seria interessante exibir os laboratórios aos quais as máquinas estão associadas
 
@@ -83,13 +90,15 @@ export function ResourceScreen() {
   const [activeSort, setActiveSort] = useState("name-asc");
   const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
 
+  async function fetchResources() {
+    const data = await listResources();
+    setResources(data);
+  }
+
   async function loadResources() {
     try {
       setLoading(true);
-
-      const data = await listResources();
-
-      setResources(data);
+      await fetchResources();
     } catch (error) {
       console.log("Erro ao buscar recursos:", error);
     } finally {
@@ -102,6 +111,11 @@ export function ResourceScreen() {
       loadResources();
     }, [])
   );
+
+  const { refreshing, refresh } = useManualRefresh({
+    onRefresh: fetchResources,
+    errorMessage: "Não foi possível atualizar os recursos. Tente novamente.",
+  });
 
   const resourceFilters = useMemo<
     readonly FilterDefinition<Resource>[]
@@ -189,6 +203,15 @@ export function ResourceScreen() {
     return labels[type] ?? type;
   }
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={refresh}
+      colors={[colors.primary]}
+      tintColor={colors.primary}
+    />
+  );
+
   return (
     <ScreenContainer>
       <AppListFilter
@@ -204,26 +227,41 @@ export function ResourceScreen() {
       />
 
       {resources.length === 0 ? (
-        <AppCard>
-          <EmptyState
-            icon="briefcase"
-            title="Nenhum recurso cadastrado"
-            message="Cadastre ferramentas, máquinas ou laboratórios para começar."
-          />
-        </AppCard>
+        <ScrollView
+          alwaysBounceVertical
+          style={styles.emptyList}
+          contentContainerStyle={styles.emptyListContent}
+          refreshControl={refreshControl}
+        >
+          <AppCard>
+            <EmptyState
+              icon="briefcase"
+              title="Nenhum recurso cadastrado"
+              message="Cadastre ferramentas, máquinas ou laboratórios para começar."
+            />
+          </AppCard>
+        </ScrollView>
       ) : filteredResources.length === 0 ? (
-        <AppCard>
-          <EmptyState
-            icon="briefcase"
-            title="Nenhum recurso encontrado"
-            message="Tente alterar a busca ou os filtros aplicados."
-          />
-        </AppCard>
+        <ScrollView
+          alwaysBounceVertical
+          style={styles.emptyList}
+          contentContainerStyle={styles.emptyListContent}
+          refreshControl={refreshControl}
+        >
+          <AppCard>
+            <EmptyState
+              icon="briefcase"
+              title="Nenhum recurso encontrado"
+              message="Tente alterar a busca ou os filtros aplicados."
+            />
+          </AppCard>
+        </ScrollView>
       ) : (
         <FlatList
           data={filteredResources}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={refreshControl}
           renderItem={({ item }) => (
             <AppCard>
               <View style={styles.cardContent}>
