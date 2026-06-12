@@ -1,4 +1,9 @@
-export type ListFilterType = "text" | "number" | "select" | "date";
+export type ListFilterType =
+  | "text"
+  | "number"
+  | "select"
+  | "date"
+  | "boolean";
 
 export type ListFilterOption = {
   label: string;

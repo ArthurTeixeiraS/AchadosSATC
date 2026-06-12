@@ -7,7 +7,14 @@ import {
   View,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { Button, Modal, Portal, Text, TextInput } from "react-native-paper";
+import {
+  Button,
+  Checkbox,
+  Modal,
+  Portal,
+  Text,
+  TextInput,
+} from "react-native-paper";
 
 import { AppButton } from "../AppButton";
 import { AppDatePicker } from "../AppDatePicker";
@@ -261,6 +268,41 @@ export function AppListFilter<T>({
                         </Button>
                       )}
                     </View>
+                  );
+                }
+
+                if (definition.type === "boolean") {
+                  const checked = value === "true";
+
+                  return (
+                    <TouchableOpacity
+                      key={definition.key}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked }}
+                      style={styles.checkboxField}
+                      onPress={() =>
+                        updateDraftFilter(
+                          definition.key,
+                          checked ? "" : "true"
+                        )
+                      }
+                    >
+                      <Checkbox
+                        status={checked ? "checked" : "unchecked"}
+                      />
+
+                      <View style={styles.checkboxText}>
+                        <Text style={styles.checkboxLabel}>
+                          {definition.label}
+                        </Text>
+
+                        {!!definition.placeholder && (
+                          <Text style={styles.checkboxDescription}>
+                            {definition.placeholder}
+                          </Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
                   );
                 }
 

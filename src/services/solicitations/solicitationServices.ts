@@ -20,6 +20,7 @@ import {
   SolicitationDraft,
   SolicitationShift,
   SolicitationStatus,
+  SolicitationReturnInput,
   SolicitationTool,
 } from "../../types/Solicitation";
 import {
@@ -50,7 +51,8 @@ type BusinessErrorCode =
   | "NO_RESOURCES"
   | "MACHINE_CONFLICT"
   | "INSUFFICIENT_STOCK"
-  | "RESOURCE_NOT_FOUND";
+  | "RESOURCE_NOT_FOUND"
+  | "INVALID_RETURN";
 
 export class SolicitationBusinessError extends Error {
   constructor(
@@ -121,9 +123,20 @@ function mapSolicitation(id: string, data: DocumentData): Solicitation {
     id,
     ...data,
   } as Solicitation;
+  const isLegacyFinished = solicitation.status === "ENCERRADA";
 
   return {
     ...solicitation,
+    maquinas: (solicitation.maquinas ?? []).map((machine) => ({
+      ...machine,
+      devolvida: machine.devolvida ?? isLegacyFinished,
+    })),
+    ferramentas: (solicitation.ferramentas ?? []).map((tool) => ({
+      ...tool,
+      quantidadeDevolvida:
+        tool.quantidadeDevolvida ??
+        (isLegacyFinished ? Number(tool.quantidade) || 0 : 0),
+    })),
     atrasada: isSolicitationOverdue(solicitation),
   };
 }
@@ -139,6 +152,10 @@ function assertStatus(
       `A solicitação precisa estar com status ${expectedStatus} para ${action}.`
     );
   }
+}
+
+function formatValidationItems(title: string, items: string[]) {
+  return `${title}\n\n${items.map((item) => `• ${item}`).join("\n")}`;
 }
 
 function getToolReferences(tools: SolicitationTool[]) {
@@ -235,7 +252,7 @@ export async function validateDraftMachineAvailability(
 
     throw new SolicitationBusinessError(
       "MACHINE_CONFLICT",
-      `Máquinas indisponíveis no período: ${items.join(", ")}.`,
+      formatValidationItems("Máquinas indisponíveis no período:", items),
       items
     );
   }
@@ -333,7 +350,7 @@ export async function validateDraftToolAvailability(
   if (unavailableTools.length > 0) {
     throw new SolicitationBusinessError(
       "INSUFFICIENT_STOCK",
-      `Estoque insuficiente: ${unavailableTools.join("; ")}.`,
+      formatValidationItems("Estoque insuficiente:", unavailableTools),
       unavailableTools
     );
   }
@@ -373,12 +390,14 @@ export async function createSolicitation(
     recursoId: item.resource.id,
     nome: item.resource.nome,
     laboratorioId: item.resource.laboratorioId ?? null,
+    devolvida: false,
   }));
 
   const ferramentas = draft.ferramentasSelecionadas.map((item) => ({
     recursoId: item.resource.id,
     nome: item.resource.nome,
     quantidade: item.quantidade,
+    quantidadeDevolvida: 0,
   }));
 
   const solicitationRef = doc(solicitacoesRef);
@@ -667,7 +686,7 @@ export async function approveSolicitation(
 
       throw new SolicitationBusinessError(
         "MACHINE_CONFLICT",
-        `Máquinas indisponíveis no período: ${items.join(", ")}.`,
+        formatValidationItems("Máquinas indisponíveis no período:", items),
         items
       );
     }
@@ -720,7 +739,7 @@ export async function approveSolicitation(
 
       throw new SolicitationBusinessError(
         "MACHINE_CONFLICT",
-        `Máquinas indisponíveis no período: ${items.join(", ")}.`,
+        formatValidationItems("Máquinas indisponíveis no período:", items),
         items
       );
     }
@@ -768,7 +787,7 @@ export async function approveSolicitation(
     if (unavailableTools.length > 0) {
       throw new SolicitationBusinessError(
         "INSUFFICIENT_STOCK",
-        `Estoque insuficiente: ${unavailableTools.join("; ")}.`,
+        formatValidationItems("Estoque insuficiente:", unavailableTools),
         unavailableTools
       );
     }
@@ -956,7 +975,10 @@ export async function registerSolicitationWithdrawal(
     if (unavailableTools.length > 0) {
       throw new SolicitationBusinessError(
         "INSUFFICIENT_STOCK",
-        `Não foi possível registrar a retirada. Estoque insuficiente: ${unavailableTools.join("; ")}.`,
+        formatValidationItems(
+          "Não foi possível registrar a retirada. Estoque insuficiente:",
+          unavailableTools
+        ),
         unavailableTools
       );
     }
@@ -1022,7 +1044,8 @@ export async function registerSolicitationWithdrawal(
 
 export async function registerSolicitationReturn(
   id: string,
-  funcionario: AppUser
+  funcionario: AppUser,
+  input: SolicitationReturnInput
 ): Promise<void> {
   const solicitationRef = doc(db, COLLECTION_NAME, id);
   const auditRef = doc(
@@ -1046,9 +1069,102 @@ export async function registerSolicitationReturn(
 
     assertStatus(solicitation.status, "EM_USO", "registrar a devolução");
 
-    const toolReferences = getToolReferences(solicitation.ferramentas);
-    const machineReservationReferences =
-      getMachineReservationReferences(solicitation);
+    const uniqueMachineIds = new Set(input.maquinasIds);
+    const uniqueToolIds = new Set(
+      input.ferramentas.map((tool) => tool.recursoId)
+    );
+
+    if (
+      input.maquinasIds.length !== uniqueMachineIds.size ||
+      input.ferramentas.length !== uniqueToolIds.size
+    ) {
+      throw new SolicitationBusinessError(
+        "INVALID_RETURN",
+        "Existem recursos repetidos nesta devolução."
+      );
+    }
+
+    if (uniqueMachineIds.size === 0 && input.ferramentas.length === 0) {
+      throw new SolicitationBusinessError(
+        "INVALID_RETURN",
+        "Selecione pelo menos um recurso para devolver."
+      );
+    }
+
+    const selectedMachines = solicitation.maquinas.filter((machine) =>
+      uniqueMachineIds.has(machine.recursoId)
+    );
+
+    if (selectedMachines.length !== uniqueMachineIds.size) {
+      throw new SolicitationBusinessError(
+        "INVALID_RETURN",
+        "Uma ou mais máquinas selecionadas não pertencem à solicitação."
+      );
+    }
+
+    const alreadyReturnedMachine = selectedMachines.find(
+      (machine) => machine.devolvida
+    );
+
+    if (alreadyReturnedMachine) {
+      throw new SolicitationBusinessError(
+        "INVALID_RETURN",
+        `A máquina ${alreadyReturnedMachine.nome} já foi devolvida.`
+      );
+    }
+
+    const selectedTools = input.ferramentas.map((returnedTool) => {
+      const requestedTool = solicitation.ferramentas.find(
+        (tool) => tool.recursoId === returnedTool.recursoId
+      );
+
+      if (!requestedTool) {
+        throw new SolicitationBusinessError(
+          "INVALID_RETURN",
+          "Uma ou mais ferramentas selecionadas não pertencem à solicitação."
+        );
+      }
+
+      const quantity = Number(returnedTool.quantidade);
+      const returnedQuantity = Number(
+        requestedTool.quantidadeDevolvida ?? 0
+      );
+      const pendingQuantity =
+        Number(requestedTool.quantidade) - returnedQuantity;
+
+      if (
+        !Number.isInteger(quantity) ||
+        quantity <= 0 ||
+        quantity > pendingQuantity
+      ) {
+        throw new SolicitationBusinessError(
+          "INVALID_RETURN",
+          `Quantidade inválida para ${requestedTool.nome}. Pendente: ${pendingQuantity}.`
+        );
+      }
+
+      return {
+        requestedTool,
+        quantity,
+      };
+    });
+
+    const toolReferences = selectedTools.map(({ requestedTool }) => ({
+      tool: requestedTool,
+      reference: doc(
+        db,
+        RESOURCE_COLLECTION_NAME,
+        requestedTool.recursoId
+      ) as DocumentReference<DocumentData>,
+    }));
+    const machineReservationReferences = selectedMachines.map((machine) => ({
+      machine,
+      reservationKey: getReservationKey(
+        solicitation.dataUtilizacao,
+        solicitation.turno
+      ),
+      reference: doc(db, RESOURCE_COLLECTION_NAME, machine.recursoId),
+    }));
     const toolSnapshots = await Promise.all(
       toolReferences.map(({ reference }) => transaction.get(reference))
     );
@@ -1073,6 +1189,17 @@ export async function registerSolicitationReturn(
       }
     });
 
+    machineReservationSnapshots.forEach((machineSnapshot, index) => {
+      const reservation = machineReservationReferences[index];
+
+      if (reservation && !machineSnapshot.exists()) {
+        throw new SolicitationBusinessError(
+          "RESOURCE_NOT_FOUND",
+          `A máquina ${reservation.machine.nome} não foi encontrada.`
+        );
+      }
+    });
+
     toolSnapshots.forEach((toolSnapshot, index) => {
       const toolReference = toolReferences[index];
 
@@ -1081,6 +1208,11 @@ export async function registerSolicitationReturn(
       }
 
       const requestedTool = toolReference.tool;
+      const returnedTool = selectedTools[index];
+
+      if (!returnedTool) {
+        return;
+      }
       const availableQuantity = Number(
         toolSnapshot.data().quantidadeDisponivel ?? 0
       );
@@ -1091,7 +1223,7 @@ export async function registerSolicitationReturn(
 
       transaction.update(toolReference.reference, {
         quantidadeDisponivel: Math.min(
-          availableQuantity + requestedTool.quantidade,
+          availableQuantity + returnedTool.quantity,
           totalQuantity
         ),
         updatedAt: serverTimestamp(),
@@ -1119,26 +1251,75 @@ export async function registerSolicitationReturn(
       });
     });
 
+    const updatedMachines = solicitation.maquinas.map((machine) =>
+      uniqueMachineIds.has(machine.recursoId)
+        ? { ...machine, devolvida: true }
+        : machine
+    );
+    const returnedToolsById = new Map(
+      selectedTools.map(({ requestedTool, quantity }) => [
+        requestedTool.recursoId,
+        quantity,
+      ])
+    );
+    const updatedTools = solicitation.ferramentas.map((tool) => ({
+      ...tool,
+      quantidadeDevolvida:
+        Number(tool.quantidadeDevolvida ?? 0) +
+        (returnedToolsById.get(tool.recursoId) ?? 0),
+    }));
+    const allReturned =
+      updatedMachines.every((machine) => machine.devolvida) &&
+      updatedTools.every(
+        (tool) =>
+          Number(tool.quantidadeDevolvida ?? 0) >= Number(tool.quantidade)
+      );
+    const newStatus: SolicitationStatus = allReturned
+      ? "ENCERRADA"
+      : "EM_USO";
+    const returnedItems = [
+      ...selectedMachines.map((machine) => ({
+        recursoId: machine.recursoId,
+        nome: machine.nome,
+        tipo: "MAQUINA" as const,
+        quantidade: 1,
+      })),
+      ...selectedTools.map(({ requestedTool, quantity }) => ({
+        recursoId: requestedTool.recursoId,
+        nome: requestedTool.nome,
+        tipo: "FERRAMENTA" as const,
+        quantidade: quantity,
+      })),
+    ];
+
     transaction.update(solicitationRef, {
-      status: "ENCERRADA",
-      devolvidaEm: serverTimestamp(),
-      devolvidaPorId: funcionario.id,
-      devolvidaPorNome: funcionario.nomeCompleto,
+      maquinas: updatedMachines,
+      ferramentas: updatedTools,
+      status: newStatus,
+      ...(allReturned
+        ? {
+            devolvidaEm: serverTimestamp(),
+            devolvidaPorId: funcionario.id,
+            devolvidaPorNome: funcionario.nomeCompleto,
+          }
+        : {}),
       updatedAt: serverTimestamp(),
     });
 
     transaction.set(auditRef, {
       ...createAuditEventData({
         solicitationId: solicitation.id,
-        type: "DEVOLUCAO_INTEGRAL",
+        type: allReturned
+          ? "DEVOLUCAO_INTEGRAL"
+          : "DEVOLUCAO_PARCIAL",
         actor: {
           id: funcionario.id,
           nome: funcionario.nomeCompleto,
           perfil: funcionario.tipoUsuario,
         },
         previousStatus: solicitation.status,
-        newStatus: "ENCERRADA",
-        items: getSolicitationAuditItems(solicitation),
+        newStatus,
+        items: returnedItems,
       }),
       createdAt: serverTimestamp(),
     });

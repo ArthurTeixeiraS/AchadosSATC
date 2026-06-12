@@ -87,6 +87,7 @@ export function SolicitationAuditTimeline({ solicitation }: Props) {
     solicitation.id,
     solicitation.status,
     solicitation.updatedAt?.seconds,
+    solicitation.updatedAt?.nanoseconds,
   ]);
 
   return (

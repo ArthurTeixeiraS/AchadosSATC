@@ -142,6 +142,32 @@ export const styles = StyleSheet.create({
   dateField: {
     marginBottom: spacing.md,
   },
+  checkboxField: {
+    minHeight: 58,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingRight: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  checkboxText: {
+    flex: 1,
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    fontFamily: typography.fontFamily.semiBold,
+    color: colors.text,
+  },
+  checkboxDescription: {
+    marginTop: 2,
+    fontSize: 12,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.textSecondary,
+  },
   modalActions: {
     paddingTop: spacing.md,
     borderTopWidth: 1,

@@ -115,7 +115,24 @@ function parseBrazilianDate(value: string) {
   return new Date(year, month - 1, day).getTime();
 }
 
+function isFromToday(value: string) {
+  const useDate = parseBrazilianDate(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return Number.isFinite(useDate) && useDate >= today.getTime();
+}
+
 const mySolicitationFilters: readonly FilterDefinition<Solicitation>[] = [
+  {
+    key: "fromToday",
+    label: "A partir de hoje",
+    type: "boolean",
+    placeholder: "Ocultar solicitações com data de uso anterior a hoje.",
+    predicate: (item, value) =>
+      value !== "true" || isFromToday(item.dataUtilizacao),
+    formatValue: () => "Ativo",
+  },
   {
     key: "status",
     label: "Status",
@@ -180,7 +197,9 @@ export function MinhasSolicitacoesScreen() {
 
   const [search, setSearch] = useState("");
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({});
+    useState<ActiveListFilters>({
+      fromToday: "true",
+    });
   const [activeSort, setActiveSort] = useState("status-priority");
   const [currentTime, setCurrentTime] = useState(() => new Date());
 

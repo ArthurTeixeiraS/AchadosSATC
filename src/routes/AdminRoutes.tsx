@@ -80,20 +80,54 @@ export function AdminRoutes() {
           const routeName =
             getFocusedRouteNameFromRoute(route) ?? "ReceivedSolicitations";
           const isDetails = routeName === "FuncionarioSolicitationDetails";
+          const isReturn = routeName === "RegisterSolicitationReturn";
 
           return {
             ...getDrawerHeaderOptions(navigation, {
-              title: isDetails
-                ? "Detalhes da solicitação"
-                : "Solicitações",
-              subtitle: isDetails
-                ? "Analise e atualize o atendimento"
-                : "Gerencie os pedidos recebidos",
-              showMenu: !isDetails,
-              onBack: () =>
+              title: isReturn
+                ? "Registrar devolução"
+                : isDetails
+                  ? "Detalhes da solicitação"
+                  : "Solicitações",
+              subtitle: isReturn
+                ? "Selecione os recursos devolvidos"
+                : isDetails
+                  ? "Analise e atualize o atendimento"
+                  : "Gerencie os pedidos recebidos",
+              showMenu: !isDetails && !isReturn,
+              onBack: () => {
+                const nestedState = (
+                  route as typeof route & {
+                    state?: {
+                      index: number;
+                      routes: Array<{
+                        name: string;
+                        params?: { solicitationId?: string };
+                      }>;
+                    };
+                  }
+                ).state;
+                const activeRoute =
+                  nestedState?.routes[nestedState.index ?? 0];
+
+                if (
+                  isReturn &&
+                  activeRoute?.params?.solicitationId
+                ) {
+                  navigation.navigate("Solicitações", {
+                    screen: "FuncionarioSolicitationDetails",
+                    params: {
+                      solicitationId:
+                        activeRoute.params.solicitationId,
+                    },
+                  });
+                  return;
+                }
+
                 navigation.navigate("Solicitações", {
                   screen: "ReceivedSolicitations",
-                }),
+                });
+              },
             }),
             drawerIcon: ({ color, size }) => (
               <Feather name="clipboard" size={size} color={color} />

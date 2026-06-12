@@ -99,6 +99,7 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.background,
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 12,
   },
@@ -117,6 +118,21 @@ export const styles = StyleSheet.create({
   availableStrong: {
     fontFamily: typography.fontFamily.bold,
     color: colors.secondary,
+  },
+
+  returnStatus: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    fontSize: 13,
+    fontFamily: typography.fontFamily.semiBold,
+  },
+
+  returnedStatus: {
+    color: colors.success,
+  },
+
+  pendingStatus: {
+    color: colors.warning,
   },
 
   buttonContainer: {
