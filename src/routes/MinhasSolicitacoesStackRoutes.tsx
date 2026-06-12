@@ -3,11 +3,12 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacoesScreen";
 import { ProfessorSolicitationDetailsScreen } from "../screens/professor/ProfessorSolicitationDetailsScreen";
+import type { Solicitation } from "../types/Solicitation";
 
 export type MinhasSolicitacoesStackParamList = {
   MinhasSolicitacoesList: undefined;
   ProfessorSolicitationDetails: {
-    solicitation: any;
+    solicitation: Solicitation;
   };
 };
 
