@@ -229,10 +229,7 @@ export function ProfessorSolicitationDetailsScreen({
 
         const quantidade = Math.max(1, Number(snapshot.quantidade) || 1);
 
-        if (
-          resource.status !== "DISPONIVEL" ||
-          (resource.quantidadeDisponivel ?? 0) < quantidade
-        ) {
+        if (resource.status !== "DISPONIVEL") {
           resourcesToReview.push(snapshot.nome);
         }
 

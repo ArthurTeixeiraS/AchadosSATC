@@ -32,6 +32,7 @@ import { FAB } from "react-native-paper";
 import { colors } from "../../../styles/colors";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
 
@@ -89,6 +90,7 @@ export function ResourceScreen() {
     useState<ActiveListFilters>({});
   const [activeSort, setActiveSort] = useState("name-asc");
   const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
+  const insets = useSafeAreaInsets();
 
   async function fetchResources() {
     const data = await listResources();
@@ -260,7 +262,10 @@ export function ResourceScreen() {
         <FlatList
           data={filteredResources}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 88 + insets.bottom },
+          ]}
           refreshControl={refreshControl}
           renderItem={({ item }) => (
             <AppCard>
@@ -315,7 +320,7 @@ export function ResourceScreen() {
       )}
       <FAB
         icon="plus"
-        style={styles.fab}
+        style={[styles.fab, { bottom: 16 + insets.bottom }]}
         color={colors.white}
         onPress={() =>
           navigation.navigate("CreateResource", undefined)

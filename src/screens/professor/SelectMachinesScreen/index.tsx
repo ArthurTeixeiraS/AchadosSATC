@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, FlatList, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
@@ -11,11 +12,16 @@ import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
+import { AppAlert } from "../../../components/AppAlert";
 
 import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoStackRoutes";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { listResources } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
+import {
+  getMachinesAvailabilityForPeriod,
+  MachinePeriodAvailability,
+} from "../../../services/solicitations/solicitationServices";
 
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
@@ -32,15 +38,29 @@ export function SelectMachinesScreen({ navigation }: Props) {
   const [laboratories, setLaboratories] = useState<Resource[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [availabilityByMachineId, setAvailabilityByMachineId] = useState<
+    Record<string, MachinePeriodAvailability>
+  >({});
 
   async function loadResources() {
     try {
       setLoading(true);
 
       const data = await listResources();
+      const loadedMachines = data.filter(
+        (item) => item.tipo === "MAQUINA"
+      );
+      const availability = draft.turno
+        ? await getMachinesAvailabilityForPeriod(
+            loadedMachines,
+            draft.dataUtilizacao,
+            draft.turno
+          )
+        : {};
 
-      setMachines(data.filter((item) => item.tipo === "MAQUINA"));
+      setMachines(loadedMachines);
       setLaboratories(data.filter((item) => item.tipo === "LABORATORIO"));
+      setAvailabilityByMachineId(availability);
     } catch (error) {
       console.log("Erro ao buscar máquinas:", error);
     } finally {
@@ -48,9 +68,11 @@ export function SelectMachinesScreen({ navigation }: Props) {
     }
   }
 
-  useEffect(() => {
-    loadResources();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadResources();
+    }, [draft.dataUtilizacao, draft.turno])
+  );
 
   const filteredMachines = useMemo(() => {
     if (!search.trim()) {
@@ -84,12 +106,32 @@ export function SelectMachinesScreen({ navigation }: Props) {
       return;
     }
 
+    if (!availabilityByMachineId[machine.id]?.available) {
+      Alert.alert(
+        "Máquina indisponível",
+        "Essa máquina já está reservada para a data e o turno selecionados."
+      );
+      return;
+    }
+
     addMachine(machine);
   }
 
   function handleContinue() {
+    if (invalidSelectedMachines.length > 0) {
+      Alert.alert(
+        "Revise as máquinas",
+        "Uma ou mais máquinas não estão disponíveis neste período."
+      );
+      return;
+    }
+
     navigation.navigate("SelectTools");
   }
+
+  const invalidSelectedMachines = draft.maquinasSelecionadas.filter(
+    (item) => !availabilityByMachineId[item.resource.id]?.available
+  );
 
   if (loading) {
     return <Loading message="Carregando máquinas..." />;
@@ -125,6 +167,8 @@ export function SelectMachinesScreen({ navigation }: Props) {
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
               const selected = isSelected(item.id);
+              const available =
+                availabilityByMachineId[item.id]?.available ?? false;
 
               return (
                 <AppCard style={styles.machineCard}>
@@ -134,13 +178,26 @@ export function SelectMachinesScreen({ navigation }: Props) {
                     {getLaboratoryName(item.laboratorioId)}
                   </Text>
 
-                  <Text style={styles.machineStatus}>Disponível</Text>
+                  <Text
+                    style={[
+                      styles.machineStatus,
+                      !available && styles.machineStatusUnavailable,
+                    ]}
+                  >
+                    {available
+                      ? "Disponível no período"
+                      : "Indisponível no período"}
+                  </Text>
 
                   <TouchableOpacity
                     style={[
                       styles.machineButton,
                       selected && styles.machineButtonSelected,
+                      !available &&
+                        !selected &&
+                        styles.machineButtonDisabled,
                     ]}
+                    disabled={!available && !selected}
                     onPress={() => handleToggleMachine(item)}
                   >
                     <Feather
@@ -193,8 +250,21 @@ export function SelectMachinesScreen({ navigation }: Props) {
           </Text>
         )}
 
+        {invalidSelectedMachines.length > 0 && (
+          <AppAlert
+            variant="error"
+            title="Máquinas indisponíveis:"
+            message={invalidSelectedMachines
+              .map((item) => item.resource.nome)
+              .join(", ")}
+          />
+        )}
+
         <View style={styles.summaryButtons}>
-          <AppButton onPress={handleContinue}>
+          <AppButton
+            disabled={invalidSelectedMachines.length > 0}
+            onPress={handleContinue}
+          >
             Continuar para Ferramentas
           </AppButton>
 

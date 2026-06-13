@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Alert, FlatList, TouchableOpacity, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
@@ -12,11 +13,16 @@ import { AppButton } from "../../../components/AppButton";
 import { EmptyState } from "../../../components/EmptyState";
 import { Loading } from "../../../components/Loading";
 import { AppQuantityStepper } from "../../../components/AppQuantityStepper";
+import { AppAlert } from "../../../components/AppAlert";
 
 import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoStackRoutes";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { listResources } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
+import {
+  getToolsAvailabilityForPeriod,
+  ToolPeriodAvailability,
+} from "../../../services/solicitations/solicitationServices";
 
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
@@ -37,14 +43,28 @@ export function SelectToolsScreen({ navigation }: Props) {
   const [tools, setTools] = useState<Resource[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [availabilityByToolId, setAvailabilityByToolId] = useState<
+    Record<string, ToolPeriodAvailability>
+  >({});
 
   async function loadTools() {
     try {
       setLoading(true);
 
       const data = await listResources();
+      const loadedTools = data.filter(
+        (item) => item.tipo === "FERRAMENTA"
+      );
+      const availability = draft.turno
+        ? await getToolsAvailabilityForPeriod(
+            loadedTools,
+            draft.dataUtilizacao,
+            draft.turno
+          )
+        : {};
 
-      setTools(data.filter((item) => item.tipo === "FERRAMENTA"));
+      setTools(loadedTools);
+      setAvailabilityByToolId(availability);
     } catch (error) {
       console.log("Erro ao buscar ferramentas:", error);
     } finally {
@@ -52,9 +72,11 @@ export function SelectToolsScreen({ navigation }: Props) {
     }
   }
 
-  useEffect(() => {
-    loadTools();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadTools();
+    }, [draft.dataUtilizacao, draft.turno])
+  );
 
   const filteredTools = useMemo(() => {
     if (!search.trim()) {
@@ -73,7 +95,8 @@ export function SelectToolsScreen({ navigation }: Props) {
   }
 
   function handleAddTool(tool: Resource) {
-    const availableQuantity = tool.quantidadeDisponivel ?? 0;
+    const availableQuantity =
+      availabilityByToolId[tool.id]?.availableQuantity ?? 0;
 
     if (availableQuantity <= 0) {
       Alert.alert(
@@ -87,8 +110,22 @@ export function SelectToolsScreen({ navigation }: Props) {
   }
 
   function handleContinue() {
+    if (invalidSelectedTools.length > 0) {
+      Alert.alert(
+        "Ajuste as quantidades",
+        "Uma ou mais ferramentas excedem a disponibilidade deste período."
+      );
+      return;
+    }
+
     navigation.navigate("ReviewSolicitation");
   }
+
+  const invalidSelectedTools = draft.ferramentasSelecionadas.filter(
+    (item) =>
+      item.quantidade >
+      (availabilityByToolId[item.resource.id]?.availableQuantity ?? 0)
+  );
 
   if (loading) {
     return <Loading message="Carregando ferramentas..." />;
@@ -133,7 +170,10 @@ export function SelectToolsScreen({ navigation }: Props) {
             renderItem={({ item }) => {
               const selectedTool = getSelectedTool(item.id);
               const selectedQuantity = selectedTool?.quantidade ?? 0;
-              const availableQuantity = item.quantidadeDisponivel ?? 0;
+              const availableQuantity =
+                availabilityByToolId[item.id]?.availableQuantity ?? 0;
+              const exceedsAvailability =
+                selectedQuantity > availableQuantity;
 
               return (
                 <AppCard style={styles.toolCard}>
@@ -147,8 +187,14 @@ export function SelectToolsScreen({ navigation }: Props) {
                         </Text>
                       )}
 
-                      <Text style={styles.toolAvailability}>
-                        Disponível: {availableQuantity}
+                      <Text
+                        style={[
+                          styles.toolAvailability,
+                          exceedsAvailability &&
+                            styles.toolAvailabilityError,
+                        ]}
+                      >
+                        Disponível no período: {availableQuantity}
                       </Text>
                     </View>
 
@@ -156,7 +202,10 @@ export function SelectToolsScreen({ navigation }: Props) {
                       <AppQuantityStepper
                         value={selectedQuantity}
                         min={1}
-                        max={availableQuantity}
+                        max={Math.max(
+                          availableQuantity,
+                          selectedQuantity
+                        )}
                         onChange={(value) =>
                           updateToolQuantity(item.id, value)
                         }
@@ -217,8 +266,21 @@ export function SelectToolsScreen({ navigation }: Props) {
           </Text>
         )}
 
+        {invalidSelectedTools.length > 0 && (
+          <AppAlert
+            variant="error"
+            title="Quantidades indisponíveis:"
+            message={invalidSelectedTools
+              .map((item) => item.resource.nome)
+              .join(", ")}
+          />
+        )}
+
         <View style={styles.summaryButtons}>
-          <AppButton onPress={handleContinue}>
+          <AppButton
+            disabled={invalidSelectedTools.length > 0}
+            onPress={handleContinue}
+          >
             Revisar Solicitação
           </AppButton>
 

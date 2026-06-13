@@ -23,6 +23,7 @@ import {
   SolicitationReturnInput,
   SolicitationTool,
 } from "../../types/Solicitation";
+import { Resource } from "../../types/Resources";
 import {
   AUDIT_COLLECTION_NAME,
   createAuditEventData,
@@ -36,6 +37,18 @@ export type DashboardStats = {
   pendentes: number;
   novas: number;
   encerradas: number;
+};
+
+export type ToolPeriodAvailability = {
+  resourceId: string;
+  totalQuantity: number;
+  allocatedQuantity: number;
+  availableQuantity: number;
+};
+
+export type MachinePeriodAvailability = {
+  resourceId: string;
+  available: boolean;
 };
 
 const SHIFT_END_TIME: Record<
@@ -194,7 +207,7 @@ function getReservationKey(
 }
 
 function getStockReservations(
-  data: DocumentData,
+  data: DocumentData | Resource,
   reservationKey: string
 ): Record<string, number> {
   const reservations = data.reservasEstoque?.[reservationKey];
@@ -211,29 +224,96 @@ function getStockReservations(
   );
 }
 
-export async function validateDraftMachineAvailability(
-  draft: SolicitationDraft
-): Promise<void> {
-  if (!draft.turno || draft.maquinasSelecionadas.length === 0) {
-    return;
+function getToolCapacity(data: DocumentData | Resource): number {
+  const totalQuantity = Number(data.quantidadeTotal);
+
+  if (Number.isFinite(totalQuantity) && totalQuantity >= 0) {
+    return totalQuantity;
   }
 
-  const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-  const requestedMachineIds = new Set(
-    draft.maquinasSelecionadas.map((item) => item.resource.id)
-  );
-  const conflictingMachineNames = new Set<string>();
+  const availableQuantity = Number(data.quantidadeDisponivel);
 
-  snapshot.docs.forEach((document) => {
+  return Number.isFinite(availableQuantity) && availableQuantity >= 0
+    ? availableQuantity
+    : 0;
+}
+
+function getPendingToolQuantity(tool: SolicitationTool): number {
+  const requestedQuantity = Math.max(Number(tool.quantidade) || 0, 0);
+  const returnedQuantity = Math.max(
+    Number(tool.quantidadeDevolvida) || 0,
+    0
+  );
+
+  return Math.max(requestedQuantity - returnedQuantity, 0);
+}
+
+function getToolAllocationsByResourceId(
+  documents: { id: string; data: () => DocumentData }[],
+  dataUtilizacao: string,
+  turno: SolicitationShift,
+  excludedSolicitationId?: string
+): Map<string, number> {
+  const allocations = new Map<string, number>();
+
+  documents.forEach((document) => {
+    if (document.id === excludedSolicitationId) {
+      return;
+    }
+
     const solicitation = document.data();
     const isSamePeriod =
-      solicitation.dataUtilizacao === draft.dataUtilizacao &&
-      solicitation.turno === draft.turno;
-    const occupiesResources = ["APROVADA", "EM_USO"].includes(
-      solicitation.status
-    );
+      solicitation.dataUtilizacao === dataUtilizacao &&
+      solicitation.turno === turno;
 
-    if (!isSamePeriod || !occupiesResources) {
+    if (
+      !isSamePeriod ||
+      !["APROVADA", "EM_USO"].includes(solicitation.status)
+    ) {
+      return;
+    }
+
+    const tools =
+      (solicitation.ferramentas as Solicitation["ferramentas"]) ?? [];
+
+    tools.forEach((tool) => {
+      const quantity =
+        solicitation.status === "EM_USO"
+          ? getPendingToolQuantity(tool)
+          : Math.max(Number(tool.quantidade) || 0, 0);
+
+      allocations.set(
+        tool.recursoId,
+        (allocations.get(tool.recursoId) ?? 0) + quantity
+      );
+    });
+  });
+
+  return allocations;
+}
+
+function getAllocatedMachineIds(
+  documents: { id: string; data: () => DocumentData }[],
+  dataUtilizacao: string,
+  turno: SolicitationShift,
+  excludedSolicitationId?: string
+): Set<string> {
+  const allocatedMachineIds = new Set<string>();
+
+  documents.forEach((document) => {
+    if (document.id === excludedSolicitationId) {
+      return;
+    }
+
+    const solicitation = document.data();
+    const isSamePeriod =
+      solicitation.dataUtilizacao === dataUtilizacao &&
+      solicitation.turno === turno;
+
+    if (
+      !isSamePeriod ||
+      !["APROVADA", "EM_USO"].includes(solicitation.status)
+    ) {
       return;
     }
 
@@ -241,10 +321,139 @@ export async function validateDraftMachineAvailability(
       (solicitation.maquinas as Solicitation["maquinas"]) ?? [];
 
     machines.forEach((machine) => {
-      if (requestedMachineIds.has(machine.recursoId)) {
-        conflictingMachineNames.add(machine.nome);
+      if (solicitation.status !== "EM_USO" || !machine.devolvida) {
+        allocatedMachineIds.add(machine.recursoId);
       }
     });
+  });
+
+  return allocatedMachineIds;
+}
+
+function calculateToolPeriodAvailability(
+  resourceId: string,
+  resourceData: DocumentData | Resource,
+  reservationKey: string,
+  allocatedBySolicitations: number
+): ToolPeriodAvailability {
+  const totalQuantity = getToolCapacity(resourceData);
+  const reservedByStock = Object.values(
+    getStockReservations(resourceData, reservationKey)
+  ).reduce((total, quantity) => total + quantity, 0);
+  const allocatedQuantity = Math.max(
+    reservedByStock,
+    allocatedBySolicitations
+  );
+
+  return {
+    resourceId,
+    totalQuantity,
+    allocatedQuantity,
+    availableQuantity: Math.max(totalQuantity - allocatedQuantity, 0),
+  };
+}
+
+export async function getToolsAvailabilityForPeriod(
+  tools: Resource[],
+  dataUtilizacao: string,
+  turno: SolicitationShift
+): Promise<Record<string, ToolPeriodAvailability>> {
+  if (!dataUtilizacao || !turno || tools.length === 0) {
+    return {};
+  }
+
+  const solicitationsSnapshot = await getDocs(
+    collection(db, COLLECTION_NAME)
+  );
+  const allocations = getToolAllocationsByResourceId(
+    solicitationsSnapshot.docs,
+    dataUtilizacao,
+    turno
+  );
+  const reservationKey = getReservationKey(dataUtilizacao, turno);
+
+  return Object.fromEntries(
+    tools.map((tool) => [
+      tool.id,
+      calculateToolPeriodAvailability(
+        tool.id,
+        tool,
+        reservationKey,
+        allocations.get(tool.id) ?? 0
+      ),
+    ])
+  );
+}
+
+export async function getMachinesAvailabilityForPeriod(
+  machines: Resource[],
+  dataUtilizacao: string,
+  turno: SolicitationShift
+): Promise<Record<string, MachinePeriodAvailability>> {
+  if (!dataUtilizacao || !turno || machines.length === 0) {
+    return {};
+  }
+
+  const solicitationsSnapshot = await getDocs(
+    collection(db, COLLECTION_NAME)
+  );
+  const machineSnapshots = await Promise.all(
+    machines.map((machine) =>
+      getDoc(doc(db, RESOURCE_COLLECTION_NAME, machine.id))
+    )
+  );
+  const allocatedMachineIds = getAllocatedMachineIds(
+    solicitationsSnapshot.docs,
+    dataUtilizacao,
+    turno
+  );
+  const reservationKey = getReservationKey(dataUtilizacao, turno);
+
+  return Object.fromEntries(
+    machines.map((machine, index) => {
+      const machineSnapshot = machineSnapshots[index];
+      const machineData = machineSnapshot?.exists()
+        ? machineSnapshot.data()
+        : null;
+      const reservedSolicitationId =
+        machineData?.reservas?.[reservationKey];
+
+      return [
+        machine.id,
+        {
+          resourceId: machine.id,
+          available:
+            machineData !== null &&
+            !allocatedMachineIds.has(machine.id) &&
+            !reservedSolicitationId,
+        },
+      ];
+    })
+  );
+}
+
+export async function validateDraftMachineAvailability(
+  draft: SolicitationDraft
+): Promise<void> {
+  if (!draft.turno || draft.maquinasSelecionadas.length === 0) {
+    return;
+  }
+
+  const requestedMachines = draft.maquinasSelecionadas.map(
+    (item) => item.resource
+  );
+  const availabilityByMachineId =
+    await getMachinesAvailabilityForPeriod(
+      requestedMachines,
+      draft.dataUtilizacao,
+      draft.turno
+    );
+  const conflictingMachineNames = new Set<string>();
+
+  draft.maquinasSelecionadas.forEach(({ resource }) => {
+    if (!availabilityByMachineId[resource.id]?.available) {
+      conflictingMachineNames.add(resource.nome);
+    }
   });
 
   if (conflictingMachineNames.size > 0) {
@@ -268,29 +477,11 @@ export async function validateDraftToolAvailability(
   const solicitationsSnapshot = await getDocs(
     collection(db, COLLECTION_NAME)
   );
-  const reservedToolsByResourceId = new Map<string, number>();
-
-  solicitationsSnapshot.docs.forEach((document) => {
-    const solicitation = document.data();
-    const isSamePeriod =
-      solicitation.dataUtilizacao === draft.dataUtilizacao &&
-      solicitation.turno === draft.turno;
-
-    if (!isSamePeriod || solicitation.status !== "APROVADA") {
-      return;
-    }
-
-    const tools =
-      (solicitation.ferramentas as Solicitation["ferramentas"]) ?? [];
-
-    tools.forEach((tool) => {
-      reservedToolsByResourceId.set(
-        tool.recursoId,
-        (reservedToolsByResourceId.get(tool.recursoId) ?? 0) +
-          Number(tool.quantidade ?? 0)
-      );
-    });
-  });
+  const allocatedToolsByResourceId = getToolAllocationsByResourceId(
+    solicitationsSnapshot.docs,
+    draft.dataUtilizacao,
+    draft.turno
+  );
 
   const reservationKey = getReservationKey(
     draft.dataUtilizacao,
@@ -319,28 +510,22 @@ export async function validateDraftToolAvailability(
       return;
     }
 
-    const availableQuantity = Number(
-      toolSnapshot.data().quantidadeDisponivel ?? 0
-    );
-    const stockReservations = getStockReservations(
+    const availability = calculateToolPeriodAvailability(
+      toolSnapshot.id,
       toolSnapshot.data(),
-      reservationKey
-    );
-    const reservedQuantity = Math.max(
-      Object.values(stockReservations).reduce(
-        (total, quantity) => total + quantity,
-        0
-      ),
-      reservedToolsByResourceId.get(
+      reservationKey,
+      allocatedToolsByResourceId.get(
         toolReference.selectedTool.resource.id
       ) ?? 0
     );
-    const quantityForPeriod = availableQuantity - reservedQuantity;
 
-    if (quantityForPeriod < toolReference.selectedTool.quantidade) {
+    if (
+      availability.availableQuantity <
+      toolReference.selectedTool.quantidade
+    ) {
       unavailableTools.push(
         `${toolReference.selectedTool.resource.nome} (disponível no período: ${Math.max(
-          quantityForPeriod,
+          availability.availableQuantity,
           0
         )}, solicitada: ${toolReference.selectedTool.quantidade})`
       );
@@ -634,52 +819,26 @@ export async function approveSolicitation(
     const occupiedSolicitationsSnapshot = await getDocs(
       collection(db, COLLECTION_NAME)
     );
-    const requestedMachineIds = new Set(
-      solicitation.maquinas.map((machine) => machine.recursoId)
-    );
     const conflictingMachineNames = new Set<string>();
-    const reservedToolsByResourceId = new Map<string, number>();
+    const allocatedMachineIds = getAllocatedMachineIds(
+      occupiedSolicitationsSnapshot.docs,
+      solicitation.dataUtilizacao,
+      solicitation.turno,
+      solicitation.id
+    );
 
-    occupiedSolicitationsSnapshot.docs.forEach((occupiedDocument) => {
-      if (occupiedDocument.id === solicitation.id) {
-        return;
-      }
-
-      const occupiedSolicitation = occupiedDocument.data();
-      const isSamePeriod =
-        occupiedSolicitation.dataUtilizacao === solicitation.dataUtilizacao &&
-        occupiedSolicitation.turno === solicitation.turno;
-      const occupiesResources = ["APROVADA", "EM_USO"].includes(
-        occupiedSolicitation.status
-      );
-
-      if (!isSamePeriod || !occupiesResources) {
-        return;
-      }
-
-      const occupiedMachines =
-        (occupiedSolicitation.maquinas as Solicitation["maquinas"]) ?? [];
-
-      occupiedMachines.forEach((machine) => {
-        if (requestedMachineIds.has(machine.recursoId)) {
-          conflictingMachineNames.add(machine.nome);
-        }
-      });
-
-      if (occupiedSolicitation.status === "APROVADA") {
-        const occupiedTools =
-          (occupiedSolicitation.ferramentas as Solicitation["ferramentas"]) ??
-          [];
-
-        occupiedTools.forEach((tool) => {
-          reservedToolsByResourceId.set(
-            tool.recursoId,
-            (reservedToolsByResourceId.get(tool.recursoId) ?? 0) +
-              Number(tool.quantidade ?? 0)
-          );
-        });
+    solicitation.maquinas.forEach((machine) => {
+      if (allocatedMachineIds.has(machine.recursoId)) {
+        conflictingMachineNames.add(machine.nome);
       }
     });
+
+    const allocatedToolsByResourceId = getToolAllocationsByResourceId(
+      occupiedSolicitationsSnapshot.docs,
+      solicitation.dataUtilizacao,
+      solicitation.turno,
+      solicitation.id
+    );
 
     if (conflictingMachineNames.size > 0) {
       const items = [...conflictingMachineNames];
@@ -758,26 +917,17 @@ export async function approveSolicitation(
         return;
       }
 
-      const availableQuantity = Number(
-        toolSnapshot.data().quantidadeDisponivel ?? 0
-      );
-      const stockReservations = getStockReservations(
+      const availability = calculateToolPeriodAvailability(
+        toolSnapshot.id,
         toolSnapshot.data(),
-        reservationKey
+        reservationKey,
+        allocatedToolsByResourceId.get(requestedTool.recursoId) ?? 0
       );
-      const reservedQuantity = Math.max(
-        Object.values(stockReservations).reduce(
-          (total, quantity) => total + quantity,
-          0
-        ),
-        reservedToolsByResourceId.get(requestedTool.recursoId) ?? 0
-      );
-      const quantityForPeriod = availableQuantity - reservedQuantity;
 
-      if (quantityForPeriod < requestedTool.quantidade) {
+      if (availability.availableQuantity < requestedTool.quantidade) {
         unavailableTools.push(
           `${requestedTool.nome} (disponível no período: ${Math.max(
-            quantityForPeriod,
+            availability.availableQuantity,
             0
           )}, solicitada: ${requestedTool.quantidade})`
         );
