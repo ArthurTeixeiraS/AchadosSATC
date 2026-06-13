@@ -22,6 +22,8 @@ export const AUDIT_COLLECTION_NAME = "eventosAuditoria";
 const eventLabels: Record<SolicitationAuditEventType, string> = {
   CRIACAO: "Solicitação criada",
   ALTERACAO: "Solicitação alterada",
+  ALTERACAO_ITEM_APROVADO: "Item da alteração aprovado",
+  ALTERACAO_ITEM_RECUSADO: "Item da alteração recusado",
   APROVACAO: "Solicitação aprovada",
   RECUSA: "Solicitação recusada",
   CANCELAMENTO: "Solicitação cancelada",

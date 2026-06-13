@@ -32,7 +32,12 @@ function getShiftLabel(shift: SolicitationShift) {
 }
 
 export function SolicitationInfoScreen({ navigation }: Props) {
-  const { draft, setBasicInfo, setObservacoes } = useSolicitationDraft();
+  const {
+    draft,
+    editingSolicitation,
+    setBasicInfo,
+    setObservacoes,
+  } = useSolicitationDraft();
 
   const [dataUtilizacao, setDataUtilizacao] = useState(draft.dataUtilizacao);
   const [turno, setTurno] = useState<SolicitationShift>(
@@ -86,6 +91,7 @@ export function SolicitationInfoScreen({ navigation }: Props) {
           <AppDatePicker
             value={dataUtilizacao}
             onChange={setDataUtilizacao}
+            disabled={!!editingSolicitation}
           />
         </View>
 
@@ -102,7 +108,9 @@ export function SolicitationInfoScreen({ navigation }: Props) {
                   style={[
                     styles.shiftButton,
                     isSelected && styles.shiftButtonActive,
+                    editingSolicitation && styles.shiftButtonDisabled,
                   ]}
+                  disabled={!!editingSolicitation}
                   onPress={() => setTurno(shift)}
                 >
                   <Text
@@ -118,6 +126,14 @@ export function SolicitationInfoScreen({ navigation }: Props) {
             })}
           </View>
         </View>
+
+        {!!editingSolicitation && (
+          <AppAlert
+            variant="info"
+            title="Período preservado:"
+            message="A data e o turno não podem ser alterados porque os recursos aprovados permanecem reservados."
+          />
+        )}
 
         <AppAlert
           variant="warning"
@@ -149,7 +165,9 @@ export function SolicitationInfoScreen({ navigation }: Props) {
 
         <View style={styles.buttonContainer}>
           <AppButton onPress={handleContinue}>
-            Confirmar e selecionar Máquinas
+            {editingSolicitation
+              ? "Continuar edição"
+              : "Confirmar e selecionar Máquinas"}
           </AppButton>
 
         </View>

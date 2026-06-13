@@ -32,7 +32,12 @@ type Props = NativeStackScreenProps<
 >;
 
 export function SelectMachinesScreen({ navigation }: Props) {
-  const { draft, addMachine, removeMachine } = useSolicitationDraft();
+  const {
+    draft,
+    editingSolicitation,
+    addMachine,
+    removeMachine,
+  } = useSolicitationDraft();
 
   const [machines, setMachines] = useState<Resource[]>([]);
   const [laboratories, setLaboratories] = useState<Resource[]>([]);
@@ -54,7 +59,8 @@ export function SelectMachinesScreen({ navigation }: Props) {
         ? await getMachinesAvailabilityForPeriod(
             loadedMachines,
             draft.dataUtilizacao,
-            draft.turno
+            draft.turno,
+            editingSolicitation?.id
           )
         : {};
 
@@ -71,7 +77,7 @@ export function SelectMachinesScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       loadResources();
-    }, [draft.dataUtilizacao, draft.turno])
+    }, [draft.dataUtilizacao, draft.turno, editingSolicitation?.id])
   );
 
   const filteredMachines = useMemo(() => {

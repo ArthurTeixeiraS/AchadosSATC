@@ -7,10 +7,12 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  deleteField,
   where,
   writeBatch,
   doc,
   getDoc,
+  Timestamp,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebaseConfig";
@@ -22,6 +24,8 @@ import {
   SolicitationStatus,
   SolicitationReturnInput,
   SolicitationTool,
+  SolicitationChangeMachine,
+  SolicitationChangeTool,
 } from "../../types/Solicitation";
 import { Resource } from "../../types/Resources";
 import {
@@ -65,6 +69,7 @@ type BusinessErrorCode =
   | "MACHINE_CONFLICT"
   | "INSUFFICIENT_STOCK"
   | "RESOURCE_NOT_FOUND"
+  | "INVALID_CHANGE"
   | "INVALID_RETURN";
 
 export class SolicitationBusinessError extends Error {
@@ -334,12 +339,21 @@ function calculateToolPeriodAvailability(
   resourceId: string,
   resourceData: DocumentData | Resource,
   reservationKey: string,
-  allocatedBySolicitations: number
+  allocatedBySolicitations: number,
+  excludedSolicitationId?: string
 ): ToolPeriodAvailability {
   const totalQuantity = getToolCapacity(resourceData);
-  const reservedByStock = Object.values(
-    getStockReservations(resourceData, reservationKey)
-  ).reduce((total, quantity) => total + quantity, 0);
+  const stockReservations = getStockReservations(
+    resourceData,
+    reservationKey
+  );
+  const reservedByStock = Object.entries(stockReservations).reduce(
+    (total, [solicitationId, quantity]) =>
+      solicitationId === excludedSolicitationId
+        ? total
+        : total + quantity,
+    0
+  );
   const allocatedQuantity = Math.max(
     reservedByStock,
     allocatedBySolicitations
@@ -356,7 +370,8 @@ function calculateToolPeriodAvailability(
 export async function getToolsAvailabilityForPeriod(
   tools: Resource[],
   dataUtilizacao: string,
-  turno: SolicitationShift
+  turno: SolicitationShift,
+  excludedSolicitationId?: string
 ): Promise<Record<string, ToolPeriodAvailability>> {
   if (!dataUtilizacao || !turno || tools.length === 0) {
     return {};
@@ -368,7 +383,8 @@ export async function getToolsAvailabilityForPeriod(
   const allocations = getToolAllocationsByResourceId(
     solicitationsSnapshot.docs,
     dataUtilizacao,
-    turno
+    turno,
+    excludedSolicitationId
   );
   const reservationKey = getReservationKey(dataUtilizacao, turno);
 
@@ -379,7 +395,8 @@ export async function getToolsAvailabilityForPeriod(
         tool.id,
         tool,
         reservationKey,
-        allocations.get(tool.id) ?? 0
+        allocations.get(tool.id) ?? 0,
+        excludedSolicitationId
       ),
     ])
   );
@@ -388,7 +405,8 @@ export async function getToolsAvailabilityForPeriod(
 export async function getMachinesAvailabilityForPeriod(
   machines: Resource[],
   dataUtilizacao: string,
-  turno: SolicitationShift
+  turno: SolicitationShift,
+  excludedSolicitationId?: string
 ): Promise<Record<string, MachinePeriodAvailability>> {
   if (!dataUtilizacao || !turno || machines.length === 0) {
     return {};
@@ -405,7 +423,8 @@ export async function getMachinesAvailabilityForPeriod(
   const allocatedMachineIds = getAllocatedMachineIds(
     solicitationsSnapshot.docs,
     dataUtilizacao,
-    turno
+    turno,
+    excludedSolicitationId
   );
   const reservationKey = getReservationKey(dataUtilizacao, turno);
 
@@ -425,7 +444,8 @@ export async function getMachinesAvailabilityForPeriod(
           available:
             machineData !== null &&
             !allocatedMachineIds.has(machine.id) &&
-            !reservedSolicitationId,
+            (!reservedSolicitationId ||
+              reservedSolicitationId === excludedSolicitationId),
         },
       ];
     })
@@ -681,7 +701,9 @@ function calculateDashboardStats(
 
   return {
     pendentes: currentWeek.filter(
-      (document) => document.data().status === "PENDENTE"
+      (document) =>
+        document.data().status === "PENDENTE" ||
+        document.data().status === "ALTERACAO_PENDENTE"
     ).length,
     novas: currentWeek.filter(
       (document) => document.data().status === "APROVADA"
@@ -788,6 +810,628 @@ export async function getSolicitationById(
   }
 
   return mapSolicitation(snapshot.id, snapshot.data());
+}
+
+export async function updateApprovedSolicitation(
+  id: string,
+  draft: SolicitationDraft,
+  professor: AppUser
+): Promise<void> {
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
+  const occupiedSolicitationsSnapshot = await getDocs(
+    collection(db, COLLECTION_NAME)
+  );
+
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(solicitation.status, "APROVADA", "alterar");
+
+    if (solicitation.professorId !== professor.id) {
+      throw new SolicitationBusinessError(
+        "INVALID_CHANGE",
+        "Somente o professor responsável pode alterar esta solicitação."
+      );
+    }
+
+    if (
+      draft.dataUtilizacao !== solicitation.dataUtilizacao ||
+      draft.turno !== solicitation.turno
+    ) {
+      throw new SolicitationBusinessError(
+        "INVALID_CHANGE",
+        "A data e o turno de uma solicitação aprovada não podem ser alterados."
+      );
+    }
+
+    const originalMachines = new Map(
+      solicitation.maquinas.map((machine) => [machine.recursoId, machine])
+    );
+    const originalTools = new Map(
+      solicitation.ferramentas.map((tool) => [tool.recursoId, tool])
+    );
+    const desiredMachines = new Map(
+      draft.maquinasSelecionadas.map(({ resource }) => [resource.id, resource])
+    );
+    const desiredTools = new Map(
+      draft.ferramentasSelecionadas.map(({ resource, quantidade }) => [
+        resource.id,
+        { resource, quantidade },
+      ])
+    );
+
+    const retainedMachines = solicitation.maquinas.filter((machine) =>
+      desiredMachines.has(machine.recursoId)
+    );
+    const retainedTools = solicitation.ferramentas
+      .map((tool) => ({
+        ...tool,
+        quantidade: Math.min(
+          Number(tool.quantidade) || 0,
+          desiredTools.get(tool.recursoId)?.quantidade ?? 0
+        ),
+      }))
+      .filter((tool) => tool.quantidade > 0);
+
+    if (retainedMachines.length === 0 && retainedTools.length === 0) {
+      throw new SolicitationBusinessError(
+        "INVALID_CHANGE",
+        "Mantenha ao menos um recurso previamente aprovado na solicitação."
+      );
+    }
+
+    const addedMachines: SolicitationChangeMachine[] = [
+      ...desiredMachines.values(),
+    ]
+      .filter((resource) => !originalMachines.has(resource.id))
+      .map((resource) => ({
+        recursoId: resource.id,
+        nome: resource.nome,
+        laboratorioId: resource.laboratorioId ?? null,
+        status: "PENDENTE",
+      }));
+    const increasedTools: SolicitationChangeTool[] = [
+      ...desiredTools.values(),
+    ].flatMap(({ resource, quantidade }) => {
+      const originalQuantity = Number(
+        originalTools.get(resource.id)?.quantidade ?? 0
+      );
+      const additionalQuantity = quantidade - originalQuantity;
+
+      return additionalQuantity > 0
+        ? [{
+            recursoId: resource.id,
+            nome: resource.nome,
+            quantidadeAdicional: additionalQuantity,
+            status: "PENDENTE" as const,
+          }]
+        : [];
+    });
+    const removedMachines = solicitation.maquinas.filter(
+      (machine) => !desiredMachines.has(machine.recursoId)
+    );
+    const changedToolIds = solicitation.ferramentas
+      .filter(
+        (tool) =>
+          (desiredTools.get(tool.recursoId)?.quantidade ?? 0) <
+          Number(tool.quantidade)
+      )
+      .map((tool) => tool.recursoId);
+    const reducedTools = solicitation.ferramentas.flatMap((tool) => {
+      const desiredQuantity =
+        desiredTools.get(tool.recursoId)?.quantidade ?? 0;
+      const reduction = Number(tool.quantidade) - desiredQuantity;
+
+      return reduction > 0
+        ? [{ ...tool, reduction }]
+        : [];
+    });
+    const resourceIds = new Set([
+      ...addedMachines.map((machine) => machine.recursoId),
+      ...removedMachines.map((machine) => machine.recursoId),
+      ...increasedTools.map((tool) => tool.recursoId),
+      ...changedToolIds,
+    ]);
+    const resourceReferences = [...resourceIds].map((resourceId) => ({
+      resourceId,
+      reference: doc(db, RESOURCE_COLLECTION_NAME, resourceId),
+    }));
+    const resourceSnapshots = await Promise.all(
+      resourceReferences.map(({ reference }) => transaction.get(reference))
+    );
+    const resourcesById = new Map(
+      resourceReferences.map(({ resourceId }, index) => [
+        resourceId,
+        resourceSnapshots[index],
+      ])
+    );
+    const reservationKey = getReservationKey(
+      solicitation.dataUtilizacao,
+      solicitation.turno
+    );
+    const allocatedMachineIds = getAllocatedMachineIds(
+      occupiedSolicitationsSnapshot.docs,
+      solicitation.dataUtilizacao,
+      solicitation.turno,
+      solicitation.id
+    );
+    const allocatedToolsByResourceId = getToolAllocationsByResourceId(
+      occupiedSolicitationsSnapshot.docs,
+      solicitation.dataUtilizacao,
+      solicitation.turno,
+      solicitation.id
+    );
+    const unavailableItems: string[] = [];
+
+    addedMachines.forEach((machine) => {
+      const snapshot = resourcesById.get(machine.recursoId);
+      const reservedBy = snapshot?.data()?.reservas?.[reservationKey];
+
+      if (
+        !snapshot?.exists() ||
+        allocatedMachineIds.has(machine.recursoId) ||
+        (reservedBy && reservedBy !== solicitation.id)
+      ) {
+        unavailableItems.push(machine.nome);
+      }
+    });
+
+    increasedTools.forEach((tool) => {
+      const snapshot = resourcesById.get(tool.recursoId);
+
+      if (!snapshot?.exists()) {
+        unavailableItems.push(tool.nome);
+        return;
+      }
+
+      const approvedQuantity = Number(
+        originalTools.get(tool.recursoId)?.quantidade ?? 0
+      );
+      const availability = calculateToolPeriodAvailability(
+        tool.recursoId,
+        snapshot.data(),
+        reservationKey,
+        allocatedToolsByResourceId.get(tool.recursoId) ?? 0,
+        solicitation.id
+      );
+
+      if (
+        approvedQuantity + tool.quantidadeAdicional >
+        availability.availableQuantity
+      ) {
+        unavailableItems.push(tool.nome);
+      }
+    });
+
+    if (unavailableItems.length > 0) {
+      throw new SolicitationBusinessError(
+        "INSUFFICIENT_STOCK",
+        formatValidationItems(
+          "Recursos indisponíveis para a alteração:",
+          unavailableItems
+        ),
+        unavailableItems
+      );
+    }
+
+    removedMachines.forEach((machine) => {
+      const snapshot = resourcesById.get(machine.recursoId);
+
+      if (!snapshot?.exists()) return;
+
+      const reservations = { ...(snapshot.data().reservas ?? {}) };
+
+      if (reservations[reservationKey] === solicitation.id) {
+        delete reservations[reservationKey];
+      }
+
+      transaction.update(snapshot.ref, {
+        reservas: reservations,
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    changedToolIds.forEach((resourceId) => {
+      const snapshot = resourcesById.get(resourceId);
+
+      if (!snapshot?.exists()) return;
+
+      const stockReservations = {
+        ...(snapshot.data().reservasEstoque ?? {}),
+      };
+      const periodReservations = {
+        ...getStockReservations(snapshot.data(), reservationKey),
+      };
+      const newQuantity =
+        retainedTools.find((tool) => tool.recursoId === resourceId)
+          ?.quantidade ?? 0;
+
+      if (newQuantity > 0) {
+        periodReservations[solicitation.id] = newQuantity;
+      } else {
+        delete periodReservations[solicitation.id];
+      }
+
+      if (Object.keys(periodReservations).length > 0) {
+        stockReservations[reservationKey] = periodReservations;
+      } else {
+        delete stockReservations[reservationKey];
+      }
+
+      transaction.update(snapshot.ref, {
+        reservasEstoque: stockReservations,
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    const hasPendingItems =
+      addedMachines.length > 0 || increasedTools.length > 0;
+    const changeRequestedAt = Timestamp.now();
+    const laboratoriosIds = [
+      ...new Set(
+        retainedMachines
+          .map((machine) => machine.laboratorioId)
+          .filter(Boolean)
+      ),
+    ];
+
+    transaction.update(solicitationRef, {
+      atividade: draft.atividade,
+      observacoes: draft.observacoes,
+      maquinas: retainedMachines,
+      ferramentas: retainedTools,
+      laboratoriosIds,
+      prioridade: calculateSolicitationPriority(
+        solicitation.dataUtilizacao
+      ),
+      status: hasPendingItems ? "ALTERACAO_PENDENTE" : "APROVADA",
+      analiseAlteracao: hasPendingItems
+        ? {
+            solicitadaPorId: professor.id,
+            solicitadaPorNome: professor.nomeCompleto,
+            solicitadaEm: changeRequestedAt,
+            maquinas: addedMachines,
+            ferramentas: increasedTools,
+          }
+        : deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: "ALTERACAO",
+        actor: {
+          id: professor.id,
+          nome: professor.nomeCompleto,
+          perfil: professor.tipoUsuario,
+        },
+        summary: hasPendingItems
+          ? `Solicitação alterada: ${addedMachines.length + increasedTools.length} acréscimo(s) enviado(s) para análise e ${removedMachines.length + reducedTools.length} redução(ões) aplicada(s)`
+          : `Solicitação aprovada alterada com ${removedMachines.length + reducedTools.length} redução(ões)`,
+        previousStatus: solicitation.status,
+        newStatus: hasPendingItems
+          ? "ALTERACAO_PENDENTE"
+          : "APROVADA",
+        items: [
+          ...addedMachines.map((machine) => ({
+            recursoId: machine.recursoId,
+            nome: machine.nome,
+            tipo: "MAQUINA" as const,
+            quantidade: 1,
+          })),
+          ...increasedTools.map((tool) => ({
+            recursoId: tool.recursoId,
+            nome: tool.nome,
+            tipo: "FERRAMENTA" as const,
+            quantidade: tool.quantidadeAdicional,
+          })),
+          ...removedMachines.map((machine) => ({
+            recursoId: machine.recursoId,
+            nome: machine.nome,
+            tipo: "MAQUINA" as const,
+            quantidade: 1,
+          })),
+          ...reducedTools.map((tool) => ({
+            recursoId: tool.recursoId,
+            nome: tool.nome,
+            tipo: "FERRAMENTA" as const,
+            quantidade: tool.reduction,
+          })),
+        ],
+      }),
+      createdAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function decideSolicitationChangeItem(
+  id: string,
+  itemType: "MAQUINA" | "FERRAMENTA",
+  resourceId: string,
+  approved: boolean,
+  funcionario: AppUser,
+  reason?: string
+): Promise<void> {
+  if (!approved && !reason?.trim()) {
+    throw new SolicitationBusinessError(
+      "INVALID_CHANGE",
+      "Informe o motivo da recusa."
+    );
+  }
+
+  const solicitationRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(
+    collection(solicitationRef, AUDIT_COLLECTION_NAME)
+  );
+  const occupiedSolicitationsSnapshot = await getDocs(
+    collection(db, COLLECTION_NAME)
+  );
+
+  await runTransaction(db, async (transaction) => {
+    const solicitationSnapshot = await transaction.get(solicitationRef);
+
+    if (!solicitationSnapshot.exists()) {
+      throw new SolicitationBusinessError(
+        "RESOURCE_NOT_FOUND",
+        "Solicitação não encontrada."
+      );
+    }
+
+    const solicitation = mapSolicitation(
+      solicitationSnapshot.id,
+      solicitationSnapshot.data()
+    );
+
+    assertStatus(
+      solicitation.status,
+      "ALTERACAO_PENDENTE",
+      "analisar a alteração"
+    );
+
+    const review = solicitation.analiseAlteracao;
+
+    if (!review) {
+      throw new SolicitationBusinessError(
+        "INVALID_CHANGE",
+        "Esta solicitação não possui alteração pendente."
+      );
+    }
+
+    const items =
+      itemType === "MAQUINA" ? review.maquinas : review.ferramentas;
+    const item = items.find(
+      (candidate) => candidate.recursoId === resourceId
+    );
+
+    if (!item || item.status !== "PENDENTE") {
+      throw new SolicitationBusinessError(
+        "INVALID_CHANGE",
+        "Este item já foi analisado ou não está mais disponível."
+      );
+    }
+
+    const resourceRef = doc(db, RESOURCE_COLLECTION_NAME, resourceId);
+    const resourceSnapshot = approved
+      ? await transaction.get(resourceRef)
+      : null;
+    const reservationKey = getReservationKey(
+      solicitation.dataUtilizacao,
+      solicitation.turno
+    );
+    let approvedMachines = [...solicitation.maquinas];
+    let approvedTools = [...solicitation.ferramentas];
+
+    if (approved) {
+      if (!resourceSnapshot?.exists()) {
+        throw new SolicitationBusinessError(
+          "RESOURCE_NOT_FOUND",
+          "O recurso não foi encontrado."
+        );
+      }
+
+      if (itemType === "MAQUINA") {
+        const machine = item as SolicitationChangeMachine;
+        const allocatedMachineIds = getAllocatedMachineIds(
+          occupiedSolicitationsSnapshot.docs,
+          solicitation.dataUtilizacao,
+          solicitation.turno,
+          solicitation.id
+        );
+        const reservations = {
+          ...(resourceSnapshot.data().reservas ?? {}),
+        };
+        const reservedBy = reservations[reservationKey];
+
+        if (
+          allocatedMachineIds.has(resourceId) ||
+          (reservedBy && reservedBy !== solicitation.id)
+        ) {
+          throw new SolicitationBusinessError(
+            "MACHINE_CONFLICT",
+            `A máquina ${machine.nome} não está mais disponível neste período.`,
+            [machine.nome]
+          );
+        }
+
+        reservations[reservationKey] = solicitation.id;
+        transaction.update(resourceRef, {
+          reservas: reservations,
+          updatedAt: serverTimestamp(),
+        });
+        approvedMachines.push({
+          recursoId: machine.recursoId,
+          nome: machine.nome,
+          laboratorioId: machine.laboratorioId ?? null,
+          devolvida: false,
+        });
+      } else {
+        const tool = item as SolicitationChangeTool;
+        const approvedQuantity = Number(
+          approvedTools.find(
+            (approvedTool) =>
+              approvedTool.recursoId === tool.recursoId
+          )?.quantidade ?? 0
+        );
+        const allocatedToolsByResourceId =
+          getToolAllocationsByResourceId(
+            occupiedSolicitationsSnapshot.docs,
+            solicitation.dataUtilizacao,
+            solicitation.turno,
+            solicitation.id
+          );
+        const availability = calculateToolPeriodAvailability(
+          resourceId,
+          resourceSnapshot.data(),
+          reservationKey,
+          allocatedToolsByResourceId.get(resourceId) ?? 0,
+          solicitation.id
+        );
+        const newQuantity =
+          approvedQuantity + tool.quantidadeAdicional;
+
+        if (newQuantity > availability.availableQuantity) {
+          throw new SolicitationBusinessError(
+            "INSUFFICIENT_STOCK",
+            `A ferramenta ${tool.nome} não possui mais quantidade suficiente neste período.`,
+            [tool.nome]
+          );
+        }
+
+        const stockReservations = {
+          ...(resourceSnapshot.data().reservasEstoque ?? {}),
+        };
+        const periodReservations = {
+          ...getStockReservations(
+            resourceSnapshot.data(),
+            reservationKey
+          ),
+          [solicitation.id]: newQuantity,
+        };
+
+        transaction.update(resourceRef, {
+          reservasEstoque: {
+            ...stockReservations,
+            [reservationKey]: periodReservations,
+          },
+          updatedAt: serverTimestamp(),
+        });
+
+        const existingToolIndex = approvedTools.findIndex(
+          (approvedTool) => approvedTool.recursoId === resourceId
+        );
+
+        if (existingToolIndex >= 0) {
+          approvedTools[existingToolIndex] = {
+            ...approvedTools[existingToolIndex],
+            quantidade: newQuantity,
+          };
+        } else {
+          approvedTools.push({
+            recursoId: tool.recursoId,
+            nome: tool.nome,
+            quantidade: tool.quantidadeAdicional,
+            quantidadeDevolvida: 0,
+          });
+        }
+      }
+    }
+
+    const decision = {
+      responsavelId: funcionario.id,
+      responsavelNome: funcionario.nomeCompleto,
+      decididaEm: Timestamp.now(),
+      ...(approved ? {} : { motivo: reason?.trim() }),
+    };
+    const updatedMachines = review.maquinas.map((machine) =>
+      itemType === "MAQUINA" && machine.recursoId === resourceId
+        ? {
+            ...machine,
+            status: approved ? "APROVADO" as const : "RECUSADO" as const,
+            decisao: decision,
+          }
+        : machine
+    );
+    const updatedTools = review.ferramentas.map((tool) =>
+      itemType === "FERRAMENTA" && tool.recursoId === resourceId
+        ? {
+            ...tool,
+            status: approved ? "APROVADO" as const : "RECUSADO" as const,
+            decisao: decision,
+          }
+        : tool
+    );
+    const hasPendingItems = [...updatedMachines, ...updatedTools].some(
+      (changeItem) => changeItem.status === "PENDENTE"
+    );
+    const laboratoriosIds = [
+      ...new Set(
+        approvedMachines
+          .map((machine) => machine.laboratorioId)
+          .filter(Boolean)
+      ),
+    ];
+
+    transaction.update(solicitationRef, {
+      maquinas: approvedMachines,
+      ferramentas: approvedTools,
+      laboratoriosIds,
+      analiseAlteracao: {
+        ...review,
+        maquinas: updatedMachines,
+        ferramentas: updatedTools,
+      },
+      status: hasPendingItems ? "ALTERACAO_PENDENTE" : "APROVADA",
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      ...createAuditEventData({
+        solicitationId: solicitation.id,
+        type: approved
+          ? "ALTERACAO_ITEM_APROVADO"
+          : "ALTERACAO_ITEM_RECUSADO",
+        actor: {
+          id: funcionario.id,
+          nome: funcionario.nomeCompleto,
+          perfil: funcionario.tipoUsuario,
+        },
+        summary: approved
+          ? "Item da alteração aprovado"
+          : "Item da alteração recusado",
+        previousStatus: solicitation.status,
+        newStatus: hasPendingItems
+          ? "ALTERACAO_PENDENTE"
+          : "APROVADA",
+        reason: approved ? undefined : reason?.trim(),
+        items: [{
+          recursoId: resourceId,
+          nome: item.nome,
+          tipo: itemType,
+          quantidade:
+            itemType === "MAQUINA"
+              ? 1
+              : (item as SolicitationChangeTool).quantidadeAdicional,
+        }],
+      }),
+      createdAt: serverTimestamp(),
+    });
+  });
 }
 
 export async function approveSolicitation(

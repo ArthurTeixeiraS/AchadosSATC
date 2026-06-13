@@ -35,6 +35,7 @@ function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     PENDENTE: "Pendente",
     APROVADA: "Aprovada",
+    ALTERACAO_PENDENTE: "Alteração pendente",
     RECUSADA: "Recusada",
     EM_USO: "Em uso",
     ENCERRADA: "Encerrada",
@@ -91,7 +92,7 @@ export function ProfessorSolicitationDetailsScreen({
   const showReturnProgress = ["EM_USO", "ENCERRADA"].includes(
     solicitation.status
   );
-  const { draft, replaceDraft } = useSolicitationDraft();
+  const { draft, replaceDraft, startEditing } = useSolicitationDraft();
 
   const [laboratoryNames, setLaboratoryNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -304,6 +305,95 @@ export function ProfessorSolicitationDetailsScreen({
     );
   }
 
+  async function editSolicitation() {
+    if (duplicating) return;
+
+    try {
+      setDuplicating(true);
+
+      const [machines, tools] = await Promise.all([
+        Promise.all(
+          (solicitation.maquinas ?? []).map(async (machine) => ({
+            snapshot: machine,
+            resource: await getResourceById(machine.recursoId),
+          }))
+        ),
+        Promise.all(
+          (solicitation.ferramentas ?? []).map(async (tool) => ({
+            snapshot: tool,
+            resource: await getResourceById(tool.recursoId),
+          }))
+        ),
+      ]);
+      const missingResources = [
+        ...machines
+          .filter(({ resource }) => !resource)
+          .map(({ snapshot }) => snapshot.nome),
+        ...tools
+          .filter(({ resource }) => !resource)
+          .map(({ snapshot }) => snapshot.nome),
+      ];
+
+      if (missingResources.length > 0) {
+        Alert.alert(
+          "Recursos não encontrados",
+          `Não foi possível editar porque alguns recursos não existem mais: ${missingResources.join(", ")}.`
+        );
+        return;
+      }
+
+      const editDraft: SolicitationDraft = {
+        dataUtilizacao: solicitation.dataUtilizacao,
+        turno: solicitation.turno,
+        atividade: solicitation.atividade ?? "",
+        observacoes: solicitation.observacoes ?? "",
+        maquinasSelecionadas: machines.map(({ resource }) => ({
+          resource: resource as Resource,
+        })),
+        ferramentasSelecionadas: tools.map(({ snapshot, resource }) => ({
+          resource: resource as Resource,
+          quantidade: Number(snapshot.quantidade) || 1,
+        })),
+      };
+
+      startEditing(solicitation, editDraft);
+
+      navigation
+        .getParent<DrawerNavigationProp<ProfessorDrawerParamList>>()
+        ?.navigate("Nova Solicitação", {
+          screen: "SolicitationInfo",
+        });
+    } catch (error) {
+      console.log("Erro ao preparar edição da solicitação:", error);
+      Alert.alert(
+        "Erro ao editar",
+        "Não foi possível preparar a solicitação para edição."
+      );
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
+  function handleEditSolicitation() {
+    if (!hasExistingDraft()) {
+      void editSolicitation();
+      return;
+    }
+
+    Alert.alert(
+      "Substituir rascunho?",
+      "Já existe uma solicitação em preenchimento. Ao continuar, os dados atuais serão substituídos.",
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: "Substituir",
+          style: "destructive",
+          onPress: () => void editSolicitation(),
+        },
+      ]
+    );
+  }
+
   return (
     <ScreenContainer>
       <ScrollView
@@ -399,6 +489,10 @@ export function ProfessorSolicitationDetailsScreen({
                 <View key={machine.recursoId} style={styles.resourceItem}>
                   <Text style={styles.resourceName}>{machine.nome}</Text>
 
+                  {!!solicitation.analiseAlteracao && (
+                    <Text style={styles.approvedItemStatus}>Aprovado</Text>
+                  )}
+
                   <Text style={styles.resourceMeta}>
                     Máquina
                     {machine.laboratorioNome
@@ -432,6 +526,10 @@ export function ProfessorSolicitationDetailsScreen({
               {solicitation.ferramentas.map((tool: any) => (
                 <View key={tool.recursoId} style={styles.resourceItem}>
                   <Text style={styles.resourceName}>{tool.nome}</Text>
+
+                  {!!solicitation.analiseAlteracao && (
+                    <Text style={styles.approvedItemStatus}>Aprovado</Text>
+                  )}
 
                   {!!tool.descricao && (
                     <Text style={styles.resourceMeta}>
@@ -493,9 +591,73 @@ export function ProfessorSolicitationDetailsScreen({
             )}
         </AppCard>
 
+        {!!solicitation.analiseAlteracao && (
+          <AppCard>
+            <Text style={styles.sectionTitle}>Alteração solicitada</Text>
+
+            <AppAlert
+              variant={
+                solicitation.status === "ALTERACAO_PENDENTE"
+                  ? "info"
+                  : "success"
+              }
+              message={
+                solicitation.status === "ALTERACAO_PENDENTE"
+                  ? "Os recursos aprovados continuam reservados enquanto os acréscimos são analisados."
+                  : "A análise desta alteração foi concluída."
+              }
+            />
+
+            {[
+              ...solicitation.analiseAlteracao.maquinas.map((item) => ({
+                key: `MAQUINA-${item.recursoId}`,
+                name: item.nome,
+                detail: "Nova máquina",
+                status: item.status,
+                reason: item.decisao?.motivo,
+              })),
+              ...solicitation.analiseAlteracao.ferramentas.map((item) => ({
+                key: `FERRAMENTA-${item.recursoId}`,
+                name: item.nome,
+                detail: `Aumento de ${item.quantidadeAdicional} unidade(s)`,
+                status: item.status,
+                reason: item.decisao?.motivo,
+              })),
+            ].map((item) => (
+              <View key={item.key} style={styles.resourceItem}>
+                <Text style={styles.resourceName}>{item.name}</Text>
+                <Text style={styles.resourceMeta}>
+                  {item.detail} ·{" "}
+                  {item.status === "APROVADO"
+                    ? "Aprovado"
+                    : item.status === "RECUSADO"
+                    ? "Recusado"
+                    : "Pendente"}
+                </Text>
+
+                {!!item.reason && (
+                  <Text style={styles.resourceMeta}>
+                    Motivo: {item.reason}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </AppCard>
+        )}
+
         <SolicitationAuditTimeline solicitation={solicitation} />
 
         <View style={styles.buttonContainer}>
+          {solicitation.status === "APROVADA" && (
+            <AppButton
+              loading={duplicating}
+              disabled={loading || duplicating}
+              onPress={handleEditSolicitation}
+            >
+              Editar solicitação
+            </AppButton>
+          )}
+
           <AppButton
             loading={duplicating}
             disabled={loading || duplicating}

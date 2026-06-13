@@ -26,13 +26,18 @@ import {
 
 import {
     approveSolicitation,
+    decideSolicitationChangeItem,
     getSolicitationById,
     isSolicitationOverdue,
     registerSolicitationWithdrawal,
     rejectSolicitation,
     SolicitationBusinessError,
 } from "../../../services/solicitations/solicitationServices";
-import { Solicitation } from "../../../types/Solicitation";
+import {
+    Solicitation,
+    SolicitationChangeMachine,
+    SolicitationChangeTool,
+} from "../../../types/Solicitation";
 
 import { styles } from "./styles";
 
@@ -45,6 +50,7 @@ function getStatusLabel(status: string) {
     const labels: Record<string, string> = {
         PENDENTE: "Pendente",
         APROVADA: "Aprovada",
+        ALTERACAO_PENDENTE: "Alteração pendente",
         RECUSADA: "Recusada",
         EM_USO: "Em uso",
         ENCERRADA: "Encerrada",
@@ -83,6 +89,11 @@ export function FuncionarioSolicitationDetailsScreen({
     const [actionLoading, setActionLoading] = useState(false);
     const [rejectModalVisible, setRejectModalVisible] = useState(false);
     const [rejectReason, setRejectReason] = useState("");
+    const [changeItemToReject, setChangeItemToReject] = useState<{
+        type: "MAQUINA" | "FERRAMENTA";
+        resourceId: string;
+    } | null>(null);
+    const [changeRejectReason, setChangeRejectReason] = useState("");
     const [currentTime, setCurrentTime] = useState(() => new Date());
 
     useEffect(() => {
@@ -231,6 +242,139 @@ export function FuncionarioSolicitationDetailsScreen({
         });
     }
 
+    function handleApproveChangeItem(
+        type: "MAQUINA" | "FERRAMENTA",
+        resourceId: string
+    ) {
+        if (!solicitation || !appUser) return;
+
+        void executeAction(
+            () =>
+                decideSolicitationChangeItem(
+                    solicitation.id,
+                    type,
+                    resourceId,
+                    true,
+                    appUser
+                ),
+            "Item aprovado com sucesso."
+        );
+    }
+
+    async function handleConfirmChangeRejection() {
+        if (
+            !solicitation ||
+            !appUser ||
+            !changeItemToReject
+        ) {
+            return;
+        }
+
+        if (!changeRejectReason.trim()) {
+            Alert.alert("Campo obrigatório", "Informe o motivo da recusa.");
+            return;
+        }
+
+        const selectedItem = changeItemToReject;
+        setChangeItemToReject(null);
+
+        await executeAction(
+            () =>
+                decideSolicitationChangeItem(
+                    solicitation.id,
+                    selectedItem.type,
+                    selectedItem.resourceId,
+                    false,
+                    appUser,
+                    changeRejectReason.trim()
+                ),
+            "Item recusado com sucesso."
+        );
+    }
+
+    function renderChangeItem(
+        item: SolicitationChangeMachine | SolicitationChangeTool,
+        type: "MAQUINA" | "FERRAMENTA"
+    ) {
+        const isPending = item.status === "PENDENTE";
+        const quantity =
+            type === "FERRAMENTA"
+                ? (item as SolicitationChangeTool).quantidadeAdicional
+                : 1;
+
+        return (
+            <View
+                key={`${type}-${item.recursoId}`}
+                style={styles.changeItem}
+            >
+                <View style={styles.changeItemHeader}>
+                    <View style={styles.changeItemInfo}>
+                        <Text style={styles.resourceName}>{item.nome}</Text>
+                        <Text style={styles.resourceMeta}>
+                            {type === "MAQUINA"
+                                ? "Nova máquina"
+                                : `Aumento de ${quantity} unidade(s)`}
+                        </Text>
+                    </View>
+
+                    <Text
+                        style={[
+                            styles.changeStatus,
+                            item.status === "APROVADO"
+                                ? styles.changeStatusApproved
+                                : item.status === "RECUSADO"
+                                ? styles.changeStatusRejected
+                                : styles.changeStatusPending,
+                        ]}
+                    >
+                        {item.status === "APROVADO"
+                            ? "Aprovado"
+                            : item.status === "RECUSADO"
+                            ? "Recusado"
+                            : "Pendente"}
+                    </Text>
+                </View>
+
+                {!!item.decisao?.motivo && (
+                    <Text style={styles.resourceMeta}>
+                        Motivo: {item.decisao.motivo}
+                    </Text>
+                )}
+
+                {isPending && (
+                    <View style={styles.actionRow}>
+                        <AppButton
+                            disabled={actionLoading}
+                            onPress={() =>
+                                handleApproveChangeItem(
+                                    type,
+                                    item.recursoId
+                                )
+                            }
+                            style={styles.actionButton}
+                        >
+                            Aprovar
+                        </AppButton>
+
+                        <AppDestructiveButton
+                            disabled={actionLoading}
+                            onPress={() => {
+                                setChangeRejectReason("");
+                                setChangeItemToReject({
+                                    type,
+                                    resourceId: item.recursoId,
+                                });
+                            }}
+                            style={styles.actionButton}
+                        >
+                            Recusar
+                        </AppDestructiveButton>
+                    </View>
+                )}
+            </View>
+        );
+    }
+
     if (loading) {
         return <Loading message="Carregando solicitação..." />;
     }
@@ -250,9 +394,16 @@ export function FuncionarioSolicitationDetailsScreen({
     const canApproveOrReject = solicitation.status === "PENDENTE";
     const canRegisterWithdrawal = solicitation.status === "APROVADA";
     const canRegisterReturn = solicitation.status === "EM_USO";
+    const isChangePending = solicitation.status === "ALTERACAO_PENDENTE";
     const showReturnProgress = ["EM_USO", "ENCERRADA"].includes(
         solicitation.status
     );
+    const pendingChangeItemsCount = solicitation.analiseAlteracao
+        ? [
+              ...solicitation.analiseAlteracao.maquinas,
+              ...solicitation.analiseAlteracao.ferramentas,
+          ].filter((item) => item.status === "PENDENTE").length
+        : 0;
 
     return (
         <ScreenContainer>
@@ -287,7 +438,13 @@ export function FuncionarioSolicitationDetailsScreen({
 
                         <View style={styles.infoColumn}>
                             <Text style={styles.infoLabel}>Status</Text>
-                            <Text style={styles.statusValue}>
+                            <Text
+                                style={[
+                                    styles.statusValue,
+                                    isChangePending &&
+                                        styles.changePendingStatusValue,
+                                ]}
+                            >
                                 {getStatusLabel(solicitation.status)}
                             </Text>
                         </View>
@@ -319,6 +476,30 @@ export function FuncionarioSolicitationDetailsScreen({
                     )}
                 </AppCard>
 
+                {isChangePending && !!solicitation.analiseAlteracao && (
+                    <AppCard style={styles.changeReviewCard}>
+                        <Text style={styles.sectionTitle}>
+                            Reaprovar itens da alteração
+                        </Text>
+
+                        <AppAlert
+                            variant="info"
+                            title={`${pendingChangeItemsCount} acréscimo${
+                                pendingChangeItemsCount !== 1 ? "s" : ""
+                            } aguardando decisão`}
+                            message="Os recursos aprovados anteriormente continuam reservados. Aprove ou recuse separadamente cada acréscimo abaixo."
+                        />
+
+                        {solicitation.analiseAlteracao.maquinas.map((item) =>
+                            renderChangeItem(item, "MAQUINA")
+                        )}
+
+                        {solicitation.analiseAlteracao.ferramentas.map((item) =>
+                            renderChangeItem(item, "FERRAMENTA")
+                        )}
+                    </AppCard>
+                )}
+
                 {isSolicitationOverdue(solicitation, currentTime) && (
                     <AppAlert
                         variant="error"
@@ -337,6 +518,12 @@ export function FuncionarioSolicitationDetailsScreen({
                             {solicitation.maquinas.map((machine) => (
                                 <View key={machine.recursoId} style={styles.resourceItem}>
                                     <Text style={styles.resourceName}>{machine.nome}</Text>
+
+                                    {!!solicitation.analiseAlteracao && (
+                                        <Text style={styles.approvedItemStatus}>
+                                            Aprovado
+                                        </Text>
+                                    )}
 
                                     <Text style={styles.resourceMeta}>
                                         Laboratório:{" "}
@@ -371,6 +558,12 @@ export function FuncionarioSolicitationDetailsScreen({
                             {solicitation.ferramentas.map((tool) => (
                                 <View key={tool.recursoId} style={styles.resourceItem}>
                                     <Text style={styles.resourceName}>{tool.nome}</Text>
+
+                                    {!!solicitation.analiseAlteracao && (
+                                        <Text style={styles.approvedItemStatus}>
+                                            Aprovado
+                                        </Text>
+                                    )}
 
                                     <View style={styles.quantityRow}>
                                         <Text style={styles.quantityText}>
@@ -410,6 +603,27 @@ export function FuncionarioSolicitationDetailsScreen({
                         </>
                     )}
                 </AppCard>
+
+                {!!solicitation.analiseAlteracao && !isChangePending && (
+                    <AppCard>
+                        <Text style={styles.sectionTitle}>
+                            Resultado da alteração
+                        </Text>
+
+                        <AppAlert
+                            variant="info"
+                            message="Todos os acréscimos desta alteração já foram analisados."
+                        />
+
+                        {solicitation.analiseAlteracao.maquinas.map((item) =>
+                            renderChangeItem(item, "MAQUINA")
+                        )}
+
+                        {solicitation.analiseAlteracao.ferramentas.map((item) =>
+                            renderChangeItem(item, "FERRAMENTA")
+                        )}
+                    </AppCard>
+                )}
 
                 <SolicitationAuditTimeline solicitation={solicitation} />
 
@@ -491,6 +705,49 @@ export function FuncionarioSolicitationDetailsScreen({
                                 mode="outlined"
                                 disabled={actionLoading}
                                 onPress={() => setRejectModalVisible(false)}
+                            >
+                                Cancelar
+                            </AppButton>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+            <Modal
+                visible={!!changeItemToReject}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setChangeItemToReject(null)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>
+                            Recusar item da alteração
+                        </Text>
+
+                        <Text style={styles.modalDescription}>
+                            Informe o motivo para que o professor compreenda a decisão.
+                        </Text>
+
+                        <AppInput
+                            value={changeRejectReason}
+                            onChangeText={setChangeRejectReason}
+                            placeholder="Motivo da recusa"
+                            multiline
+                        />
+
+                        <View style={styles.modalActions}>
+                            <AppDestructiveButton
+                                disabled={actionLoading}
+                                loading={actionLoading}
+                                onPress={handleConfirmChangeRejection}
+                            >
+                                Confirmar recusa
+                            </AppDestructiveButton>
+
+                            <AppButton
+                                mode="outlined"
+                                disabled={actionLoading}
+                                onPress={() => setChangeItemToReject(null)}
                             >
                                 Cancelar
                             </AppButton>

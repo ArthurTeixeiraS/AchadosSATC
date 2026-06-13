@@ -6,6 +6,7 @@ export type SolicitationShift = "TARDE" | "NOITE"; //Turno (já que a ferramenta
 export type SolicitationStatus =
   | "PENDENTE"
   | "APROVADA"
+  | "ALTERACAO_PENDENTE"
   | "RECUSADA"
   | "EM_USO"
   | "ENCERRADA"
@@ -16,6 +17,8 @@ export type SolicitationPriority = "NORMAL" | "IMEDIATA";
 export type SolicitationAuditEventType =
   | "CRIACAO"
   | "ALTERACAO"
+  | "ALTERACAO_ITEM_APROVADO"
+  | "ALTERACAO_ITEM_RECUSADO"
   | "APROVACAO"
   | "RECUSA"
   | "CANCELAMENTO"
@@ -74,6 +77,42 @@ export interface SolicitationDraft {  // Aqui seria um interface temporário pra
   observacoes: string;
 }
 
+export type SolicitationChangeItemStatus =
+  | "PENDENTE"
+  | "APROVADO"
+  | "RECUSADO";
+
+export interface SolicitationChangeDecision {
+  responsavelId: string;
+  responsavelNome: string;
+  decididaEm?: SolicitationTimestamp | null;
+  motivo?: string;
+}
+
+export interface SolicitationChangeMachine {
+  recursoId: string;
+  nome: string;
+  laboratorioId?: string | null;
+  status: SolicitationChangeItemStatus;
+  decisao?: SolicitationChangeDecision;
+}
+
+export interface SolicitationChangeTool {
+  recursoId: string;
+  nome: string;
+  quantidadeAdicional: number;
+  status: SolicitationChangeItemStatus;
+  decisao?: SolicitationChangeDecision;
+}
+
+export interface SolicitationChangeReview {
+  solicitadaPorId: string;
+  solicitadaPorNome: string;
+  solicitadaEm?: SolicitationTimestamp | null;
+  maquinas: SolicitationChangeMachine[];
+  ferramentas: SolicitationChangeTool[];
+}
+
 export interface SolicitationMachine {
   recursoId: string;
   nome: string;
@@ -113,6 +152,7 @@ export interface Solicitation {
   laboratoriosIds: string[];
   maquinas: SolicitationMachine[];
   ferramentas: SolicitationTool[];
+  analiseAlteracao?: SolicitationChangeReview;
   atrasada: boolean;
   createdAt?: SolicitationTimestamp;
   updatedAt?: SolicitationTimestamp;

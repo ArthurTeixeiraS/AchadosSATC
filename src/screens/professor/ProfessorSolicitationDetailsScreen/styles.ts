@@ -131,6 +131,18 @@ export const styles = StyleSheet.create({
     color: colors.success,
   },
 
+  approvedItemStatus: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    color: colors.success,
+    backgroundColor: "#F0FDF4",
+    fontSize: 12,
+    fontFamily: typography.fontFamily.semiBold,
+  },
+
   pendingStatus: {
     color: colors.warning,
   },
