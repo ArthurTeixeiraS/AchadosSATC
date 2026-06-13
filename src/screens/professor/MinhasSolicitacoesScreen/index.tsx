@@ -43,6 +43,7 @@ function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     PENDENTE: "Pendente",
     APROVADA: "Aprovada",
+    ALTERACAO_PENDENTE: "Alteração pendente",
     RECUSADA: "Recusada",
     EM_USO: "Em uso",
     ENCERRADA: "Encerrada",
@@ -56,6 +57,7 @@ function getStatusStyle(status: string) {
   const stylesByStatus: Record<string, any> = {
     PENDENTE: styles.badgePending,
     APROVADA: styles.badgeReady,
+    ALTERACAO_PENDENTE: styles.badgePending,
     EM_USO: styles.badgeInUse,
     ENCERRADA: styles.badgeFinished,
     RECUSADA: styles.badgeRejected,
@@ -96,11 +98,12 @@ function getStatusPriority(item: Solicitation, now: Date) {
 
   const priorities: Record<string, number> = {
     APROVADA: 2,
-    PENDENTE: 3,
-    EM_USO: 4,
-    RECUSADA: 5,
-    CANCELADA: 6,
-    ENCERRADA: 7,
+    ALTERACAO_PENDENTE: 3,
+    PENDENTE: 4,
+    EM_USO: 5,
+    RECUSADA: 6,
+    CANCELADA: 7,
+    ENCERRADA: 8,
   };
 
   return priorities[item.status] ?? 99;
@@ -140,6 +143,7 @@ const mySolicitationFilters: readonly FilterDefinition<Solicitation>[] = [
     options: [
       { label: "Pendente", value: "PENDENTE" },
       { label: "Aprovada", value: "APROVADA" },
+      { label: "Alteração pendente", value: "ALTERACAO_PENDENTE" },
       { label: "Recusada", value: "RECUSADA" },
       { label: "Em uso", value: "EM_USO" },
       { label: "Encerrada", value: "ENCERRADA" },

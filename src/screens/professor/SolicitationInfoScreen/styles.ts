@@ -63,6 +63,10 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
 
+  shiftButtonDisabled: {
+    opacity: 0.65,
+  },
+
   shiftText: {
     fontSize: 14,
     fontFamily: typography.fontFamily.medium,

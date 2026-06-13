@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 import {
   SelectedMachine,
   SelectedTool,
+  Solicitation,
   SolicitationDraft,
   SolicitationShift,
 } from "../types/Solicitation";
@@ -10,6 +11,7 @@ import { Resource } from "../types/Resources";
 
 interface SolicitationDraftContextData {
   draft: SolicitationDraft;
+  editingSolicitation: Solicitation | null;
 
   setBasicInfo: (data: {
     dataUtilizacao: string;
@@ -26,6 +28,7 @@ interface SolicitationDraftContextData {
 
   setObservacoes: (observacoes: string) => void;
   replaceDraft: (draft: SolicitationDraft) => void;
+  startEditing: (solicitation: Solicitation, draft: SolicitationDraft) => void;
   clearDraft: () => void;
 }
 
@@ -48,6 +51,8 @@ export function SolicitationDraftProvider({
   children: React.ReactNode;
 }) {
   const [draft, setDraft] = useState<SolicitationDraft>(initialDraft);
+  const [editingSolicitation, setEditingSolicitation] =
+    useState<Solicitation | null>(null);
 
   function setBasicInfo(data: {
     dataUtilizacao: string;
@@ -154,10 +159,20 @@ export function SolicitationDraftProvider({
   }
 
   function replaceDraft(newDraft: SolicitationDraft) {
+    setEditingSolicitation(null);
+    setDraft(newDraft);
+  }
+
+  function startEditing(
+    solicitation: Solicitation,
+    newDraft: SolicitationDraft
+  ) {
+    setEditingSolicitation(solicitation);
     setDraft(newDraft);
   }
 
   function clearDraft() {
+    setEditingSolicitation(null);
     setDraft(initialDraft);
   }
 
@@ -165,6 +180,7 @@ export function SolicitationDraftProvider({
     <SolicitationDraftContext.Provider
       value={{
         draft,
+        editingSolicitation,
         setBasicInfo,
         addMachine,
         removeMachine,
@@ -173,6 +189,7 @@ export function SolicitationDraftProvider({
         updateToolQuantity,
         setObservacoes,
         replaceDraft,
+        startEditing,
         clearDraft,
       }}
     >

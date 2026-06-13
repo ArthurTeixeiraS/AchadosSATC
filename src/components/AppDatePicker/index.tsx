@@ -21,6 +21,7 @@ type Props = {
   minimumDate?: Date;
   maximumDate?: Date;
   allowPastDates?: boolean;
+  disabled?: boolean;
 };
 
 export function AppDatePicker({
@@ -30,6 +31,7 @@ export function AppDatePicker({
   minimumDate,
   maximumDate,
   allowPastDates = false,
+  disabled = false,
 }: Props) {
   const [showPicker, setShowPicker] =
     useState(false);
@@ -65,7 +67,8 @@ export function AppDatePicker({
       )}
 
       <Pressable
-        style={styles.input}
+        style={[styles.input, disabled && { opacity: 0.6 }]}
+        disabled={disabled}
         onPress={() => setShowPicker(true)}
       >
         <Text

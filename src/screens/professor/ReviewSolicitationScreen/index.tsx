@@ -18,6 +18,7 @@ import { getResourceById } from "../../../services/resources/resourceServices";
 
 import {
     createSolicitation,
+    updateApprovedSolicitation,
     SolicitationBusinessError,
 } from "../../../services/solicitations/solicitationServices";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -40,7 +41,8 @@ function getShiftLabel(turno: string) {
 }
 
 export function ReviewSolicitationScreen({ navigation }: Props) {
-    const { draft, clearDraft } = useSolicitationDraft();
+    const { draft, editingSolicitation, clearDraft } =
+        useSolicitationDraft();
     const [laboratories, setLaboratories] = useState<Resource[]>([]);
     const [loading, setLoading] = useState(false);
     const { appUser } = useAuth();
@@ -74,12 +76,16 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
 
     function handleCancel() {
         Alert.alert(
-            "Cancelar solicitação",
-            "Deseja cancelar esta solicitação? Os dados preenchidos serão perdidos.",
+            editingSolicitation ? "Cancelar edição" : "Cancelar solicitação",
+            editingSolicitation
+                ? "Deseja cancelar a edição? As alterações não salvas serão perdidas."
+                : "Deseja cancelar esta solicitação? Os dados preenchidos serão perdidos.",
             [
                 { text: "Continuar editando", style: "cancel" },
                 {
-                    text: "Cancelar solicitação",
+                    text: editingSolicitation
+                        ? "Cancelar edição"
+                        : "Cancelar solicitação",
                     style: "destructive",
                     onPress: () => {
                         clearDraft();
@@ -113,11 +119,23 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                 return;
             }
 
-            await createSolicitation(draft, appUser);
+            if (editingSolicitation) {
+                await updateApprovedSolicitation(
+                    editingSolicitation.id,
+                    draft,
+                    appUser
+                );
+            } else {
+                await createSolicitation(draft, appUser);
+            }
 
             Alert.alert(
-                "Solicitação enviada",
-                "Sua solicitação foi enviada para análise da ferramentaria.",
+                editingSolicitation
+                    ? "Solicitação atualizada"
+                    : "Solicitação enviada",
+                editingSolicitation
+                    ? "As alterações foram salvas. Novos recursos ou aumentos serão analisados pela ferramentaria."
+                    : "Sua solicitação foi enviada para análise da ferramentaria.",
                 [
                     {
                         text: "OK",
@@ -287,14 +305,18 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         loading={loading}
                         disabled={loading}
                         onPress={handleConfirm}>
-                        Enviar solicitação
+                        {editingSolicitation
+                            ? "Salvar alterações"
+                            : "Enviar solicitação"}
                     </AppButton>
 
                     <AppDestructiveButton
                         loading={loading}
                         disabled={loading}
                         onPress={handleCancel}>
-                        Cancelar solicitação
+                        {editingSolicitation
+                            ? "Cancelar edição"
+                            : "Cancelar solicitação"}
                     </AppDestructiveButton>
                 </View>
             </ScrollView>

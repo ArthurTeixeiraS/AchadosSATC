@@ -45,6 +45,10 @@ export const styles = StyleSheet.create({
         color: colors.primary,
     },
 
+    changePendingStatusValue: {
+        color: "#92400E",
+    },
+
     observationBox: {
         marginTop: 18,
         borderTopWidth: 1,
@@ -64,6 +68,12 @@ export const styles = StyleSheet.create({
         fontFamily: typography.fontFamily.bold,
         color: colors.text,
         marginBottom: 16,
+    },
+
+    changeReviewCard: {
+        borderWidth: 1,
+        borderColor: "#F59E0B",
+        backgroundColor: "#FFFBEB",
     },
 
     resourceGroupTitle: {
@@ -123,8 +133,59 @@ export const styles = StyleSheet.create({
         color: colors.success,
     },
 
+    approvedItemStatus: {
+        alignSelf: "flex-start",
+        marginTop: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+        color: colors.success,
+        backgroundColor: "#F0FDF4",
+        fontSize: 12,
+        fontFamily: typography.fontFamily.semiBold,
+    },
+
     pendingStatus: {
         color: colors.warning,
+    },
+
+    changeItem: {
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+    },
+
+    changeItemHeader: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 12,
+    },
+
+    changeItemInfo: {
+        flex: 1,
+    },
+
+    changeStatus: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 999,
+        fontSize: 12,
+        fontFamily: typography.fontFamily.semiBold,
+    },
+
+    changeStatusPending: {
+        color: colors.warning,
+        backgroundColor: "#FFF8E1",
+    },
+
+    changeStatusApproved: {
+        color: colors.success,
+        backgroundColor: "#F0FDF4",
+    },
+
+    changeStatusRejected: {
+        color: colors.error,
+        backgroundColor: "#FEF2F2",
     },
 
     buttonContainer: {

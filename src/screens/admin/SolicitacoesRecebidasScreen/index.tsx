@@ -50,6 +50,7 @@ function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     PENDENTE: "Pendente",
     APROVADA: "Aprovada",
+    ALTERACAO_PENDENTE: "Alteração pendente",
     RECUSADA: "Recusada",
     EM_USO: "Em uso",
     ENCERRADA: "Encerrada",
@@ -81,6 +82,18 @@ function getItemsCount(item: Solicitation) {
     ) ?? 0;
 
   return machinesCount + toolsCount;
+}
+
+function getPendingChangeItemsCount(item: Solicitation) {
+  const analysis = item.analiseAlteracao;
+
+  if (!analysis) {
+    return 0;
+  }
+
+  return [...analysis.maquinas, ...analysis.ferramentas].filter(
+    (changeItem) => changeItem.status === "PENDENTE"
+  ).length;
 }
 
 function isOverdue(item: Solicitation, now: Date) {
@@ -121,6 +134,7 @@ const solicitationFilters: readonly FilterDefinition<Solicitation>[] = [
     options: [
       { label: "Pendente", value: "PENDENTE" },
       { label: "Aprovada", value: "APROVADA" },
+      { label: "Alteração pendente", value: "ALTERACAO_PENDENTE" },
       { label: "Recusada", value: "RECUSADA" },
       { label: "Em uso", value: "EM_USO" },
       { label: "Encerrada", value: "ENCERRADA" },
@@ -324,6 +338,9 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
   }, [filteredSolicitations]);
 
   function renderSolicitationCard(item: Solicitation) {
+    const isChangePending = item.status === "ALTERACAO_PENDENTE";
+    const pendingChangeItemsCount = getPendingChangeItemsCount(item);
+
     return (
       <TouchableOpacity
         activeOpacity={0.8}
@@ -356,8 +373,18 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
                 </View>
               )}
 
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  isChangePending && styles.changePendingStatusBadge,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    isChangePending && styles.changePendingStatusBadgeText,
+                  ]}
+                >
                   {getStatusLabel(item.status)}
                 </Text>
               </View>
@@ -366,13 +393,21 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
 
           <View style={styles.itemSummary}>
             <Text style={styles.itemSummaryText}>
-              {getItemsCount(item)} item{getItemsCount(item) !== 1 ? "s" : ""}
+              {isChangePending
+                ? `${pendingChangeItemsCount} acréscimo${
+                    pendingChangeItemsCount !== 1 ? "s" : ""
+                  } aguardando reaprovação`
+                : `${getItemsCount(item)} item${
+                    getItemsCount(item) !== 1 ? "s" : ""
+                  }`}
             </Text>
 
             <View style={styles.detailsRow}>
-              <Text style={styles.detailsText}>Ver detalhes</Text>
+              <Text style={styles.detailsText}>
+                {isChangePending ? "Revisar alteração" : "Ver detalhes"}
+              </Text>
               <Feather
-                name="chevron-right"
+                name={isChangePending ? "edit-3" : "chevron-right"}
                 size={16}
                 color={colors.primary}
               />

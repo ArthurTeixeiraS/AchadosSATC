@@ -115,6 +115,16 @@ export const styles = StyleSheet.create({
     color: colors.secondary,
   },
 
+  changePendingStatusBadge: {
+    backgroundColor: "#FFF8E1",
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+
+  changePendingStatusBadgeText: {
+    color: "#92400E",
+  },
+
   itemSummary: {
     marginTop: 14,
     paddingTop: 12,

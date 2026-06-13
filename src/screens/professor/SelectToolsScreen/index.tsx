@@ -35,6 +35,7 @@ type Props = NativeStackScreenProps<
 export function SelectToolsScreen({ navigation }: Props) {
   const {
     draft,
+    editingSolicitation,
     addTool,
     removeTool,
     updateToolQuantity,
@@ -59,7 +60,8 @@ export function SelectToolsScreen({ navigation }: Props) {
         ? await getToolsAvailabilityForPeriod(
             loadedTools,
             draft.dataUtilizacao,
-            draft.turno
+            draft.turno,
+            editingSolicitation?.id
           )
         : {};
 
@@ -75,7 +77,7 @@ export function SelectToolsScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       loadTools();
-    }, [draft.dataUtilizacao, draft.turno])
+    }, [draft.dataUtilizacao, draft.turno, editingSolicitation?.id])
   );
 
   const filteredTools = useMemo(() => {
