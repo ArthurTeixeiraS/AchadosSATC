@@ -62,6 +62,10 @@ export const styles = StyleSheet.create({
         color: colors.secondary,
     },
 
+    machineStatusUnavailable: {
+        color: colors.error,
+    },
+
     machineButton: {
         marginTop: 14,
         height: 40,
@@ -77,6 +81,11 @@ export const styles = StyleSheet.create({
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.primary,
+    },
+
+    machineButtonDisabled: {
+        backgroundColor: colors.border,
+        opacity: 0.7,
     },
 
     machineButtonText: {

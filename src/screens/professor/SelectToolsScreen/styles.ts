@@ -52,6 +52,10 @@ export const styles = StyleSheet.create({
     color: colors.secondary,
   },
 
+  toolAvailabilityError: {
+    color: colors.error,
+  },
+
   addButton: {
     height: 40,
     borderRadius: 10,

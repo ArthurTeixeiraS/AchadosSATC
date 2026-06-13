@@ -13,7 +13,7 @@ export const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 88,
   },
 
   resourceHeader: {
@@ -89,7 +89,6 @@ export const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 16,
-    bottom: 16,
     backgroundColor: colors.primary,
     borderRadius: 999,
   },
