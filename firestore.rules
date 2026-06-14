@@ -4,7 +4,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /usuarios/{userId} {
       allow read: if true;
-      allow write: if false;
+      allow create, delete: if false;
+      allow update: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["telefone", "updatedAt"]);
 
       match /notificacoes/{notificacaoId} {
         allow read: if request.auth != null &&

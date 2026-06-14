@@ -22,19 +22,16 @@ type Props = NativeStackScreenProps<ProfileStackParamList, "EditProfile">;
 export function EditProfileScreen({ navigation }: Props) {
   const { appUser, reloadUser } = useAuth();
 
-  
   const [telefone, setTelefone] = useState(appUser?.telefone ?? "");
   const [loading, setLoading] = useState(false);
 
   async function handleSalvar() {
-   
-
     try {
       setLoading(true);
 
       await updateUserProfile(appUser!.id, {
-          telefone: telefone.trim() || null,
-        });
+        telefone: telefone.trim() || null,
+      });
 
       await reloadUser();
 
@@ -65,8 +62,8 @@ export function EditProfileScreen({ navigation }: Props) {
         <Text style={styles.label}>E-mail institucional</Text>
         <AppInput
           value={appUser?.emailInstitucional ?? ""}
-          onChangeText={() => {}} 
-          editable={false} 
+          onChangeText={() => {}}
+          editable={false}
         />
 
         <Text style={styles.label}>Telefone</Text>
