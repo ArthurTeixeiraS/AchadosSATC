@@ -22,23 +22,19 @@ type Props = NativeStackScreenProps<ProfileStackParamList, "EditProfile">;
 export function EditProfileScreen({ navigation }: Props) {
   const { appUser, reloadUser } = useAuth();
 
-  const [email, setEmail] = useState(appUser?.emailInstitucional ?? "");
+  
   const [telefone, setTelefone] = useState(appUser?.telefone ?? "");
   const [loading, setLoading] = useState(false);
 
   async function handleSalvar() {
-    if (!email.trim()) {
-      Alert.alert("Atenção", "O e-mail não pode estar vazio.");
-      return;
-    }
+   
 
     try {
       setLoading(true);
 
       await updateUserProfile(appUser!.id, {
-        emailInstitucional: email.trim(),
-        telefone: telefone.trim() || null,
-      });
+          telefone: telefone.trim() || null,
+        });
 
       await reloadUser();
 
@@ -47,7 +43,7 @@ export function EditProfileScreen({ navigation }: Props) {
       ]);
     } catch (error) {
       console.log("Erro ao atualizar perfil:", error);
-      Alert.alert("Erro", "Não foi possível salvar as alterações.");
+      Alert.alert("Erro", "Não foi possível salvar as alterações do telefone.");
     } finally {
       setLoading(false);
     }
@@ -68,11 +64,9 @@ export function EditProfileScreen({ navigation }: Props) {
 
         <Text style={styles.label}>E-mail institucional</Text>
         <AppInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="seu@satc.edu.br"
-          keyboardType="email-address"
-          autoCapitalize="none"
+          value={appUser?.emailInstitucional ?? ""}
+          onChangeText={() => {}} 
+          editable={false} 
         />
 
         <Text style={styles.label}>Telefone</Text>
