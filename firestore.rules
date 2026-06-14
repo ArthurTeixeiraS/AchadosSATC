@@ -5,6 +5,23 @@ service cloud.firestore {
     match /usuarios/{userId} {
       allow read: if true;
       allow write: if false;
+
+      match /notificacoes/{notificacaoId} {
+        allow read: if request.auth != null &&
+          request.auth.uid == userId;
+
+        allow create: if request.auth != null &&
+          request.resource.data.destinatarioId == userId &&
+          request.resource.data.lida == false;
+
+        allow update: if request.auth != null &&
+          request.auth.uid == userId &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["lida", "lidaEm"]) &&
+          request.resource.data.lida == true;
+
+        allow delete: if false;
+      }
     }
 
     match /recursos/{resourceId} {

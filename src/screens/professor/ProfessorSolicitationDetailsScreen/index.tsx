@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
@@ -10,11 +11,13 @@ import { AppButton } from "../../../components/AppButton";
 import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { AppAlert } from "../../../components/AppAlert";
 import { EmptyState } from "../../../components/EmptyState";
+import { Loading } from "../../../components/Loading";
 import { SolicitationAuditTimeline } from "../../../components/SolicitationAuditTimeline";
 import { getResourceById } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
 import {
   cancelSolicitation,
+  getSolicitationById,
   isSolicitationOverdue,
 } from "../../../services/solicitations/solicitationServices";
 
@@ -22,7 +25,10 @@ import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicita
 import type { ProfessorDrawerParamList } from "../../../routes/ProfessorRoutes";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { useAuth } from "../../../contexts/AuthContext";
-import type { SolicitationDraft } from "../../../types/Solicitation";
+import type {
+  Solicitation,
+  SolicitationDraft,
+} from "../../../types/Solicitation";
 
 import { styles } from "./styles";
 
@@ -85,17 +91,14 @@ export function ProfessorSolicitationDetailsScreen({
   route,
   navigation,
 }: Props) {
-  const { solicitation } = route.params;
+  const { solicitationId } = route.params;
   const { appUser } = useAuth();
-
-  const canCancel = solicitation.status === "PENDENTE";
-  const showReturnProgress = ["EM_USO", "ENCERRADA"].includes(
-    solicitation.status
-  );
   const { draft, replaceDraft, startEditing } = useSolicitationDraft();
 
+  const [solicitation, setSolicitation] = useState<Solicitation | null>(null);
+  const [loadingSolicitation, setLoadingSolicitation] = useState(true);
   const [laboratoryNames, setLaboratoryNames] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -107,8 +110,31 @@ export function ProfessorSolicitationDetailsScreen({
     return () => clearInterval(interval);
   }, []);
 
+  const loadSolicitation = useCallback(async () => {
+    try {
+      setLoadingSolicitation(true);
+      setSolicitation(await getSolicitationById(solicitationId));
+    } catch (error) {
+      console.log("Erro ao carregar solicitação:", error);
+      setSolicitation(null);
+    } finally {
+      setLoadingSolicitation(false);
+    }
+  }, [solicitationId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSolicitation();
+    }, [loadSolicitation])
+  );
+
   useEffect(() => {
     async function loadLaboratories() {
+      if (!solicitation) {
+        setLaboratoryNames([]);
+        return;
+      }
+
       const ids = solicitation.laboratoriosIds ?? [];
 
       const labs = await Promise.all(
@@ -123,9 +149,11 @@ export function ProfessorSolicitationDetailsScreen({
     }
 
     loadLaboratories();
-  }, [solicitation.laboratoriosIds]);
+  }, [solicitation?.laboratoriosIds]);
 
   function handleCancelSolicitation() {
+    if (!solicitation) return;
+
     Alert.alert(
       "Cancelar solicitação",
       "Deseja cancelar esta solicitação? Essa ação não poderá ser desfeita.",
@@ -139,7 +167,7 @@ export function ProfessorSolicitationDetailsScreen({
           style: "destructive",
           onPress: async () => {
             try {
-              setLoading(true);
+              setActionLoading(true);
 
               if (!appUser) {
                 throw new Error("Usuário não encontrado.");
@@ -166,7 +194,7 @@ export function ProfessorSolicitationDetailsScreen({
                 "Não foi possível cancelar a solicitação. Tente novamente."
               );
             } finally {
-              setLoading(false);
+              setActionLoading(false);
             }
           },
         },
@@ -186,7 +214,7 @@ export function ProfessorSolicitationDetailsScreen({
   }
 
   async function duplicateSolicitation() {
-    if (duplicating) return;
+    if (duplicating || !solicitation) return;
 
     try {
       setDuplicating(true);
@@ -306,7 +334,7 @@ export function ProfessorSolicitationDetailsScreen({
   }
 
   async function editSolicitation() {
-    if (duplicating) return;
+    if (duplicating || !solicitation) return;
 
     try {
       setDuplicating(true);
@@ -394,6 +422,27 @@ export function ProfessorSolicitationDetailsScreen({
     );
   }
 
+  if (loadingSolicitation) {
+    return <Loading message="Carregando solicitação..." />;
+  }
+
+  if (!solicitation) {
+    return (
+      <ScreenContainer>
+        <EmptyState
+          icon="file-text"
+          title="Solicitação não encontrada"
+          message="Não foi possível carregar os detalhes desta solicitação."
+        />
+      </ScreenContainer>
+    );
+  }
+
+  const canCancel = solicitation.status === "PENDENTE";
+  const showReturnProgress = ["EM_USO", "ENCERRADA"].includes(
+    solicitation.status
+  );
+
   return (
     <ScreenContainer>
       <ScrollView
@@ -471,11 +520,13 @@ export function ProfessorSolicitationDetailsScreen({
         </AppCard>
 
         {isSolicitationOverdue(solicitation, currentTime) && (
-          <AppAlert
-            variant="error"
-            title="Item com devolução em atraso."
-            message="Entre em contato com a ferramentaria."
-          />
+          <View style={styles.overdueAlertContainer}>
+            <AppAlert
+              variant="error"
+              title="Item com devolução em atraso."
+              message="Entre em contato com a ferramentaria."
+            />
+          </View>
         )}
 
         <AppCard>
@@ -651,7 +702,7 @@ export function ProfessorSolicitationDetailsScreen({
           {solicitation.status === "APROVADA" && (
             <AppButton
               loading={duplicating}
-              disabled={loading || duplicating}
+              disabled={actionLoading || duplicating}
               onPress={handleEditSolicitation}
             >
               Editar solicitação
@@ -660,7 +711,7 @@ export function ProfessorSolicitationDetailsScreen({
 
           <AppButton
             loading={duplicating}
-            disabled={loading || duplicating}
+            disabled={actionLoading || duplicating}
             onPress={handleDuplicateSolicitation}
           >
             Duplicar solicitação
@@ -668,8 +719,8 @@ export function ProfessorSolicitationDetailsScreen({
 
           {canCancel && (
             <AppDestructiveButton
-              loading={loading}
-              disabled={loading || duplicating}
+              loading={actionLoading}
+              disabled={actionLoading || duplicating}
               onPress={handleCancelSolicitation}
             >
               Cancelar solicitação

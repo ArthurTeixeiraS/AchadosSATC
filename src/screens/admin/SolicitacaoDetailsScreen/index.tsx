@@ -501,11 +501,13 @@ export function FuncionarioSolicitationDetailsScreen({
                 )}
 
                 {isSolicitationOverdue(solicitation, currentTime) && (
-                    <AppAlert
-                        variant="error"
-                        title="Item com devolução em atraso."
-                        message="Entre em contato com o professor responsável."
-                    />
+                    <View style={styles.overdueAlertContainer}>
+                        <AppAlert
+                            variant="error"
+                            title="Item com devolução em atraso."
+                            message="Entre em contato com o professor responsável."
+                        />
+                    </View>
                 )}
 
                 <AppCard>

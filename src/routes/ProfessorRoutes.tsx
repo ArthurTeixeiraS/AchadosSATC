@@ -8,7 +8,9 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/ProfessorHomeScreen";
 import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
+import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
+import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
 import { SolicitationDraftProvider } from "../contexts/SolicitationDraftContext";
 import {
   MinhasSolicitacoesStackParamList,
@@ -31,6 +33,7 @@ export type ProfessorDrawerParamList = {
   "Nova Solicitação": NavigatorScreenParams<NovaSolicitacaoStackParamList>;
   "Minhas Solicitações": NavigatorScreenParams<MinhasSolicitacoesStackParamList>;
   Ocorrências: undefined;
+  Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
 
@@ -174,6 +177,23 @@ function ProfessorDrawerRoutes() {
           }),
           drawerIcon: ({ color, size }) => (
             <Feather name="alert-triangle" size={size} color={color} />
+          ),
+        })}
+      />
+
+      <Drawer.Screen
+        name="Notificações"
+        component={NotificationsScreen}
+        options={({ navigation }) => ({
+          ...getDrawerHeaderOptions(navigation, {
+            title: "Notificações",
+            subtitle: "Atualizações das suas solicitações",
+          }),
+          drawerIcon: ({ color, size }) => (
+            <Feather name="bell" size={size} color={color} />
+          ),
+          drawerLabel: ({ color }) => (
+            <NotificationDrawerLabel color={color} />
           ),
         })}
       />

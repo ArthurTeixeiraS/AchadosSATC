@@ -4,6 +4,7 @@ import { PaperProvider } from "react-native-paper";
 import { useFonts } from "expo-font";
 
 import { AuthProvider } from "./src/contexts/AuthContext";
+import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { AppRoutes } from "./src/routes/AppRoutes";
 import { fonts } from "./src/styles/fonts";
 import { theme } from "./src/styles/themes";
@@ -22,8 +23,10 @@ export default function App() {
   return (
       <PaperProvider theme={theme}>
         <AuthProvider>
-          <AppRoutes />
+          <NotificationProvider>
+            <AppRoutes />
+          </NotificationProvider>
         </AuthProvider>
       </PaperProvider>
   );
-} 
+}
