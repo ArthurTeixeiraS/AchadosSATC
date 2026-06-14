@@ -8,7 +8,9 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { DashboardScreen } from "../screens/admin/DashboardScreen";
 import { ChavesScreen } from "../screens/admin/ChavesScreen";
+import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
+import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
 import {
   FuncionarioSolicitacaoStackParamList,
   FuncionarioSolicitacaoStackRoutes,
@@ -30,6 +32,7 @@ export type AdminDrawerParamList = {
   Solicitações: NavigatorScreenParams<FuncionarioSolicitacaoStackParamList>;
   Recursos: NavigatorScreenParams<ResourceStackParamList>;
   Chaves: undefined;
+  Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
 
@@ -231,6 +234,23 @@ export function AdminRoutes() {
           }),
           drawerIcon: ({ color, size }) => (
             <Feather name="key" size={size} color={color} />
+          ),
+        })}
+      />
+
+      <Drawer.Screen
+        name="Notificações"
+        component={NotificationsScreen}
+        options={({ navigation }) => ({
+          ...getDrawerHeaderOptions(navigation, {
+            title: "Notificações",
+            subtitle: "Atualizações das solicitações",
+          }),
+          drawerIcon: ({ color, size }) => (
+            <Feather name="bell" size={size} color={color} />
+          ),
+          drawerLabel: ({ color }) => (
+            <NotificationDrawerLabel color={color} />
           ),
         })}
       />

@@ -33,6 +33,10 @@ import {
   createAuditEventData,
   getSolicitationAuditItems,
 } from "./solicitationAuditServices";
+import {
+  getActiveEmployeeIds,
+  setNotifications,
+} from "../notifications/notificationServices";
 
 const COLLECTION_NAME = "solicitacoes";
 const RESOURCE_COLLECTION_NAME = "recursos";
@@ -580,6 +584,7 @@ export async function createSolicitation(
     validateDraftMachineAvailability(draft),
     validateDraftToolAvailability(draft),
   ]);
+  const employeeIds = await getActiveEmployeeIds(professor.id);
 
   const solicitacoesRef = collection(db, COLLECTION_NAME);
 
@@ -654,6 +659,12 @@ export async function createSolicitation(
       ],
     }),
     createdAt: serverTimestamp(),
+  });
+  setNotifications(batch, employeeIds, auditRef.id, {
+    tipo: "NOVA_SOLICITACAO",
+    solicitacaoId: solicitationRef.id,
+    titulo: "Nova solicitação",
+    mensagem: `${professor.nomeCompleto} enviou uma nova solicitação para análise.`,
   });
 
   await batch.commit();
@@ -738,6 +749,7 @@ export async function cancelSolicitation(
   const auditRef = doc(
     collection(solicitationRef, AUDIT_COLLECTION_NAME)
   );
+  const employeeIds = await getActiveEmployeeIds(professor.id);
 
   await runTransaction(db, async (transaction) => {
     const solicitationSnapshot = await transaction.get(solicitationRef);
@@ -777,6 +789,12 @@ export async function cancelSolicitation(
         newStatus: "CANCELADA",
       }),
       createdAt: serverTimestamp(),
+    });
+    setNotifications(transaction, employeeIds, auditRef.id, {
+      tipo: "SOLICITACAO_CANCELADA",
+      solicitacaoId: solicitation.id,
+      titulo: "Solicitação cancelada",
+      mensagem: `${professor.nomeCompleto} cancelou uma solicitação.`,
     });
   });
 }
@@ -821,6 +839,7 @@ export async function updateApprovedSolicitation(
   const auditRef = doc(
     collection(solicitationRef, AUDIT_COLLECTION_NAME)
   );
+  const employeeIds = await getActiveEmployeeIds(professor.id);
   const occupiedSolicitationsSnapshot = await getDocs(
     collection(db, COLLECTION_NAME)
   );
@@ -1157,6 +1176,16 @@ export async function updateApprovedSolicitation(
       }),
       createdAt: serverTimestamp(),
     });
+    if (hasPendingItems) {
+      setNotifications(transaction, employeeIds, auditRef.id, {
+        tipo: "ALTERACAO_PENDENTE",
+        solicitacaoId: solicitation.id,
+        titulo: "Alteração aguardando análise",
+        mensagem: `${professor.nomeCompleto} adicionou ${
+          addedMachines.length + increasedTools.length
+        } recurso(s) para reaprovação.`,
+      });
+    }
   });
 }
 
@@ -1431,6 +1460,26 @@ export async function decideSolicitationChangeItem(
       }),
       createdAt: serverTimestamp(),
     });
+
+    if (solicitation.professorId !== funcionario.id) {
+      setNotifications(
+        transaction,
+        [solicitation.professorId],
+        auditRef.id,
+        {
+          tipo: approved
+            ? "ALTERACAO_ITEM_APROVADO"
+            : "ALTERACAO_ITEM_RECUSADO",
+          solicitacaoId: solicitation.id,
+          titulo: approved
+            ? "Item da alteração aprovado"
+            : "Item da alteração recusado",
+          mensagem: approved
+            ? `${item.nome} foi aprovado e incorporado à solicitação.`
+            : `${item.nome} foi recusado. Motivo: ${reason?.trim()}`,
+        }
+      );
+    }
   });
 }
 
@@ -1648,6 +1697,19 @@ export async function approveSolicitation(
       }),
       createdAt: serverTimestamp(),
     });
+    if (solicitation.professorId !== funcionario.id) {
+      setNotifications(
+        transaction,
+        [solicitation.professorId],
+        auditRef.id,
+        {
+          tipo: "SOLICITACAO_APROVADA",
+          solicitacaoId: solicitation.id,
+          titulo: "Solicitação aprovada",
+          mensagem: "Sua solicitação foi aprovada pela ferramentaria.",
+        }
+      );
+    }
   });
 }
 
@@ -1702,6 +1764,19 @@ export async function rejectSolicitation(
       }),
       createdAt: serverTimestamp(),
     });
+    if (solicitation.professorId !== funcionario.id) {
+      setNotifications(
+        transaction,
+        [solicitation.professorId],
+        auditRef.id,
+        {
+          tipo: "SOLICITACAO_RECUSADA",
+          solicitacaoId: solicitation.id,
+          titulo: "Solicitação recusada",
+          mensagem: `Sua solicitação foi recusada. Motivo: ${motivo}`,
+        }
+      );
+    }
   });
 }
 
@@ -1833,6 +1908,20 @@ export async function registerSolicitationWithdrawal(
       }),
       createdAt: serverTimestamp(),
     });
+    if (solicitation.professorId !== funcionario.id) {
+      setNotifications(
+        transaction,
+        [solicitation.professorId],
+        auditRef.id,
+        {
+          tipo: "RETIRADA_REGISTRADA",
+          solicitacaoId: solicitation.id,
+          titulo: "Retirada registrada",
+          mensagem:
+            "A retirada dos recursos da sua solicitação foi registrada.",
+        }
+      );
+    }
   });
 }
 
@@ -2117,5 +2206,24 @@ export async function registerSolicitationReturn(
       }),
       createdAt: serverTimestamp(),
     });
+    if (solicitation.professorId !== funcionario.id) {
+      setNotifications(
+        transaction,
+        [solicitation.professorId],
+        auditRef.id,
+        {
+          tipo: allReturned
+            ? "DEVOLUCAO_INTEGRAL"
+            : "DEVOLUCAO_PARCIAL",
+          solicitacaoId: solicitation.id,
+          titulo: allReturned
+            ? "Devolução concluída"
+            : "Devolução parcial registrada",
+          mensagem: allReturned
+            ? "Todos os recursos foram devolvidos e a solicitação foi encerrada."
+            : "Parte dos recursos foi devolvida. Ainda existem itens pendentes.",
+        }
+      );
+    }
   });
 }

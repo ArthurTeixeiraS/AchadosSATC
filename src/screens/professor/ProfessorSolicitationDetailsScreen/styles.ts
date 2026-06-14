@@ -45,6 +45,10 @@ export const styles = StyleSheet.create({
     color: colors.primary,
   },
 
+  overdueAlertContainer: {
+    marginTop: 14,
+  },
+
   observationBox: {
     marginTop: 18,
     borderTopWidth: 1,

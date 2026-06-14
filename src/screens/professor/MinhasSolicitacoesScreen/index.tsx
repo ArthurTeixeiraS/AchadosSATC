@@ -362,7 +362,7 @@ export function MinhasSolicitacoesScreen() {
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate("ProfessorSolicitationDetails", {
-                  solicitation: item,
+                  solicitationId: item.id,
                 })
               }
             >
