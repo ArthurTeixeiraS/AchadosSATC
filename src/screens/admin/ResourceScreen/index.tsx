@@ -6,6 +6,7 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Text } from "react-native-paper";
@@ -89,14 +90,22 @@ function ResourceMenuButton({ item, navigation }: {
   item: Resource;
   navigation: NativeStackNavigationProp<ResourceStackParamList>;
 }) {
-  const buttonRef = useRef<TouchableOpacity>(null);
+  const buttonRef =
+    useRef<React.ElementRef<typeof TouchableOpacity>>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuTop, setMenuTop] = useState(0);
+  const { height: windowHeight } = useWindowDimensions();
 
   function handleOpenMenu() {
-    // measureInWindow retorna posicao absoluta em relacao a janela, funciona certo mesmo dentro de scroll
-    buttonRef.current?.measureInWindow((x, y, width, height) => {
-      setMenuTop(y + height + 4);
+    buttonRef.current?.measureInWindow((_x, y, _width, height) => {
+      const menuHeight = 98;
+      const spacing = 4;
+      const topBelow = y + height + spacing;
+      const top = topBelow + menuHeight <= windowHeight
+        ? topBelow
+        : Math.max(8, y - menuHeight - spacing);
+
+      setMenuTop(top);
       setMenuOpen(true);
     });
   }
@@ -110,7 +119,11 @@ function ResourceMenuButton({ item, navigation }: {
       </TouchableOpacity>
 
       {menuOpen && (
-        <Modal transparent animationType="fade">
+        <Modal
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMenuOpen(false)}
+        >
           <Pressable
             style={styles.menuOverlay}
             onPress={() => setMenuOpen(false)}

@@ -18,6 +18,7 @@ import {
   AppNotification,
   NotificationType,
 } from "../../types/Notification";
+import { UserRole } from "../../types/User";
 
 const USER_COLLECTION = "usuarios";
 const NOTIFICATION_COLLECTION = "notificacoes";
@@ -174,19 +175,18 @@ export async function markAllNotificationsAsRead(userId: string) {
   }
 }
 
-export async function syncOverdueNotifications() {
+export async function syncOverdueNotifications(
+  userId: string,
+  userRole: UserRole
+) {
   const overdueQuery = query(
     collection(db, SOLICITATION_COLLECTION),
     where("status", "==", "EM_USO")
   );
-  const [solicitationsSnapshot, employeeIds] = await Promise.all([
-    getDocs(overdueQuery),
-    getActiveEmployeeIds(),
-  ]);
+  const solicitationsSnapshot = await getDocs(overdueQuery);
   const now = new Date();
   const pendingNotifications: Array<{
     reference: ReturnType<typeof getNotificationReference>;
-    recipientId: string;
     solicitationId: string;
   }> = [];
 
@@ -198,26 +198,25 @@ export async function syncOverdueNotifications() {
       return;
     }
 
-    const recipients = [
-      data.professorId as string | undefined,
-      ...employeeIds,
-    ].filter((userId): userId is string => Boolean(userId));
+    const isRecipient =
+      userRole === "FUNCIONARIO" || data.professorId === userId;
 
-    [...new Set(recipients)].forEach((recipientId) => {
-      pendingNotifications.push({
-        reference: getNotificationReference(
-          recipientId,
-          `atraso_${document.id}`
-        ),
-        recipientId,
-        solicitationId: document.id,
-      });
+    if (!isRecipient) {
+      return;
+    }
+
+    pendingNotifications.push({
+      reference: getNotificationReference(
+        userId,
+        `atraso_${document.id}`
+      ),
+      solicitationId: document.id,
     });
   });
 
   await Promise.all(
     pendingNotifications.map(
-      ({ reference, recipientId, solicitationId }) =>
+      ({ reference, solicitationId }) =>
         runTransaction(db, async (transaction) => {
           const existingNotification = await transaction.get(reference);
 
@@ -227,7 +226,7 @@ export async function syncOverdueNotifications() {
 
           transaction.set(reference, {
             tipo: "SOLICITACAO_ATRASADA",
-            destinatarioId: recipientId,
+            destinatarioId: userId,
             solicitacaoId: solicitationId,
             titulo: "Devolução em atraso",
             mensagem:

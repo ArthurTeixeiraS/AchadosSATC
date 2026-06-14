@@ -65,20 +65,24 @@ export function CreateResourceScreen({ navigation, route }: Props) {
     loadLaboratories();
   }, []);
 
-  // preenche os campos se vier de uma copia
   useEffect(() => {
     const duplicateFrom = route.params?.duplicateFrom;
 
     if (!duplicateFrom) return;
 
-    setNome(duplicateFrom.nome + " (cópia)");
+    setNome(duplicateFrom.nome);
     setDescricao(duplicateFrom.descricao ?? "");
     setTipo(duplicateFrom.tipo);
     setLocalizacao(duplicateFrom.localizacao ?? "");
-    setPatrimonio(duplicateFrom.patrimonio ?? "");
+    setPatrimonio("");
     setQuantidadeTotal(String(duplicateFrom.quantidadeTotal ?? ""));
-    setQuantidadeDisponivel(String(duplicateFrom.quantidadeDisponivel ?? ""));
+    setQuantidadeDisponivel(
+      duplicateFrom.tipo === "FERRAMENTA"
+        ? String(duplicateFrom.quantidadeTotal ?? "")
+        : ""
+    );
     setLaboratorioId(duplicateFrom.laboratorioId ?? "");
+    setImageUri(duplicateFrom.imagemUrl ?? "");
   }, [route.params?.duplicateFrom]);
 
   function handleChangeTipo(value: ResourceType) {

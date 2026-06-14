@@ -48,7 +48,7 @@ export function NotificationProvider({
     if (!appUser) return;
 
     try {
-      await syncOverdueNotifications();
+      await syncOverdueNotifications(appUser.id, appUser.tipoUsuario);
     } catch (syncError) {
       console.log("Erro ao sincronizar notificações de atraso:", syncError);
     }
