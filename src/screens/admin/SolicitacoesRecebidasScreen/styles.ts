@@ -137,14 +137,25 @@ export const styles = StyleSheet.create({
 
   itemSummaryText: {
     fontSize: 13,
+    lineHeight: 18,
     fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
+  },
+
+  changePendingItemSummary: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 10,
   },
 
   detailsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+
+  changePendingDetailsRow: {
+    alignSelf: "flex-end",
   },
 
   detailsText: {

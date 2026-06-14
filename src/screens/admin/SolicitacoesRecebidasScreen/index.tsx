@@ -391,7 +391,12 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
             </View>
           </View>
 
-          <View style={styles.itemSummary}>
+          <View
+            style={[
+              styles.itemSummary,
+              isChangePending && styles.changePendingItemSummary,
+            ]}
+          >
             <Text style={styles.itemSummaryText}>
               {isChangePending
                 ? `${pendingChangeItemsCount} acréscimo${
@@ -402,7 +407,12 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
                   }`}
             </Text>
 
-            <View style={styles.detailsRow}>
+            <View
+              style={[
+                styles.detailsRow,
+                isChangePending && styles.changePendingDetailsRow,
+              ]}
+            >
               <Text style={styles.detailsText}>
                 {isChangePending ? "Revisar alteração" : "Ver detalhes"}
               </Text>
