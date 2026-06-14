@@ -65,6 +65,22 @@ export function CreateResourceScreen({ navigation, route }: Props) {
     loadLaboratories();
   }, []);
 
+  // preenche os campos se vier de uma copia
+  useEffect(() => {
+    const duplicateFrom = route.params?.duplicateFrom;
+
+    if (!duplicateFrom) return;
+
+    setNome(duplicateFrom.nome + " (cópia)");
+    setDescricao(duplicateFrom.descricao ?? "");
+    setTipo(duplicateFrom.tipo);
+    setLocalizacao(duplicateFrom.localizacao ?? "");
+    setPatrimonio(duplicateFrom.patrimonio ?? "");
+    setQuantidadeTotal(String(duplicateFrom.quantidadeTotal ?? ""));
+    setQuantidadeDisponivel(String(duplicateFrom.quantidadeDisponivel ?? ""));
+    setLaboratorioId(duplicateFrom.laboratorioId ?? "");
+  }, [route.params?.duplicateFrom]);
+
   function handleChangeTipo(value: ResourceType) {
     if (value === "MAQUINA" && laboratories.length === 0) {
       showNoLaboratoryAlert();
@@ -322,7 +338,7 @@ export function CreateResourceScreen({ navigation, route }: Props) {
           loading={loading}
           disabled={loading}
           onPress={handleCreateResource}>
-          Cadastrar recurso
+          {route.params?.duplicateFrom ? "Cadastrar cópia de recurso" : "Cadastrar recurso"}
         </AppButton>
 
       </ScrollView>

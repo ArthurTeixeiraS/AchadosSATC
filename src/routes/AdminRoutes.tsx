@@ -160,7 +160,7 @@ export function AdminRoutes() {
           ] as
             | {
                 name: string;
-                params?: ResourceStackParamList["EditResource"];
+                params?: ResourceStackParamList["EditResource"] & ResourceStackParamList["CreateResource"];
               }
             | undefined;
           const routeName =
@@ -179,8 +179,10 @@ export function AdminRoutes() {
               showMenu: false,
             },
             CreateResource: {
-              title: "Novo recurso",
-              subtitle: "Cadastre um recurso da ferramentaria",
+              title: activeRoute?.params?.duplicateFrom ? "Cópia de Recurso" : "Novo recurso",
+              subtitle: activeRoute?.params?.duplicateFrom
+                ? "Cadastre uma cópia do recurso"
+                : "Cadastre um recurso da ferramentaria",
               showMenu: false,
             },
             EditResource: {
