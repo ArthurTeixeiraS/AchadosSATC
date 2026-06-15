@@ -19,6 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import Feather from "@expo/vector-icons/Feather";
 import { uploadImageAsync } from "../../../services/storage/uploadImage";
 import { colors } from "../../../styles/colors";
+import { useAuth } from "../../../contexts/AuthContext";
 
 type Props = NativeStackScreenProps<
   ResourceStackParamList,
@@ -32,6 +33,7 @@ const resourceTypeOptions = [
 ] as const;
 
 export function CreateResourceScreen({ navigation, route }: Props) {
+  const { appUser } = useAuth();
   const initialType = route.params?.initialType ?? "FERRAMENTA";
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -201,6 +203,11 @@ export function CreateResourceScreen({ navigation, route }: Props) {
         return;
       }
 
+      if (!appUser) {
+        setErro("Não foi possível identificar o usuário responsável.");
+        return;
+      }
+
       await createResource({
         nome: nome.trim(),
         descricao: descricao.trim(),
@@ -216,7 +223,7 @@ export function CreateResourceScreen({ navigation, route }: Props) {
           : undefined,
         imagemUrl,
         laboratorioId: isMaquina ? laboratorioId : undefined,
-      });
+      }, appUser);
 
       navigation.navigate("ResourceList");
     } catch (error) {

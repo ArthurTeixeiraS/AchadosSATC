@@ -21,6 +21,7 @@ export type ResourceStackParamList = {
   }
   ResourceDetails: {
     resource: Resource;
+    origin?: "AUDITORIA";
   };
 };
 

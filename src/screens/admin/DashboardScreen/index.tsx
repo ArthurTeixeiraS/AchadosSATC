@@ -196,7 +196,10 @@ export function DashboardScreen() {
           </View>
         </TouchableOpacity>
       )}
-      <TouchableOpacity style={styles.menuItem} onPress={emBreve}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={emBreve}
+      >
         <View style={styles.menuIconWrapper}>
           <Feather name="tool" size={20} color="#fff" />
         </View>
@@ -206,13 +209,16 @@ export function DashboardScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuItem} onPress={emBreve}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => irPara("Relatórios")}
+      >
         <View style={styles.menuIconWrapper}>
           <Feather name="bar-chart-2" size={20} color="#fff" />
         </View>
         <View style={styles.menuTextWrapper}>
           <Text style={styles.menuTitle}>Relatórios</Text>
-          <Text style={styles.menuSubtitle}>Estatísticas e métricas</Text>
+          <Text style={styles.menuSubtitle}>Auditoria de operações</Text>
         </View>
         </TouchableOpacity>
       </ScrollView>

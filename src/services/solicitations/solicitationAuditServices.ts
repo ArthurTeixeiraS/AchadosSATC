@@ -16,10 +16,11 @@ import {
   SolicitationStatus,
   SolicitationTimestamp,
 } from "../../types/Solicitation";
+import { AuditEventType } from "../../types/Audit";
 
 export const AUDIT_COLLECTION_NAME = "eventosAuditoria";
 
-const eventLabels: Record<SolicitationAuditEventType, string> = {
+const eventLabels: Record<AuditEventType, string> = {
   CRIACAO: "Solicitação criada",
   ALTERACAO: "Solicitação alterada",
   ALTERACAO_ITEM_APROVADO: "Item da alteração aprovado",
@@ -30,9 +31,15 @@ const eventLabels: Record<SolicitationAuditEventType, string> = {
   RETIRADA: "Retirada registrada",
   DEVOLUCAO_PARCIAL: "Devolução parcial registrada",
   DEVOLUCAO_INTEGRAL: "Devolução integral registrada",
+  RECURSO_CRIACAO: "Recurso cadastrado",
+  RECURSO_EDICAO: "Recurso editado",
+  RECURSO_REMOCAO: "Recurso removido",
+  ESTOQUE_ENTRADA: "Entrada de estoque",
+  ESTOQUE_SAIDA: "Saída de estoque",
+  ESTOQUE_AJUSTE: "Ajuste manual de estoque",
 };
 
-export function getAuditEventLabel(type: SolicitationAuditEventType) {
+export function getAuditEventLabel(type: AuditEventType) {
   return eventLabels[type];
 }
 
@@ -128,7 +135,9 @@ function createLegacyEvent(
   };
 }
 
-function getLegacyEvents(solicitation: Solicitation) {
+export function getLegacySolicitationAuditEvents(
+  solicitation: Solicitation
+) {
   const professor: AuditActor = {
     id: solicitation.professorId,
     nome: solicitation.professorNome,
@@ -217,7 +226,7 @@ export async function listSolicitationAuditEvents(
     mapAuditEvent(document.id, document.data())
   );
   const persistedTypes = new Set(persistedEvents.map((event) => event.tipo));
-  const legacyEvents = getLegacyEvents(solicitation).filter(
+  const legacyEvents = getLegacySolicitationAuditEvents(solicitation).filter(
     (event) => !persistedTypes.has(event.tipo)
   );
 

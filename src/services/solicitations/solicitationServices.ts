@@ -37,6 +37,7 @@ import {
   getActiveEmployeeIds,
   setNotifications,
 } from "../notifications/notificationServices";
+import { createResourceAuditEventData } from "../resources/resourceAuditServices";
 
 const COLLECTION_NAME = "solicitacoes";
 const RESOURCE_COLLECTION_NAME = "recursos";
@@ -1883,6 +1884,33 @@ export async function registerSolicitationWithdrawal(
         reservasEstoque: stockReservations,
         updatedAt: serverTimestamp(),
       });
+      transaction.set(
+        doc(collection(toolReference.reference, AUDIT_COLLECTION_NAME)),
+        {
+          ...createResourceAuditEventData({
+            resourceId: requestedTool.recursoId,
+            resourceName: requestedTool.nome,
+            resourceType: "FERRAMENTA",
+            type: "ESTOQUE_SAIDA",
+            actor: {
+              id: funcionario.id,
+              nome: funcionario.nomeCompleto,
+              perfil: funcionario.tipoUsuario,
+            },
+            summary: `${requestedTool.quantidade} unidade(s) de ${requestedTool.nome} foram retiradas.`,
+            changes: [
+              {
+                campo: "Quantidade disponível",
+                valorAnterior: availableQuantity,
+                valorNovo: availableQuantity - requestedTool.quantidade,
+              },
+            ],
+            quantity: requestedTool.quantidade,
+            solicitationId: solicitation.id,
+          }),
+          createdAt: serverTimestamp(),
+        }
+      );
     });
 
     transaction.update(solicitationRef, {
@@ -2111,6 +2139,38 @@ export async function registerSolicitationReturn(
         ),
         updatedAt: serverTimestamp(),
       });
+      const newAvailableQuantity = Math.min(
+        availableQuantity + returnedTool.quantity,
+        totalQuantity
+      );
+
+      transaction.set(
+        doc(collection(toolReference.reference, AUDIT_COLLECTION_NAME)),
+        {
+          ...createResourceAuditEventData({
+            resourceId: requestedTool.recursoId,
+            resourceName: requestedTool.nome,
+            resourceType: "FERRAMENTA",
+            type: "ESTOQUE_ENTRADA",
+            actor: {
+              id: funcionario.id,
+              nome: funcionario.nomeCompleto,
+              perfil: funcionario.tipoUsuario,
+            },
+            summary: `${returnedTool.quantity} unidade(s) de ${requestedTool.nome} retornaram ao estoque.`,
+            changes: [
+              {
+                campo: "Quantidade disponível",
+                valorAnterior: availableQuantity,
+                valorNovo: newAvailableQuantity,
+              },
+            ],
+            quantity: returnedTool.quantity,
+            solicitationId: solicitation.id,
+          }),
+          createdAt: serverTimestamp(),
+        }
+      );
     });
 
     machineReservationReferences.forEach((reservation, index) => {
