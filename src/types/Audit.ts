@@ -5,6 +5,7 @@ import {
   SolicitationTimestamp,
 } from "./Solicitation";
 import { ResourceType } from "./Resources";
+import { OccurrenceEvent, OccurrenceEventType } from "./Occurrence";
 
 export type ResourceAuditEventType =
   | "RECURSO_CRIACAO"
@@ -16,7 +17,8 @@ export type ResourceAuditEventType =
 
 export type AuditEventType =
   | SolicitationAuditEventType
-  | ResourceAuditEventType;
+  | ResourceAuditEventType
+  | OccurrenceEventType;
 
 export interface AuditChange {
   campo: string;
@@ -41,4 +43,5 @@ export interface ResourceAuditEvent {
 
 export type SystemAuditEvent =
   | SolicitationAuditEvent
-  | ResourceAuditEvent;
+  | ResourceAuditEvent
+  | OccurrenceEvent;

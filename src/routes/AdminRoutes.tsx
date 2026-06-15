@@ -28,6 +28,10 @@ import { getDrawerHeaderOptions } from "./drawerHelpers";
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
 import { KeysStackRoutes, KeysStackParamList } from "./KeysStackRoutes";
+import {
+  OccurrenceStackParamList,
+  OccurrenceStackRoutes,
+} from "./OccurrenceStackRoutes";
 
 export type AdminDrawerParamList = {
   Dashboard: undefined;
@@ -36,6 +40,7 @@ export type AdminDrawerParamList = {
   Chaves: NavigatorScreenParams<KeysStackParamList>;
   Consultas: undefined;
   Relatórios: undefined;
+  Ocorrências: NavigatorScreenParams<OccurrenceStackParamList>;
   Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
@@ -289,6 +294,65 @@ export function AdminRoutes() {
             <Feather name="bar-chart-2" size={size} color={color} />
           ),
         })}
+      />
+
+      <Drawer.Screen
+        name="Ocorrências"
+        component={OccurrenceStackRoutes}
+        options={({ navigation, route }) => {
+          const nestedState = (
+            route as typeof route & {
+              state?: {
+                index: number;
+                routes: Array<{
+                  name: string;
+                  params?: { origin?: "AUDITORIA" };
+                }>;
+              };
+            }
+          ).state;
+          const activeRoute =
+            nestedState?.routes[nestedState.index ?? 0];
+          const routeName =
+            activeRoute?.name ??
+            getFocusedRouteNameFromRoute(route) ??
+            "OccurrenceList";
+          const isCreate = routeName === "CreateOccurrence";
+          const isDetails = routeName === "OccurrenceDetails";
+
+          return {
+            ...getDrawerHeaderOptions(navigation, {
+              title: isCreate
+                ? "Nova ocorrência"
+                : isDetails
+                  ? "Detalhes da ocorrência"
+                  : "Ocorrências",
+              subtitle: isCreate
+                ? "Informe o recurso e o problema"
+                : isDetails
+                  ? "Analise e acompanhe o atendimento"
+                  : "Gerencie problemas reportados",
+              showMenu: !isCreate && !isDetails,
+              onBack: () => {
+                if (
+                  isDetails &&
+                  activeRoute?.params?.origin === "AUDITORIA"
+                ) {
+                  navigation.navigate("Relatórios");
+                  return;
+                }
+
+                navigation.navigate("Ocorrências", {
+                  screen: "OccurrenceList",
+                });
+              },
+            }),
+            drawerIcon: ({ color, size }) => (
+              <Feather name="alert-triangle" size={size} color={color} />
+            ),
+            popToTopOnBlur: true,
+          };
+        }}
       />
 
       <Drawer.Screen

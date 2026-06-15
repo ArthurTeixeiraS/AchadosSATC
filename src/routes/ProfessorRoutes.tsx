@@ -7,7 +7,6 @@ import {
 import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/ProfessorHomeScreen";
-import { OcorrenciasScreen } from "../screens/professor/OcorrenciasScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
 import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
@@ -27,12 +26,16 @@ import {
 import { getDrawerHeaderOptions } from "./drawerHelpers";
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
+import {
+  OccurrenceStackParamList,
+  OccurrenceStackRoutes,
+} from "./OccurrenceStackRoutes";
 
 export type ProfessorDrawerParamList = {
   Home: undefined;
   "Nova Solicitação": NavigatorScreenParams<NovaSolicitacaoStackParamList>;
   "Minhas Solicitações": NavigatorScreenParams<MinhasSolicitacoesStackParamList>;
-  Ocorrências: undefined;
+  Ocorrências: NavigatorScreenParams<OccurrenceStackParamList>;
   Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
@@ -169,16 +172,37 @@ function ProfessorDrawerRoutes() {
 
       <Drawer.Screen
         name="Ocorrências"
-        component={OcorrenciasScreen}
-        options={({ navigation }) => ({
-          ...getDrawerHeaderOptions(navigation, {
-            title: "Ocorrências",
-            subtitle: "Registre e acompanhe problemas",
-          }),
-          drawerIcon: ({ color, size }) => (
-            <Feather name="alert-triangle" size={size} color={color} />
-          ),
-        })}
+        component={OccurrenceStackRoutes}
+        options={({ navigation, route }) => {
+          const routeName =
+            getFocusedRouteNameFromRoute(route) ?? "OccurrenceList";
+          const isCreate = routeName === "CreateOccurrence";
+          const isDetails = routeName === "OccurrenceDetails";
+
+          return {
+            ...getDrawerHeaderOptions(navigation, {
+              title: isCreate
+                ? "Nova ocorrência"
+                : isDetails
+                  ? "Detalhes da ocorrência"
+                  : "Ocorrências",
+              subtitle: isCreate
+                ? "Informe o recurso e o problema"
+                : isDetails
+                  ? "Acompanhe o atendimento"
+                  : "Registre e acompanhe problemas",
+              showMenu: !isCreate && !isDetails,
+              onBack: () =>
+                navigation.navigate("Ocorrências", {
+                  screen: "OccurrenceList",
+                }),
+            }),
+            drawerIcon: ({ color, size }) => (
+              <Feather name="alert-triangle" size={size} color={color} />
+            ),
+            popToTopOnBlur: true,
+          };
+        }}
       />
 
       <Drawer.Screen

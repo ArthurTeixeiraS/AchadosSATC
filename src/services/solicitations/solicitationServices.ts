@@ -348,6 +348,14 @@ function calculateToolPeriodAvailability(
   excludedSolicitationId?: string
 ): ToolPeriodAvailability {
   const totalQuantity = getToolCapacity(resourceData);
+  if (resourceData.status === "MANUTENCAO") {
+    return {
+      resourceId,
+      totalQuantity,
+      allocatedQuantity: totalQuantity,
+      availableQuantity: 0,
+    };
+  }
   const stockReservations = getStockReservations(
     resourceData,
     reservationKey
@@ -448,6 +456,7 @@ export async function getMachinesAvailabilityForPeriod(
           resourceId: machine.id,
           available:
             machineData !== null &&
+            machineData.status !== "MANUTENCAO" &&
             !allocatedMachineIds.has(machine.id) &&
             (!reservedSolicitationId ||
               reservedSolicitationId === excludedSolicitationId),
@@ -1275,6 +1284,16 @@ export async function decideSolicitationChangeItem(
         );
       }
 
+      if (resourceSnapshot.data().status === "MANUTENCAO") {
+        throw new SolicitationBusinessError(
+          itemType === "MAQUINA"
+            ? "MACHINE_CONFLICT"
+            : "INSUFFICIENT_STOCK",
+          `${item.nome} está em manutenção e não pode ser aprovado.`,
+          [item.nome]
+        );
+      }
+
       if (itemType === "MAQUINA") {
         const machine = item as SolicitationChangeMachine;
         const allocatedMachineIds = getAllocatedMachineIds(
@@ -1575,6 +1594,13 @@ export async function approveSolicitation(
         return;
       }
 
+      if (reservationSnapshot.data().status === "MANUTENCAO") {
+        conflictingMachineNames.add(
+          `${reservation.machine.nome} (em manutenção)`
+        );
+        return;
+      }
+
       const reservations = reservationSnapshot.data().reservas ?? {};
       const reservedSolicitationId =
         reservations[reservation.reservationKey];
@@ -1608,6 +1634,11 @@ export async function approveSolicitation(
 
       if (!toolSnapshot.exists()) {
         unavailableTools.push(`${requestedTool.nome} (recurso não encontrado)`);
+        return;
+      }
+
+      if (toolSnapshot.data().status === "MANUTENCAO") {
+        unavailableTools.push(`${requestedTool.nome} (em manutenção)`);
         return;
       }
 

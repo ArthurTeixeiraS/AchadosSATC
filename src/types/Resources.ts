@@ -24,6 +24,7 @@ export interface Resource {
   patrimonio?: string;
   reservas?: Record<string, string>;
   reservasEstoque?: Record<string, Record<string, number>>;
+  manutencaoOcorrenciaId?: string;
 
   imagemUrl?: string;
 

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -63,10 +62,6 @@ export function DashboardScreen() {
         initialStatus: "EM_USO",
       },
     });
-  }
-
-  function emBreve() {
-    Alert.alert("Em breve", "Esta funcionalidade ainda não está disponível.");
   }
 
   return (
@@ -198,7 +193,7 @@ export function DashboardScreen() {
       )}
       <TouchableOpacity
         style={styles.menuItem}
-        onPress={emBreve}
+        onPress={() => irPara("Ocorrências")}
       >
         <View style={styles.menuIconWrapper}>
           <Feather name="tool" size={20} color="#fff" />
