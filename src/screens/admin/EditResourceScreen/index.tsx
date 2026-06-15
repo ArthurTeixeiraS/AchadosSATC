@@ -26,6 +26,7 @@ import { uploadImageAsync } from "../../../services/storage/uploadImage";
 
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
+import { useAuth } from "../../../contexts/AuthContext";
 
 type Props = NativeStackScreenProps<ResourceStackParamList, "EditResource">;
 
@@ -37,6 +38,7 @@ const resourceStatusOptions = [
 
 export function EditResourceScreen({ route, navigation }: Props) {
     const { resource } = route.params;
+    const { appUser } = useAuth();
 
     const [nome, setNome] = useState(resource.nome);
     const [descricao, setDescricao] = useState(resource.descricao ?? "");
@@ -172,6 +174,11 @@ export function EditResourceScreen({ route, navigation }: Props) {
                 imagemUrl = await uploadImageAsync(imageUri, imagePath);
             }
 
+            if (!appUser) {
+                setErro("Não foi possível identificar o usuário responsável.");
+                return;
+            }
+
             await updateResource(resource.id, {
                 nome: nome.trim(),
                 descricao: descricao.trim() || undefined,
@@ -199,7 +206,7 @@ export function EditResourceScreen({ route, navigation }: Props) {
                 localizacao: isLaboratorio
                     ? localizacao.trim() || undefined
                     : undefined,
-            });
+            }, appUser);
 
             navigation.navigate("ResourceDetails", {
                 resource,

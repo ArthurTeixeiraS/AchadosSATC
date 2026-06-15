@@ -19,6 +19,7 @@ import { styles } from "./styles";
 
 import { getResourceById } from "../../../services/resources/resourceServices";
 import { deleteResource } from "../../../services/resources/resourceServices";
+import { useAuth } from "../../../contexts/AuthContext";
 
 type Props = NativeStackScreenProps<
     ResourceStackParamList,
@@ -47,6 +48,7 @@ function getTypeLabel(type: string) {
 
 export function ResourceDetailsScreen({ route, navigation }: Props) {
     const { resource: initialResource } = route.params;
+    const { appUser } = useAuth();
     const [resource, setResource] = useState(initialResource);
 
     const isFerramenta = resource.tipo === "FERRAMENTA";
@@ -112,7 +114,15 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await deleteResource(resource.id);
+                            if (!appUser) {
+                                Alert.alert(
+                                    "Erro ao excluir",
+                                    "Não foi possível identificar o usuário responsável."
+                                );
+                                return;
+                            }
+
+                            await deleteResource(resource.id, appUser);
                             navigation.navigate("ResourceList");
                         } catch (error) {
                             console.log("Erro ao excluir recurso:", error);

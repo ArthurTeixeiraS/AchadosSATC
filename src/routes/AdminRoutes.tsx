@@ -8,6 +8,7 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { DashboardScreen } from "../screens/admin/DashboardScreen";
 import { AdministrativeConsultationsScreen } from "../screens/admin/AdministrativeConsultationsScreen";
+import { AuditReportScreen } from "../screens/admin/AuditReportScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
 import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
@@ -34,6 +35,7 @@ export type AdminDrawerParamList = {
   Recursos: NavigatorScreenParams<ResourceStackParamList>;
   Chaves: NavigatorScreenParams<KeysStackParamList>;
   Consultas: undefined;
+  Relatórios: undefined;
   Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
@@ -109,7 +111,7 @@ export function AdminRoutes() {
                         name: string;
                         params?: {
                           solicitationId?: string;
-                          origin?: "CONSULTAS";
+                          origin?: "CONSULTAS" | "AUDITORIA";
                         };
                       }>;
                     };
@@ -140,6 +142,14 @@ export function AdminRoutes() {
                   return;
                 }
 
+                if (
+                  isDetails &&
+                  activeRoute?.params?.origin === "AUDITORIA"
+                ) {
+                  navigation.navigate("Relatórios");
+                  return;
+                }
+
                 navigation.navigate("Solicitações", {
                   screen: "ReceivedSolicitations",
                 });
@@ -163,7 +173,10 @@ export function AdminRoutes() {
                 index: number;
                 routes: Array<{
                   name: string;
-                  params?: ResourceStackParamList["EditResource"];
+                  params?:
+                    & ResourceStackParamList["EditResource"]
+                    & ResourceStackParamList["CreateResource"]
+                    & ResourceStackParamList["ResourceDetails"];
                 }>;
               };
             }
@@ -173,7 +186,10 @@ export function AdminRoutes() {
           ] as
             | {
                 name: string;
-                params?: ResourceStackParamList["EditResource"] & ResourceStackParamList["CreateResource"];
+                params?:
+                  & ResourceStackParamList["EditResource"]
+                  & ResourceStackParamList["CreateResource"]
+                  & ResourceStackParamList["ResourceDetails"];
               }
             | undefined;
           const routeName =
@@ -214,6 +230,14 @@ export function AdminRoutes() {
               ...screenConfig,
               onBack: () => {
                 if (
+                  routeName === "ResourceDetails" &&
+                  activeRoute?.params?.origin === "AUDITORIA"
+                ) {
+                  navigation.navigate("Relatórios");
+                  return;
+                }
+
+                if (
                   routeName === "EditResource" &&
                   activeRoute?.params?.resource
                 ) {
@@ -249,6 +273,20 @@ export function AdminRoutes() {
           }),
           drawerIcon: ({ color, size }) => (
             <Feather name="search" size={size} color={color} />
+          ),
+        })}
+      />
+
+      <Drawer.Screen
+        name="Relatórios"
+        component={AuditReportScreen}
+        options={({ navigation }) => ({
+          ...getDrawerHeaderOptions(navigation, {
+            title: "Relatórios",
+            subtitle: "Auditoria de operações",
+          }),
+          drawerIcon: ({ color, size }) => (
+            <Feather name="bar-chart-2" size={size} color={color} />
           ),
         })}
       />

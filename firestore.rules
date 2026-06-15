@@ -30,6 +30,24 @@ service cloud.firestore {
 
     match /recursos/{resourceId} {
       allow read, write: if request.auth != null;
+
+      match /eventosAuditoria/{eventoId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+        allow update, delete: if false;
+      }
+    }
+
+    match /chaves/{chaveId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /movimentacoes/{movimentacaoId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /{path=**}/eventosAuditoria/{eventoId} {
+      allow read: if request.auth != null;
     }
 
     match /solicitacoes/{solicitacaoId} {
