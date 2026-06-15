@@ -46,6 +46,8 @@ export type DashboardStats = {
   pendentes: number;
   novas: number;
   encerradas: number;
+  emUso: number;
+  atrasadas: number;
 };
 
 export type ToolPeriodAvailability = {
@@ -706,7 +708,7 @@ function getCurrentWeekRange() {
 }
 
 function calculateDashboardStats(
-  documents: readonly { data: () => DocumentData }[]
+  documents: readonly { id: string; data: () => DocumentData }[]
 ): DashboardStats {
   const { startOfWeek, endOfWeek } = getCurrentWeekRange();
   const currentWeek = documents.filter((document) => {
@@ -718,6 +720,20 @@ function calculateDashboardStats(
 
     const createdAt = data.createdAt.toDate();
     return createdAt >= startOfWeek && createdAt <= endOfWeek;
+  });
+
+  const now = new Date();
+  let emUso = 0;
+  let atrasadas = 0;
+
+  documents.forEach((document) => {
+    const data = document.data();
+    if (data.status === "EM_USO") {
+      emUso++;
+      if (isSolicitationOverdue(data as any, now)) {
+        atrasadas++;
+      }
+    }
   });
 
   return {
@@ -732,6 +748,8 @@ function calculateDashboardStats(
     encerradas: currentWeek.filter(
       (document) => document.data().status === "ENCERRADA"
     ).length,
+    emUso,
+    atrasadas,
   };
 }
 
@@ -2317,4 +2335,78 @@ export async function registerSolicitationReturn(
       );
     }
   });
+}
+
+export type ProfessorHomeData = {
+  pendentes: Solicitation[];
+  emUso: Solicitation[];
+  proximasAprovadas: Solicitation[];
+};
+
+function parseDateBR(value: string) {
+  if (!value) return 0;
+  const parts = value.split("/");
+  if (parts.length !== 3) return 0;
+  return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+}
+
+export async function getProfessorHomeData(
+  professorId: string
+): Promise<ProfessorHomeData> {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where("professorId", "==", professorId)
+  );
+
+  const snapshot = await getDocs(q);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const todayTime = now.getTime();
+  
+  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+  const nextWeekTime = todayTime + sevenDaysInMs;
+
+  const pendentes: Solicitation[] = [];
+  const emUso: Solicitation[] = [];
+  const proximasAprovadas: Solicitation[] = [];
+
+  snapshot.docs.forEach((docSnap) => {
+    const solicitation = mapSolicitation(docSnap.id, docSnap.data());
+    const useDate = parseDateBR(solicitation.dataUtilizacao);
+
+    if (solicitation.status === "EM_USO") {
+      emUso.push(solicitation);
+    }
+
+    if (solicitation.status === "PENDENTE" || solicitation.status === "ALTERACAO_PENDENTE") {
+      if (useDate >= todayTime && useDate <= nextWeekTime) {
+        pendentes.push(solicitation);
+      }
+    }
+
+    if (solicitation.status === "APROVADA") {
+      if (useDate >= todayTime && useDate <= nextWeekTime) {
+        proximasAprovadas.push(solicitation);
+      }
+    }
+  });
+
+  const sortByUseDate = (a: Solicitation, b: Solicitation) =>
+    parseDateBR(a.dataUtilizacao) - parseDateBR(b.dataUtilizacao);
+
+  const sortByCreatedAtDesc = (a: Solicitation, b: Solicitation) => {
+    const aTime = (a.createdAt as any)?.seconds || 0;
+    const bTime = (b.createdAt as any)?.seconds || 0;
+    return bTime - aTime;
+  };
+
+  pendentes.sort(sortByCreatedAtDesc);
+  proximasAprovadas.sort(sortByUseDate);
+  emUso.sort((a, b) => {
+    if (a.atrasada && !b.atrasada) return -1;
+    if (!a.atrasada && b.atrasada) return 1;
+    return sortByUseDate(a, b);
+  });
+
+  return { pendentes, emUso, proximasAprovadas };
 }

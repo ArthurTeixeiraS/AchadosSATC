@@ -105,36 +105,41 @@ export const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  menuItem: {
+  shortcutsTitle: {
+    fontSize: 13,
+    fontFamily: typography.fontFamily.semiBold,
+    color: colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginTop: spacing.sm,
+    marginBottom: -spacing.xs,
+  },
+  shortcutsRow: {
     flexDirection: "row",
-    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  shortcutCard: {
+    width: "48%",
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
     padding: spacing.md,
-    gap: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "flex-start",
+    gap: spacing.sm,
     ...shadows.card,
   },
-  menuIconWrapper: {
-    width: 40,
-    height: 40,
+  shortcutIcon: {
+    width: 36,
+    height: 36,
     borderRadius: radius.sm,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  menuTextWrapper: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: 14,
+  shortcutLabel: {
+    fontSize: 13,
     fontFamily: typography.fontFamily.semiBold,
     color: colors.text,
-  },
-  menuSubtitle: {
-    fontSize: 12,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.textSecondary,
-    marginTop: 2,
   },
 
   badge: {
