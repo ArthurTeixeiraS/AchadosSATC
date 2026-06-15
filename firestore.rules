@@ -6,77 +6,169 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isEmployee() {
+    function userDocument() {
+      return get(
+        /databases/$(database)/documents/usuarios/$(request.auth.uid)
+      );
+    }
+
+    function isActiveUser() {
       return signedIn() &&
-        get(/databases/$(database)/documents/usuarios/$(request.auth.uid))
-          .data.tipoUsuario == "FUNCIONARIO";
+        userDocument().data.statusConta == "ATIVO";
+    }
+
+    function isEmployee() {
+      return isActiveUser() &&
+        userDocument().data.tipoUsuario == "FUNCIONARIO";
+    }
+
+    function isProfessor() {
+      return isActiveUser() &&
+        userDocument().data.tipoUsuario == "PROFESSOR";
+    }
+
+    function isSolicitationOwner(solicitationId) {
+      return isProfessor() &&
+        get(
+          /databases/$(database)/documents/solicitacoes/$(solicitationId)
+        ).data.professorId == request.auth.uid;
+    }
+
+    function isSolicitationOwnerAfter(solicitationId) {
+      return isProfessor() &&
+        existsAfter(
+          /databases/$(database)/documents/solicitacoes/$(solicitationId)
+        ) &&
+        getAfter(
+          /databases/$(database)/documents/solicitacoes/$(solicitationId)
+        ).data.professorId == request.auth.uid;
+    }
+
+    function professorCanUpdateSolicitation() {
+      return isProfessor() &&
+        resource.data.professorId == request.auth.uid &&
+        request.resource.data.professorId == resource.data.professorId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "atividade",
+          "observacoes",
+          "maquinas",
+          "ferramentas",
+          "laboratoriosIds",
+          "prioridade",
+          "status",
+          "analiseAlteracao",
+          "canceladaEm",
+          "canceladaPorId",
+          "canceladaPorNome",
+          "updatedAt"
+        ]) &&
+        (
+          (
+            resource.data.status == "PENDENTE" &&
+            request.resource.data.status == "CANCELADA" &&
+            request.resource.data.canceladaPorId == request.auth.uid
+          ) ||
+          (
+            resource.data.status == "APROVADA" &&
+            request.resource.data.status in [
+              "APROVADA",
+              "ALTERACAO_PENDENTE"
+            ]
+          )
+        );
     }
 
     match /usuarios/{userId} {
+      // O login atual consulta a matrícula antes da autenticação.
       allow read: if true;
       allow create, delete: if false;
-      allow update: if request.auth != null &&
+      allow update: if isActiveUser() &&
         request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["telefone", "updatedAt"]);
 
       match /notificacoes/{notificacaoId} {
-        allow read: if request.auth != null &&
+        allow read: if isActiveUser() &&
           request.auth.uid == userId;
 
-        allow create: if request.auth != null &&
+        allow create: if isActiveUser() &&
           request.resource.data.destinatarioId == userId &&
-          request.resource.data.lida == false;
+          request.resource.data.lida == false &&
+          request.resource.data.criadaEm == request.time &&
+          request.resource.data.keys().hasOnly([
+            "tipo",
+            "destinatarioId",
+            "solicitacaoId",
+            "titulo",
+            "mensagem",
+            "lida",
+            "criadaEm"
+          ]) &&
+          (
+            isEmployee() ||
+            isSolicitationOwnerAfter(
+              request.resource.data.solicitacaoId
+            )
+          );
 
-        allow update: if request.auth != null &&
+        allow update: if isActiveUser() &&
           request.auth.uid == userId &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["lida", "lidaEm"]) &&
-          request.resource.data.lida == true;
+          request.resource.data.lida == true &&
+          request.resource.data.lidaEm == request.time;
 
         allow delete: if false;
       }
     }
 
     match /recursos/{resourceId} {
-      allow read: if signedIn();
+      allow read: if isActiveUser();
       allow create, delete: if isEmployee();
       allow update: if isEmployee() ||
-        (signedIn() &&
+        (isProfessor() &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(["reservas", "reservasEstoque", "updatedAt"]));
 
       match /eventosAuditoria/{eventoId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read: if isEmployee();
+        allow create: if isEmployee() &&
+          request.resource.data.entidadeId == resourceId &&
+          request.resource.data.responsavel.id == request.auth.uid &&
+          request.resource.data.createdAt == request.time;
         allow update, delete: if false;
       }
     }
 
     match /chaves/{chaveId} {
-      allow read, write: if request.auth != null;
+      allow read, create: if isEmployee();
+      allow update: if isEmployee() &&
+        request.resource.data.codigo == resource.data.codigo;
+      allow delete: if false;
     }
 
     match /movimentacoes/{movimentacaoId} {
-      allow read, write: if request.auth != null;
+      allow read, create, update, delete: if isEmployee();
     }
 
     match /ocorrencias/{ocorrenciaId} {
-      allow read: if signedIn() &&
+      allow read: if isActiveUser() &&
         (isEmployee() || resource.data.autor.id == request.auth.uid);
-      allow create: if signedIn() &&
+      allow create: if isActiveUser() &&
         request.resource.data.autor.id == request.auth.uid &&
         request.resource.data.status == "ABERTA";
       allow update: if isEmployee();
       allow delete: if false;
 
       match /eventosAuditoria/{eventoId} {
-        allow read: if signedIn() &&
+        allow read: if isActiveUser() &&
           (isEmployee() ||
             get(/databases/$(database)/documents/ocorrencias/$(ocorrenciaId))
               .data.autor.id == request.auth.uid);
-        allow create: if signedIn() &&
+        allow create: if isActiveUser() &&
+          request.resource.data.entidadeId == ocorrenciaId &&
           request.resource.data.responsavel.id == request.auth.uid &&
+          request.resource.data.createdAt == request.time &&
           (isEmployee() ||
             (request.resource.data.tipo == "OCORRENCIA_CRIACAO" &&
               getAfter(
@@ -87,15 +179,32 @@ service cloud.firestore {
     }
 
     match /{path=**}/eventosAuditoria/{eventoId} {
-      allow read: if request.auth != null;
+      allow read: if isEmployee();
     }
 
     match /solicitacoes/{solicitacaoId} {
-      allow read, write: if request.auth != null;
+      allow read: if isEmployee() ||
+        (
+          isProfessor() &&
+          resource.data.professorId == request.auth.uid
+        );
+      allow create: if isProfessor() &&
+        request.resource.data.professorId == request.auth.uid &&
+        request.resource.data.status == "PENDENTE";
+      allow update: if isEmployee() ||
+        professorCanUpdateSolicitation();
+      allow delete: if false;
 
       match /eventosAuditoria/{eventoId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read: if isEmployee() ||
+          isSolicitationOwner(solicitacaoId);
+        allow create: if (
+            isEmployee() ||
+            isSolicitationOwnerAfter(solicitacaoId)
+          ) &&
+          request.resource.data.solicitacaoId == solicitacaoId &&
+          request.resource.data.responsavel.id == request.auth.uid &&
+          request.resource.data.createdAt == request.time;
         allow update, delete: if false;
       }
     }

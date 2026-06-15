@@ -97,7 +97,7 @@ export function KeyFormScreen() {
       console.log("Erro ao salvar chave:", error);
       
       
-      if (error.message === "DPLICATE_CODE") {
+      if (error.message === "DUPLICATE_CODE") {
         Alert.alert("Erro", "Este código de chave já está cadastrado.");
       } else {
         Alert.alert("Erro", "Ocorreu um erro ao salvar a chave. Tente novamente.");

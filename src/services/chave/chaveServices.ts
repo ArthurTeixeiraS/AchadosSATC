@@ -1,18 +1,15 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  query, 
-  where, 
-  orderBy,
-  serverTimestamp, 
-  deleteDoc,
-  DocumentData
+import {
+  collection,
+  doc,
+  getDocs,
+  updateDoc,
+  query,
+  where,
+  runTransaction,
+  serverTimestamp,
 } from "firebase/firestore";
 
-import { db } from "../firebase/firebaseConfig"; 
+import { db } from "../firebase/firebaseConfig";
 
 
 export interface Chave {
@@ -38,70 +35,80 @@ export interface UpdateChaveDTO {
 
 const NOME_COLECAO = "chaves";
 
+function normalizarCodigo(codigo: string) {
+  return codigo.normalize("NFKC").trim().toUpperCase();
+}
+
+function getChaveIdPorCodigo(codigo: string) {
+  return `codigo_${encodeURIComponent(codigo)}`;
+}
 
 async function verificarCodigoDuplicado(codigo: string): Promise<boolean> {
   const chavesRef = collection(db, NOME_COLECAO);
-  const q = query(chavesRef, where("codigo", "==", codigo.trim().toUpperCase()));
+  const q = query(chavesRef, where("codigo", "==", codigo));
   const querySnapshot = await getDocs(q);
   return !querySnapshot.empty;
 }
 
-
 export async function cadastrarChave(data: CreateChaveDTO): Promise<void> {
-  const codigoFormatado = data.codigo.trim().toUpperCase(); 
+  const codigoFormatado = normalizarCodigo(data.codigo);
 
+  // Mantém compatibilidade com registros antigos que possuem ID automático.
   const isDuplicado = await verificarCodigoDuplicado(codigoFormatado);
   if (isDuplicado) {
-    throw new Error("DUPLICATE_CODE"); 
+    throw new Error("DUPLICATE_CODE");
   }
 
-  const chavesRef = collection(db, NOME_COLECAO);
+  const chaveRef = doc(
+    db,
+    NOME_COLECAO,
+    getChaveIdPorCodigo(codigoFormatado)
+  );
 
-  await addDoc(chavesRef, {
-    codigo: codigoFormatado,
-    descricao: data.descricao.trim(),
-    localizacao: data.localizacao.trim(),
-    isArquivado: false, 
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const chaveSnapshot = await transaction.get(chaveRef);
+
+    if (chaveSnapshot.exists()) {
+      throw new Error("DUPLICATE_CODE");
+    }
+
+    transaction.set(chaveRef, {
+      codigo: codigoFormatado,
+      descricao: data.descricao.trim(),
+      localizacao: data.localizacao.trim(),
+      isArquivado: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
   });
 }
 
-export async function listarChaves(trazerArquivadas: boolean = false): Promise<Chave[]> {
-  try {
-    console.log("=== INICIANDO BUSCA NO FIRESTORE ===");
-    console.log("Buscando chaves com isArquivado igual a:", trazerArquivadas);
+export async function listarChaves(
+  trazerArquivadas?: boolean
+): Promise<Chave[]> {
+  const snapshot = await getDocs(collection(db, NOME_COLECAO));
+  const chaves = snapshot.docs.map((document) => {
+    const dados = document.data();
 
-    const chavesRef = collection(db, NOME_COLECAO);
-    const q = query(chavesRef, where("isArquivado", "==", trazerArquivadas));
-    
-    const querySnapshot = await getDocs(q);
-    
-    console.log("Quantidade de documentos encontrados no banco:", querySnapshot.size);
+    return {
+      id: document.id,
+      codigo: dados.codigo || "",
+      localizacao: dados.localizacao || "",
+      descricao: dados.descricao || "",
+      // Registros anteriores ao arquivamento lógico continuam ativos.
+      isArquivado: dados.isArquivado === true,
+      createdAt: dados.createdAt || null,
+      updatedAt: dados.updatedAt || null,
+    } as Chave;
+  });
 
-    const chaves = querySnapshot.docs.map(doc => {
-      const dados = doc.data();
-      console.log(`Documento ID [${doc.id}] conteúdo:`, dados);
-      
-      return {
-        id: doc.id,
-        codigo: dados.codigo || "",
-        localizacao: dados.localizacao || "",
-        descricao: dados.descricao || "",
-        isArquivado: !!dados.isArquivado, // Força a virar booleano puro (true/false)
-        createdAt: dados.createdAt || null,
-        updatedAt: dados.updatedAt || null,
-      };
-    }) as Chave[];
-
-    console.log("Total de chaves mapeadas com sucesso:", chaves.length);
-    console.log("====================================");
-    
+  if (trazerArquivadas === undefined) {
     return chaves;
-  } catch (error) {
-    console.error("ERRO CRÍTICO DENTRO DE listarChaves:", error);
-    throw error;
   }
+
+  return chaves.filter(
+    (chave) => chave.isArquivado === trazerArquivadas
+  );
 }
 
 
@@ -129,17 +136,6 @@ export async function alternarArquivamentoChave(id: string, novoStatus: boolean)
     });
   } catch (error) {
     console.error("Erro ao alternar arquivamento da chave no serviço:", error);
-    throw error;
-  }
-}
-
-
-export async function excluirChave(id: string): Promise<void> {
-  try {
-    const chaveRef = doc(db, NOME_COLECAO, id);
-    await deleteDoc(chaveRef);
-  } catch (error) {
-    console.error("Erro ao excluir chave no serviço:", error);
     throw error;
   }
 }

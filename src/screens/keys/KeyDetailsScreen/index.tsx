@@ -7,7 +7,11 @@ import Feather from "@expo/vector-icons/Feather";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppButton } from "../../../components/AppButton";
 
-import { listarChaves, alternarArquivamentoChave, excluirChave, Chave } from "../../../services/chave/chaveServices";
+import {
+  listarChaves,
+  alternarArquivamentoChave,
+  Chave,
+} from "../../../services/chave/chaveServices";
 import { colors } from "../../../styles/colors";
 
 
@@ -88,35 +92,6 @@ export function KeyDetailsScreen() {
     );
   }
 
-  async function handleExcluir() {
-    if (!chave) return;
-
-    Alert.alert(
-      "Atenção Extrema",
-      "Tem certeza que deseja excluir permanentemente esta chave do inventário? Esta ação não pode ser desfeita.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoadingAcao(true);
-              await excluirChave(chave.id);
-              Alert.alert("Sucesso", "Chave removida permanentemente!");
-              navigation.goBack();
-            } catch (error) {
-              console.log("Erro ao excluir chave:", error);
-              Alert.alert("Erro", "Não foi possível excluir a chave.");
-            } finally {
-              setLoadingAcao(false);
-            }
-          },
-        },
-      ]
-    );
-  }
-
   if (loading) {
     return (
       <ScreenContainer>
@@ -180,16 +155,6 @@ export function KeyDetailsScreen() {
           >
             <Feather name={chave.isArquivado ? "unlock" : "archive"} size={16} />{" "}
             {chave.isArquivado ? "Reativar Chave" : "Arquivar Chave"}
-          </AppButton>
-
-          <AppButton
-            mode="outlined"
-            loading={loadingAcao}
-            onPress={handleExcluir}
-            style={[styles.btnSecondary, { borderColor: "#EF4444" }]}
-            textColor="#EF4444"
-          >
-            <Feather name="trash-2" size={16} /> Excluir Permanentemente
           </AppButton>
 
         </View>

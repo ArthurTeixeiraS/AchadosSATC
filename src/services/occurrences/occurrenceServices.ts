@@ -367,11 +367,34 @@ export async function setOccurrenceMaintenance(
   const eventRef = doc(
     collection(occurrenceRef, AUDIT_COLLECTION_NAME)
   );
-  const solicitationSnapshot = enabled
-    ? await getDocs(collection(db, SOLICITATION_COLLECTION_NAME))
-    : null;
+  const [occurrenceBeforeTransaction, solicitationSnapshot] = enabled
+    ? await Promise.all([
+        getDoc(occurrenceRef),
+        getDocs(collection(db, SOLICITATION_COLLECTION_NAME)),
+      ])
+    : [null, null];
+
+  if (enabled && !occurrenceBeforeTransaction?.exists()) {
+    throw new OccurrenceBusinessError("Ocorrência não encontrada.");
+  }
+
+  const occurrenceResource =
+    occurrenceBeforeTransaction?.exists()
+      ? occurrenceBeforeTransaction.data().recurso
+      : undefined;
   const activeSolicitations =
     solicitationSnapshot?.docs.map((document) => document.data()) ?? [];
+  const linkedMachineSnapshot =
+    enabled && occurrenceResource?.tipo === "LABORATORIO"
+      ? await getDocs(
+          query(
+            collection(db, RESOURCE_COLLECTION_NAME),
+            where("laboratorioId", "==", occurrenceResource.id)
+          )
+        )
+      : null;
+  const linkedMachineRefs =
+    linkedMachineSnapshot?.docs.map((document) => document.ref) ?? [];
 
   await runTransaction(db, async (transaction) => {
     const occurrenceSnapshot = await transaction.get(occurrenceRef);
@@ -383,12 +406,31 @@ export async function setOccurrenceMaintenance(
       occurrenceSnapshot.id,
       occurrenceSnapshot.data()
     );
+
+    if (
+      enabled &&
+      occurrenceResource &&
+      occurrence.recurso.id !== occurrenceResource.id
+    ) {
+      throw new OccurrenceBusinessError(
+        "O recurso relacionado à ocorrência foi alterado. Tente novamente."
+      );
+    }
+
     const resourceRef = doc(
       db,
       RESOURCE_COLLECTION_NAME,
       occurrence.recurso.id
     );
     const resourceSnapshot = await transaction.get(resourceRef);
+    const linkedMachineSnapshots = enabled
+      ? await Promise.all(
+          linkedMachineRefs.map((reference) =>
+            transaction.get(reference)
+          )
+        )
+      : [];
+
     if (!resourceSnapshot.exists()) {
       throw new OccurrenceBusinessError("Recurso não encontrado.");
     }
@@ -413,6 +455,10 @@ export async function setOccurrenceMaintenance(
       }
       if (
         hasReservations(resourceData) ||
+        linkedMachineSnapshots.some(
+          (snapshot) =>
+            snapshot.exists() && hasReservations(snapshot.data())
+        ) ||
         hasActiveSolicitationAllocation(
           activeSolicitations,
           occurrence.recurso.id
