@@ -75,12 +75,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function login(cracha: string, senha: string) {
-    const email = await findEmailByCracha(cracha);
+    try {
+      const email = await findEmailByCracha(cracha);
+      const credential = await signInWithEmailAndPassword(auth, email, senha);
 
-    const credential = await signInWithEmailAndPassword(auth, email, senha);
+      setFirebaseUser(credential.user);
+      await loadUserData(credential.user.uid);
+    } catch (error: any) {
+      // trata erros do firebase e do proprio app com mensagem amigavel
+      const code = error?.code ?? "";
 
-    setFirebaseUser(credential.user);
-    await loadUserData(credential.user.uid);
+      if (
+        code === "auth/wrong-password" ||
+        code === "auth/invalid-password" ||
+        code === "auth/invalid-credential" ||
+        error?.message === "Crachá não encontrado."
+      ) {
+        throw new Error("Sua matrícula ou senha estão incorretos.");
+      }
+
+      if (code === "auth/too-many-requests") {
+        throw new Error("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
+      }
+
+      if (code === "auth/network-request-failed") {
+        throw new Error("Sem conexão com a internet. Verifique sua rede e tente novamente.");
+      }
+
+      // re-lança outros erros que ja tem mensagem tratada (ex: usuario inativo)
+      throw error;
+    }
   }
 
   async function logout() {
