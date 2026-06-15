@@ -180,7 +180,7 @@ export function DashboardScreen() {
       {appUser?.tipoUsuario === "FUNCIONARIO" && (
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => irPara("Chaves")} // Mudado de "KeysStackRoutes" para "Chaves"
+          onPress={() => irPara("Chaves")}
         >
           <View style={styles.menuIconWrapper}>
             <Feather name="key" size={20} color="#fff" />

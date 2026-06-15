@@ -27,7 +27,7 @@ import {
 import { getDrawerHeaderOptions } from "./drawerHelpers";
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
-import { KeysStackRoutes, KeysStackParamList } from "./KeysStackRoutes";
+import { KeyStackParamList, KeyStackRoutes } from "./KeyStackRoutes";
 import {
   OccurrenceStackParamList,
   OccurrenceStackRoutes,
@@ -37,7 +37,7 @@ export type AdminDrawerParamList = {
   Dashboard: undefined;
   Solicitações: NavigatorScreenParams<FuncionarioSolicitacaoStackParamList>;
   Recursos: NavigatorScreenParams<ResourceStackParamList>;
-  Chaves: NavigatorScreenParams<KeysStackParamList>;
+  Chaves: NavigatorScreenParams<KeyStackParamList>;
   Consultas: undefined;
   Relatórios: undefined;
   Ocorrências: NavigatorScreenParams<OccurrenceStackParamList>;
@@ -357,21 +357,32 @@ export function AdminRoutes() {
 
       <Drawer.Screen
         name="Chaves"
-        component={KeysStackRoutes} 
+        component={KeyStackRoutes}
         options={({ navigation, route }) => {
-          
-          const routeName = getFocusedRouteNameFromRoute(route) ?? "KeysList";
-          const isCreate = routeName === "KeyCreate";
-          const isDetails = routeName === "KeyDetails";
-          const isEdit = routeName === "KeyEdit";
+          const nestedState = (route as typeof route & {
+            state?: {
+              index?: number;
+              routes?: Array<{
+                name: string;
+                params?: { keyId?: string };
+              }>;
+            };
+          }).state;
+          const activeRoute =
+            nestedState?.routes?.[nestedState.index ?? 0];
+          const routeName =
+            activeRoute?.name ??
+            getFocusedRouteNameFromRoute(route) ??
+            "KeyList";
+          const isEdit = routeName === "EditKey";
 
           const screenConfig = {
-            KeysList: {
+            KeyList: {
               title: "Chaves",
               subtitle: "Controle de acesso aos laboratórios",
               showMenu: true,
             },
-            KeyCreate: {
+            CreateKey: {
               title: "Cadastrar Nova Chave",
               subtitle: "Adicione uma chave ao inventário",
               showMenu: false,
@@ -381,7 +392,7 @@ export function AdminRoutes() {
               subtitle: "Visualize e gerencie a chave selecionada",
               showMenu: false,
             },
-            KeyEdit: {
+            EditKey: {
               title: "Editar Chave",
               subtitle: "Atualize os dados da chave",
               showMenu: false,
@@ -396,13 +407,17 @@ export function AdminRoutes() {
             ...getDrawerHeaderOptions(navigation, {
               ...screenConfig,
               onBack: () => {
-                
-                if (isEdit) {
-                  navigation.goBack();
+                if (isEdit && activeRoute?.params?.keyId) {
+                  navigation.navigate("Chaves", {
+                    screen: "KeyDetails",
+                    params: {
+                      keyId: activeRoute.params.keyId,
+                    },
+                  });
                   return;
                 }
                 
-                navigation.navigate("Chaves", { screen: "KeysList" });
+                navigation.navigate("Chaves", { screen: "KeyList" });
               },
             }),
             drawerIcon: ({ color, size }) => (

@@ -8,17 +8,21 @@ import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppButton } from "../../../components/AppButton";
 
 
-import { cadastrarChave, editarChave, listarChaves } from "../../../services/chave/chaveServices";
+import {
+  createKey,
+  getKeyById,
+  updateKey,
+} from "../../../services/keys/keyServices";
 import { colors } from "../../../styles/colors";
-import { styles } from "../KeysListScreen/styles"; 
+import { styles } from "../KeyListScreen/styles";
 
 export function KeyFormScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   
 
-  const chaveId = route.params?.chaveId;
-  const isEdicao = !!chaveId; 
+  const keyId = route.params?.keyId;
+  const isEditing = !!keyId;
 
 
   const [codigo, setCodigo] = useState("");
@@ -31,41 +35,35 @@ export function KeyFormScreen() {
 
   
   useEffect(() => {
-    if (isEdicao) {
-      async function carregarDadosChave() {
+    if (isEditing) {
+      async function loadKey() {
         try {
           setLoadingDados(true);
           
-          const listaAtivas = await listarChaves(false);
-          let chaveEncontrada = listaAtivas.find((c) => c.id === chaveId);
-          
-        
-          if (!chaveEncontrada) {
-            const listaArquivadas = await listarChaves(true);
-            chaveEncontrada = listaArquivadas.find((c) => c.id === chaveId);
-          }
+          const key = await getKeyById(keyId);
 
-          if (chaveEncontrada) {
-            setCodigo(chaveEncontrada.codigo);
-            setLocalizacao(chaveEncontrada.localizacao);
-            setDescricao(chaveEncontrada.descricao);
+          if (key) {
+            setCodigo(key.codigo);
+            setLocalizacao(key.localizacao);
+            setDescricao(key.descricao);
           } else {
             Alert.alert("Erro", "Chave não encontrada.");
-            navigation.goBack();
+            navigation.navigate("KeyList");
           }
         } catch (error) {
           console.log("Erro ao carregar chave para edição:", error);
           Alert.alert("Erro", "Não foi possível carregar os dados da chave.");
+          navigation.navigate("KeyList");
         } finally {
           setLoadingDados(false);
         }
       }
-      carregarDadosChave();
+      loadKey();
     }
-  }, [isEdicao, chaveId]);
+  }, [isEditing, keyId]);
 
  
-  async function handleSalvar() {
+  async function handleSave() {
 
     if (!codigo.trim() || !localizacao.trim() || !descricao.trim()) {
       Alert.alert("Atenção", "Todos os campos são obrigatórios.");
@@ -75,24 +73,24 @@ export function KeyFormScreen() {
     try {
       setLoadingSalvar(true);
 
-      if (isEdicao) {
+      if (isEditing) {
         
-        await editarChave(chaveId, {
+        await updateKey(keyId, {
           descricao: descricao.trim(),
           localizacao: localizacao.trim(),
         });
         Alert.alert("Sucesso", "Chave atualizada com sucesso!");
+        navigation.navigate("KeyDetails", { keyId });
       } else {
         
-        await cadastrarChave({
+        await createKey({
           codigo: codigo.trim(),
           descricao: descricao.trim(),
           localizacao: localizacao.trim(),
         });
         Alert.alert("Sucesso", "Chave cadastrada com sucesso!");
+        navigation.navigate("KeyList");
       }
-
-      navigation.goBack(); 
     } catch (error: any) {
       console.log("Erro ao salvar chave:", error);
       
@@ -134,14 +132,14 @@ export function KeyFormScreen() {
             value={codigo}
             onChangeText={setCodigo}
             autoCapitalize="characters"
-            editable={!isEdicao} 
-            textColor={isEdicao ? "#6B7280" : undefined}
+            editable={!isEditing}
+            textColor={isEditing ? "#6B7280" : undefined}
             outlineColor="#E5E7EB"
             activeOutlineColor={colors.primary}
-            style={{ backgroundColor: isEdicao ? "#F3F4F6" : "#FFF" }}
-            right={isEdicao ? <TextInput.Icon icon={() => <Feather name="lock" size={16} color="#9CA3AF" />} /> : undefined}
+            style={{ backgroundColor: isEditing ? "#F3F4F6" : "#FFF" }}
+            right={isEditing ? <TextInput.Icon icon={() => <Feather name="lock" size={16} color="#9CA3AF" />} /> : undefined}
           />
-          {isEdicao && (
+          {isEditing && (
             <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
               O código identificador não pode ser alterado após o cadastro.
             </Text>
@@ -184,8 +182,8 @@ export function KeyFormScreen() {
 
        
         <View style={{ marginTop: 12 }}>
-          <AppButton loading={loadingSalvar} onPress={handleSalvar}>
-            {isEdicao ? "Salvar Alterações" : "Cadastrar Chave"}
+          <AppButton loading={loadingSalvar} onPress={handleSave}>
+            {isEditing ? "Salvar Alterações" : "Cadastrar Chave"}
           </AppButton>
         </View>
 

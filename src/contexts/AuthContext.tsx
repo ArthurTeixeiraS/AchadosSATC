@@ -33,6 +33,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function clearAuthenticatedSession() {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.log("Erro ao limpar sessão autenticada:", error);
+    }
+
+    setFirebaseUser(null);
+    setAppUser(null);
+  }
+
   async function loadUserData(uid: string) {
     //Busca os dados do usuário no Firestore via UID
     const userRef = doc(db, "usuarios", uid);
@@ -75,13 +86,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function login(cracha: string, senha: string) {
+    let authenticated = false;
+
     try {
       const email = await findEmailByCracha(cracha);
       const credential = await signInWithEmailAndPassword(auth, email, senha);
+      authenticated = true;
 
       setFirebaseUser(credential.user);
       await loadUserData(credential.user.uid);
     } catch (error: any) {
+      if (authenticated) {
+        await clearAuthenticatedSession();
+      }
+
       // trata erros do firebase e do proprio app com mensagem amigavel
       const code = error?.code ?? "";
 
@@ -125,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.log("Erro ao carregar usuário:", error);
-        setAppUser(null);
+        await clearAuthenticatedSession();
       } finally {
         setLoading(false);
       }

@@ -24,14 +24,12 @@ import {
 import { Loading } from "../../../components/Loading";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
-import {
-  Chave,
-  listarChaves,
-} from "../../../services/chave/chaveServices";
+import { listKeys } from "../../../services/keys/keyServices";
 import { colors } from "../../../styles/colors";
+import { Key } from "../../../types/Key";
 import { styles } from "./styles";
 
-const keySorts: readonly SortDefinition<Chave>[] = [
+const keySorts: readonly SortDefinition<Key>[] = [
   {
     key: "code-asc",
     label: "Código de A a Z",
@@ -49,7 +47,7 @@ const keySorts: readonly SortDefinition<Chave>[] = [
   },
 ];
 
-const keyFilters: readonly FilterDefinition<Chave>[] = [
+const keyFilters: readonly FilterDefinition<Key>[] = [
   {
     key: "status",
     label: "Status",
@@ -81,7 +79,7 @@ const keyFilters: readonly FilterDefinition<Chave>[] = [
   },
 ];
 
-function searchKey(item: Chave, search: string) {
+function searchKey(item: Key, search: string) {
   return [
     item.codigo,
     item.localizacao,
@@ -89,9 +87,9 @@ function searchKey(item: Chave, search: string) {
   ].some((value) => normalizeFilterText(value).includes(search));
 }
 
-export function KeysListScreen() {
+export function KeyListScreen() {
   const navigation = useNavigation<any>();
-  const [keys, setKeys] = useState<Chave[]>([]);
+  const [keys, setKeys] = useState<Key[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -100,7 +98,7 @@ export function KeysListScreen() {
   const [activeSort, setActiveSort] = useState("code-asc");
 
   const fetchKeys = useCallback(async () => {
-    const data = await listarChaves();
+    const data = await listKeys();
     setKeys(data);
     setError(null);
   }, []);
@@ -112,7 +110,7 @@ export function KeysListScreen() {
       async function loadKeys() {
         try {
           setLoading(true);
-          const data = await listarChaves();
+          const data = await listKeys();
 
           if (active) {
             setKeys(data);
@@ -215,7 +213,7 @@ export function KeysListScreen() {
               activeOpacity={0.8}
               onPress={() =>
                 navigation.navigate("KeyDetails", {
-                  chaveId: item.id,
+                  keyId: item.id,
                 })
               }
             >
@@ -265,7 +263,7 @@ export function KeysListScreen() {
         icon="plus"
         color={colors.white}
         style={styles.fab}
-        onPress={() => navigation.navigate("KeyCreate")}
+        onPress={() => navigation.navigate("CreateKey")}
       />
     </ScreenContainer>
   );

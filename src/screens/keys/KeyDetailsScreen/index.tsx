@@ -8,47 +8,42 @@ import { ScreenContainer } from "../../../components/ScreenContainer";
 import { AppButton } from "../../../components/AppButton";
 
 import {
-  listarChaves,
-  alternarArquivamentoChave,
-  Chave,
-} from "../../../services/chave/chaveServices";
+  getKeyById,
+  setKeyArchived,
+} from "../../../services/keys/keyServices";
 import { colors } from "../../../styles/colors";
+import { Key } from "../../../types/Key";
 
 
-import { styles as globalStyles } from "../KeysListScreen/styles"; 
+import { styles as globalStyles } from "../KeyListScreen/styles";
 import { styles } from "./styles"; 
 
 export function KeyDetailsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { chaveId } = route.params;
+  const { keyId } = route.params;
   
 
-  const [chave, setChave] = useState<Chave | null>(null);
+  const [key, setKey] = useState<Key | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingAcao, setLoadingAcao] = useState(false);
 
-  async function carregarDadosChave() {
+  async function loadKey() {
     try {
       setLoading(true);
       
-      const listaAtivas = await listarChaves(false) as Chave[];
-      let chaveEncontrada = listaAtivas.find((c) => c.id === chaveId);
+      const loadedKey = await getKeyById(keyId);
 
-      if (!chaveEncontrada) {
-        const listaArquivadas = await listarChaves(true) as Chave[];
-        chaveEncontrada = listaArquivadas.find((c) => c.id === chaveId);
-      }
-
-      if (chaveEncontrada) {
-        setChave(chaveEncontrada);
+      if (loadedKey) {
+        setKey(loadedKey);
       } else {
         Alert.alert("Erro", "Chave não encontrada no sistema.");
-        navigation.goBack();
+        navigation.navigate("KeyList");
       }
     } catch (error) {
       console.log("Erro ao carregar detalhes da chave:", error);
       Alert.alert("Erro", "Não foi possível carregar os detalhes da chave.");
+      navigation.navigate("KeyList");
     } finally {
       setLoading(false);
     }
@@ -56,16 +51,16 @@ export function KeyDetailsScreen() {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
-      carregarDadosChave();
+      loadKey();
     });
 
     return unsubscribe;
-  }, [navigation, chaveId]);
+  }, [navigation, keyId]);
 
-  async function handleAlternarArquivamento() {
-    if (!chave) return;
+  async function handleArchiveToggle() {
+    if (!key) return;
     
-    const acaoTexto = chave.isArquivado ? "reativar" : "arquivar";
+    const acaoTexto = key.isArquivado ? "reativar" : "arquivar";
 
     Alert.alert(
       "Confirmar Ação",
@@ -77,9 +72,9 @@ export function KeyDetailsScreen() {
           onPress: async () => {
             try {
               setLoadingAcao(true);
-              await alternarArquivamentoChave(chave.id, !chave.isArquivado);
-              Alert.alert("Sucesso", `Chave ${chave.isArquivado ? "reativada" : "arquivada"} com sucesso!`);
-              navigation.goBack(); 
+              await setKeyArchived(key.id, !key.isArquivado);
+              Alert.alert("Sucesso", `Chave ${key.isArquivado ? "reativada" : "arquivada"} com sucesso!`);
+              navigation.navigate("KeyList");
             } catch (error) {
               console.log(`Erro ao ${acaoTexto} chave:`, error);
               Alert.alert("Erro", `Não foi possível ${acaoTexto} a chave.`);
@@ -103,7 +98,7 @@ export function KeyDetailsScreen() {
     );
   }
 
-  if (!chave) return null;
+  if (!key) return null;
 
   return (
     <ScreenContainer>
@@ -114,11 +109,11 @@ export function KeyDetailsScreen() {
             <Feather name="key" size={28} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.codeText}>{chave.codigo}</Text>
+            <Text style={styles.codeText}>{key.codigo}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
-              <View style={[styles.dotStatus, { backgroundColor: chave.isArquivado ? "#EF4444" : "#10B981" }]} />
+              <View style={[styles.dotStatus, { backgroundColor: key.isArquivado ? "#EF4444" : "#10B981" }]} />
               <Text style={styles.statusText}>
-                {chave.isArquivado ? "Arquivada (Inativa)" : "Ativa no Inventário"}
+                {key.isArquivado ? "Arquivada (Inativa)" : "Ativa no Inventário"}
               </Text>
             </View>
           </View>
@@ -126,20 +121,20 @@ export function KeyDetailsScreen() {
 
         <View style={styles.infoSection}>
           <Text style={styles.sectionLabel}>Laboratório / Localização</Text>
-          <Text style={styles.sectionValue}>{chave.localizacao}</Text>
+          <Text style={styles.sectionValue}>{key.localizacao}</Text>
 
           <Divider style={styles.divider} />
 
           <Text style={styles.sectionLabel}>Descrição do Acesso</Text>
-          <Text style={styles.sectionValue}>{chave.descricao}</Text>
+          <Text style={styles.sectionValue}>{key.descricao}</Text>
         </View>
 
         <View style={styles.actionsWrapper}>
           
-          {!chave.isArquivado && (
+          {!key.isArquivado && (
             <AppButton
               mode="contained"
-              onPress={() => navigation.navigate("KeyEdit", { chaveId: chave.id })}
+              onPress={() => navigation.navigate("EditKey", { keyId: key.id })}
               style={styles.btnEditar}
             >
               <Feather name="edit-2" size={16} /> Editar Dados
@@ -149,12 +144,12 @@ export function KeyDetailsScreen() {
           <AppButton
             mode="outlined"
             loading={loadingAcao}
-            onPress={handleAlternarArquivamento}
+            onPress={handleArchiveToggle}
             style={[styles.btnSecondary, { borderColor: colors.primary }]}
             textColor={colors.primary}
           >
-            <Feather name={chave.isArquivado ? "unlock" : "archive"} size={16} />{" "}
-            {chave.isArquivado ? "Reativar Chave" : "Arquivar Chave"}
+            <Feather name={key.isArquivado ? "unlock" : "archive"} size={16} />{" "}
+            {key.isArquivado ? "Reativar Chave" : "Arquivar Chave"}
           </AppButton>
 
         </View>

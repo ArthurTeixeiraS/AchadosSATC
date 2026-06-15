@@ -1,4 +1,4 @@
-export interface Chave {
+export interface Key {
   id: string;               
   codigo: string;         
   descricao: string;       
@@ -8,8 +8,13 @@ export interface Chave {
   updatedAt: any;        
 }
 
-export interface CreateChaveDTO {
+export interface CreateKeyDTO {
   codigo: string;
+  descricao: string;
+  localizacao: string;
+}
+
+export interface UpdateKeyDTO {
   descricao: string;
   localizacao: string;
 }

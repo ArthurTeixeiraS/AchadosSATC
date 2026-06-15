@@ -1,25 +1,25 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { KeysListScreen } from "../screens/keys/KeysListScreen";
+import { KeyListScreen } from "../screens/keys/KeyListScreen";
 import { KeyDetailsScreen } from "../screens/keys/KeyDetailsScreen/index";
 import { KeyFormScreen } from "../screens/keys/KeyFormScreen";
 
 import { colors } from "../styles/colors";
 
-export type KeysStackParamList = {
-  KeysList: undefined;
-  KeyCreate: undefined;
-  KeyDetails: { chaveId: string }; 
-  KeyEdit: { chaveId: string };    
+export type KeyStackParamList = {
+  KeyList: undefined;
+  CreateKey: undefined;
+  KeyDetails: { keyId: string };
+  EditKey: { keyId: string };
 };
 
-const Stack = createNativeStackNavigator<KeysStackParamList>();
+const Stack = createNativeStackNavigator<KeyStackParamList>();
 
-export function KeysStackRoutes() {
+export function KeyStackRoutes() {
   return (
     <Stack.Navigator
-      initialRouteName="KeysList"
+      initialRouteName="KeyList"
       screenOptions={{
         
         headerShown: false, 
@@ -34,10 +34,10 @@ export function KeysStackRoutes() {
         headerBackTitle: "",
       }}
     >
-      <Stack.Screen name="KeysList" component={KeysListScreen} />
+      <Stack.Screen name="KeyList" component={KeyListScreen} />
       <Stack.Screen name="KeyDetails" component={KeyDetailsScreen} />
-      <Stack.Screen name="KeyCreate" component={KeyFormScreen} />
-      <Stack.Screen name="KeyEdit" component={KeyFormScreen} />
+      <Stack.Screen name="CreateKey" component={KeyFormScreen} />
+      <Stack.Screen name="EditKey" component={KeyFormScreen} />
     </Stack.Navigator>
   );
 }
