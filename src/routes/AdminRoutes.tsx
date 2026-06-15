@@ -7,7 +7,7 @@ import {
 import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { DashboardScreen } from "../screens/admin/DashboardScreen";
-import { ChavesScreen } from "../screens/admin/ChavesScreen";
+//import { ChavesScreen } from "../screens/admin/ChavesScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
 import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
@@ -26,12 +26,13 @@ import {
 import { getDrawerHeaderOptions } from "./drawerHelpers";
 import { colors } from "../styles/colors";
 import { typography } from "../styles/typography";
+import { KeysStackRoutes, KeysStackParamList } from "./KeysStackRoutes";
 
 export type AdminDrawerParamList = {
   Dashboard: undefined;
   Solicitações: NavigatorScreenParams<FuncionarioSolicitacaoStackParamList>;
   Recursos: NavigatorScreenParams<ResourceStackParamList>;
-  Chaves: undefined;
+  Chaves: NavigatorScreenParams<KeysStackParamList>;
   Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
@@ -226,16 +227,60 @@ export function AdminRoutes() {
 
       <Drawer.Screen
         name="Chaves"
-        component={ChavesScreen}
-        options={({ navigation }) => ({
-          ...getDrawerHeaderOptions(navigation, {
+        component={KeysStackRoutes} 
+        options={({ navigation, route }) => {
+          
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "KeysList";
+          const isCreate = routeName === "KeyCreate";
+          const isDetails = routeName === "KeyDetails";
+          const isEdit = routeName === "KeyEdit";
+
+          const screenConfig = {
+            KeysList: {
+              title: "Chaves",
+              subtitle: "Controle de acesso aos laboratórios",
+              showMenu: true,
+            },
+            KeyCreate: {
+              title: "Cadastrar Nova Chave",
+              subtitle: "Adicione uma chave ao inventário",
+              showMenu: false,
+            },
+            KeyDetails: {
+              title: "Detalhes da Chave",
+              subtitle: "Visualize e gerencie a chave selecionada",
+              showMenu: false,
+            },
+            KeyEdit: {
+              title: "Editar Chave",
+              subtitle: "Atualize os dados da chave",
+              showMenu: false,
+            },
+          }[routeName] ?? {
             title: "Chaves",
-            subtitle: "Controle de acesso aos laboratórios",
-          }),
-          drawerIcon: ({ color, size }) => (
-            <Feather name="key" size={size} color={color} />
-          ),
-        })}
+            subtitle: "Controle de acesso",
+            showMenu: true,
+          };
+
+          return {
+            ...getDrawerHeaderOptions(navigation, {
+              ...screenConfig,
+              onBack: () => {
+                
+                if (isEdit) {
+                  navigation.goBack();
+                  return;
+                }
+                
+                navigation.navigate("Chaves", { screen: "KeysList" });
+              },
+            }),
+            drawerIcon: ({ color, size }) => (
+              <Feather name="key" size={size} color={color} />
+            ),
+            popToTopOnBlur: true,
+          };
+        }}
       />
 
       <Drawer.Screen

@@ -166,19 +166,21 @@ export function DashboardScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.menuItem}
-        onPress={() => irPara("Chaves")}
-      >
-        <View style={styles.menuIconWrapper}>
-          <Feather name="key" size={20} color="#fff" />
-        </View>
-        <View style={styles.menuTextWrapper}>
-          <Text style={styles.menuTitle}>Chaves</Text>
-          <Text style={styles.menuSubtitle}>Controle de acesso aos labs</Text>
-        </View>
-      </TouchableOpacity>
-
+    
+      {appUser?.tipoUsuario === "FUNCIONARIO" && (
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => irPara("Chaves")} // Mudado de "KeysStackRoutes" para "Chaves"
+        >
+          <View style={styles.menuIconWrapper}>
+            <Feather name="key" size={20} color="#fff" />
+          </View>
+          <View style={styles.menuTextWrapper}>
+            <Text style={styles.menuTitle}>Chaves</Text>
+            <Text style={styles.menuSubtitle}>Controle de acesso aos labs</Text>
+          </View>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity style={styles.menuItem} onPress={emBreve}>
         <View style={styles.menuIconWrapper}>
           <Feather name="tool" size={20} color="#fff" />
