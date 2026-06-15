@@ -9,6 +9,7 @@ import { AdminRoutes } from "./AdminRoutes";
 import { ProfessorRoutes } from "./ProfessorRoutes";
 import { Loading } from "../components/Loading";
 
+
 export function AppRoutes() {
   // Aqui é onde é decido qual o conjunto de telas será apresentado ao usuário, baseado no estado de autenticação e tipo de usuário
   const { appUser, loading } = useAuth();
