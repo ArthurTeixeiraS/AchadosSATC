@@ -153,6 +153,21 @@ export function DashboardScreen() {
 
       <TouchableOpacity
         style={styles.menuItem}
+        onPress={() => irPara("Consultas")}
+      >
+        <View style={styles.menuIconWrapper}>
+          <Feather name="search" size={20} color="#fff" />
+        </View>
+        <View style={styles.menuTextWrapper}>
+          <Text style={styles.menuTitle}>Consultas</Text>
+          <Text style={styles.menuSubtitle}>
+            Recursos alocados e histórico de solicitações
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
         onPress={irParaDevolucoes}
       >
         <View style={styles.menuIconWrapper}>
