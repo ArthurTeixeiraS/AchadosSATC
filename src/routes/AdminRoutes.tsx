@@ -7,7 +7,7 @@ import {
 import { createDrawerNavigator } from "@react-navigation/drawer";
 
 import { DashboardScreen } from "../screens/admin/DashboardScreen";
-//import { ChavesScreen } from "../screens/admin/ChavesScreen";
+import { AdministrativeConsultationsScreen } from "../screens/admin/AdministrativeConsultationsScreen";
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
 import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
@@ -33,6 +33,7 @@ export type AdminDrawerParamList = {
   Solicitações: NavigatorScreenParams<FuncionarioSolicitacaoStackParamList>;
   Recursos: NavigatorScreenParams<ResourceStackParamList>;
   Chaves: NavigatorScreenParams<KeysStackParamList>;
+  Consultas: undefined;
   Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
@@ -106,7 +107,10 @@ export function AdminRoutes() {
                       index: number;
                       routes: Array<{
                         name: string;
-                        params?: { solicitationId?: string };
+                        params?: {
+                          solicitationId?: string;
+                          origin?: "CONSULTAS";
+                        };
                       }>;
                     };
                   }
@@ -125,6 +129,14 @@ export function AdminRoutes() {
                         activeRoute.params.solicitationId,
                     },
                   });
+                  return;
+                }
+
+                if (
+                  isDetails &&
+                  activeRoute?.params?.origin === "CONSULTAS"
+                ) {
+                  navigation.navigate("Consultas");
                   return;
                 }
 
@@ -225,6 +237,20 @@ export function AdminRoutes() {
             popToTopOnBlur: true,
           };
         }}
+      />
+
+      <Drawer.Screen
+        name="Consultas"
+        component={AdministrativeConsultationsScreen}
+        options={({ navigation }) => ({
+          ...getDrawerHeaderOptions(navigation, {
+            title: "Consultas",
+            subtitle: "Recursos alocados e histórico",
+          }),
+          drawerIcon: ({ color, size }) => (
+            <Feather name="search" size={size} color={color} />
+          ),
+        })}
       />
 
       <Drawer.Screen
