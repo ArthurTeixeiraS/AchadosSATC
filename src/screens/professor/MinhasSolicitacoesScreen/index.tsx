@@ -30,7 +30,7 @@ import {
   listSolicitationsByProfessor,
 } from "../../../services/solicitations/solicitationServices";
 
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MinhasSolicitacoesStackParamList } from "../../../routes/MinhasSolicitacoesStackRoutes";
 import { Solicitation } from "../../../types/Solicitation";
@@ -199,11 +199,29 @@ export function MinhasSolicitacoesScreen() {
   const [solicitations, setSolicitations] = useState<Solicitation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const route = useRoute<RouteProp<MinhasSolicitacoesStackParamList, "MinhasSolicitacoesList">>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<MinhasSolicitacoesStackParamList>>();
+
   const [search, setSearch] = useState("");
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({
-      fromToday: "true",
+    useState<ActiveListFilters>(() => {
+      const initialStatus = route.params?.initialStatus;
+      if (initialStatus) {
+        return { status: initialStatus };
+      }
+      return { fromToday: "true" };
     });
+
+  useEffect(() => {
+    if (route.params?.initialStatus) {
+      setActiveFilters({
+        status: route.params.initialStatus,
+      });
+      navigation.setParams({ initialStatus: undefined });
+    }
+  }, [route.params?.initialStatus, navigation]);
+
   const [activeSort, setActiveSort] = useState("status-priority");
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -214,9 +232,6 @@ export function MinhasSolicitacoesScreen() {
 
     return () => clearInterval(interval);
   }, []);
-
-  const navigation =
-    useNavigation<NativeStackNavigationProp<MinhasSolicitacoesStackParamList>>();
 
   async function fetchSolicitations() {
     if (!appUser) return;
