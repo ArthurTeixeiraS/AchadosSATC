@@ -1,4 +1,5 @@
 import {
+  collection,
   collectionGroup,
   DocumentData,
   getDocs,
@@ -24,6 +25,7 @@ import {
 import { getSolicitationCode } from "./administrativeConsultationServices";
 import { listSolicitations } from "./solicitationServices";
 import { listResources } from "../resources/resourceServices";
+import { Occurrence, OccurrenceEvent } from "../../types/Occurrence";
 
 const solicitationEventTypes = new Set<SolicitationAuditEventType>([
   "CRIACAO",
@@ -62,16 +64,21 @@ function createEntry(
     entityType: AuditReportEntry["entityType"];
     solicitation?: Solicitation;
     resource?: Resource;
+    occurrence?: Occurrence;
   }
 ): AuditReportEntry {
   const entityId =
     options.entityType === "RECURSO"
       ? (event as ResourceAuditEvent).entidadeId
-      : (event as SolicitationAuditEvent).solicitacaoId;
+      : options.entityType === "OCORRENCIA"
+        ? (event as OccurrenceEvent).entidadeId
+        : (event as SolicitationAuditEvent).solicitacaoId;
   const entityLabel =
     options.entityType === "RECURSO"
       ? (event as ResourceAuditEvent).recursoNome
-      : getSolicitationCode(entityId);
+      : options.entityType === "OCORRENCIA"
+        ? `OC-${entityId.slice(0, 4).toUpperCase()}`
+        : getSolicitationCode(entityId);
 
   return {
     id: `${options.entityType}-${entityId}-${event.id}`,
@@ -81,14 +88,17 @@ function createEntry(
     event,
     solicitation: options.solicitation,
     resource: options.resource,
+    occurrence: options.occurrence,
     timestampMillis: getTimestampMillis(event.createdAt),
   };
 }
 
 export async function listGlobalAuditEntries(): Promise<AuditReportEntry[]> {
-  const [solicitations, resources, auditSnapshot] = await Promise.all([
+  const [solicitations, resources, occurrencesSnapshot, auditSnapshot] =
+    await Promise.all([
     listSolicitations(),
     listResources(),
+    getDocs(collection(db, "ocorrencias")),
     getDocs(collectionGroup(db, AUDIT_COLLECTION_NAME)),
   ]);
   const solicitationsById = new Map(
@@ -96,6 +106,12 @@ export async function listGlobalAuditEntries(): Promise<AuditReportEntry[]> {
   );
   const resourcesById = new Map(
     resources.map((resource) => [resource.id, resource])
+  );
+  const occurrencesById = new Map(
+    occurrencesSnapshot.docs.map((document) => [
+      document.id,
+      { id: document.id, ...document.data() } as Occurrence,
+    ])
   );
   const persistedTypesBySolicitation = new Map<
     string,
@@ -109,6 +125,23 @@ export async function listGlobalAuditEntries(): Promise<AuditReportEntry[]> {
     const data = document.data();
     const isResourceEvent =
       data.entidadeTipo === "RECURSO" || parentCollection === "recursos";
+    const isOccurrenceEvent =
+      data.entidadeTipo === "OCORRENCIA" ||
+      parentCollection === "ocorrencias";
+
+    if (isOccurrenceEvent) {
+      const event = {
+        id: document.id,
+        ...data,
+        entidadeTipo: "OCORRENCIA",
+        entidadeId: data.entidadeId ?? parentId,
+      } as OccurrenceEvent;
+
+      return createEntry(event, {
+        entityType: "OCORRENCIA",
+        occurrence: occurrencesById.get(event.entidadeId),
+      });
+    }
 
     if (isResourceEvent) {
       const event = {

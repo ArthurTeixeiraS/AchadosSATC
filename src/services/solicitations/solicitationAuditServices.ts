@@ -37,6 +37,11 @@ const eventLabels: Record<AuditEventType, string> = {
   ESTOQUE_ENTRADA: "Entrada de estoque",
   ESTOQUE_SAIDA: "Saída de estoque",
   ESTOQUE_AJUSTE: "Ajuste manual de estoque",
+  OCORRENCIA_CRIACAO: "Ocorrência criada",
+  OCORRENCIA_COMENTARIO: "Comentário em ocorrência",
+  OCORRENCIA_STATUS_ALTERADO: "Status da ocorrência alterado",
+  MANUTENCAO_ATIVADA: "Manutenção ativada",
+  MANUTENCAO_DESATIVADA: "Manutenção desativada",
 };
 
 export function getAuditEventLabel(type: AuditEventType) {

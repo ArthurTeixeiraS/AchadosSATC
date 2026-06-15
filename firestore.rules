@@ -2,6 +2,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isEmployee() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+          .data.tipoUsuario == "FUNCIONARIO";
+    }
+
     match /usuarios/{userId} {
       allow read: if true;
       allow create, delete: if false;
@@ -29,7 +39,12 @@ service cloud.firestore {
     }
 
     match /recursos/{resourceId} {
-      allow read, write: if request.auth != null;
+      allow read: if signedIn();
+      allow create, delete: if isEmployee();
+      allow update: if isEmployee() ||
+        (signedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["reservas", "reservasEstoque", "updatedAt"]));
 
       match /eventosAuditoria/{eventoId} {
         allow read: if request.auth != null;
@@ -44,6 +59,31 @@ service cloud.firestore {
 
     match /movimentacoes/{movimentacaoId} {
       allow read, write: if request.auth != null;
+    }
+
+    match /ocorrencias/{ocorrenciaId} {
+      allow read: if signedIn() &&
+        (isEmployee() || resource.data.autor.id == request.auth.uid);
+      allow create: if signedIn() &&
+        request.resource.data.autor.id == request.auth.uid &&
+        request.resource.data.status == "ABERTA";
+      allow update: if isEmployee();
+      allow delete: if false;
+
+      match /eventosAuditoria/{eventoId} {
+        allow read: if signedIn() &&
+          (isEmployee() ||
+            get(/databases/$(database)/documents/ocorrencias/$(ocorrenciaId))
+              .data.autor.id == request.auth.uid);
+        allow create: if signedIn() &&
+          request.resource.data.responsavel.id == request.auth.uid &&
+          (isEmployee() ||
+            (request.resource.data.tipo == "OCORRENCIA_CRIACAO" &&
+              getAfter(
+                /databases/$(database)/documents/ocorrencias/$(ocorrenciaId)
+              ).data.autor.id == request.auth.uid));
+        allow update, delete: if false;
+      }
     }
 
     match /{path=**}/eventosAuditoria/{eventoId} {

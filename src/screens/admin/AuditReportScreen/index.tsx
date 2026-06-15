@@ -38,6 +38,10 @@ import {
   SolicitationAuditEvent,
   SolicitationStatus,
 } from "../../../types/Solicitation";
+import {
+  OccurrenceEvent,
+  OccurrenceStatus,
+} from "../../../types/Occurrence";
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
 
@@ -58,6 +62,11 @@ const eventTypes: readonly AuditEventType[] = [
   "ESTOQUE_ENTRADA",
   "ESTOQUE_SAIDA",
   "ESTOQUE_AJUSTE",
+  "OCORRENCIA_CRIACAO",
+  "OCORRENCIA_COMENTARIO",
+  "OCORRENCIA_STATUS_ALTERADO",
+  "MANUTENCAO_ATIVADA",
+  "MANUTENCAO_DESATIVADA",
 ];
 
 const sorts: readonly SortDefinition<AuditReportEntry>[] = [
@@ -129,6 +138,10 @@ function searchEntry(item: AuditReportEntry, search: string) {
     item.entityType === "RECURSO"
       ? (item.event as ResourceAuditEvent)
       : null;
+  const occurrenceEvent =
+    item.entityType === "OCORRENCIA"
+      ? (item.event as OccurrenceEvent)
+      : null;
 
   return [
     item.entityLabel,
@@ -138,6 +151,8 @@ function searchEntry(item: AuditReportEntry, search: string) {
     getAuditEventLabel(item.event.tipo),
     resourceEvent?.recursoNome,
     resourceEvent?.solicitacaoId,
+    occurrenceEvent?.recursoNome,
+    occurrenceEvent?.observacao,
     ...(
       item.entityType === "SOLICITACAO"
         ? (item.event as SolicitationAuditEvent).itens?.map(
@@ -146,6 +161,16 @@ function searchEntry(item: AuditReportEntry, search: string) {
         : []
     ),
   ].some((value) => normalizeFilterText(value).includes(search));
+}
+
+function getOccurrenceStatusLabel(status?: OccurrenceStatus) {
+  const labels: Record<OccurrenceStatus, string> = {
+    ABERTA: "Aberta",
+    EM_ANALISE: "Em análise",
+    ENCERRADA: "Encerrada",
+  };
+
+  return status ? labels[status] : "";
 }
 
 const AuditReportCard = React.memo(function AuditReportCard({
@@ -157,19 +182,28 @@ const AuditReportCard = React.memo(function AuditReportCard({
 }) {
   const event = item.event;
   const isResourceEvent = item.entityType === "RECURSO";
+  const isOccurrenceEvent = item.entityType === "OCORRENCIA";
   const resourceEvent = isResourceEvent
     ? (event as ResourceAuditEvent)
     : null;
-  const solicitationEvent = !isResourceEvent
-    ? (event as SolicitationAuditEvent)
+  const solicitationEvent =
+    !isResourceEvent && !isOccurrenceEvent
+      ? (event as SolicitationAuditEvent)
+      : null;
+  const occurrenceEvent = isOccurrenceEvent
+    ? (event as OccurrenceEvent)
     : null;
   const statusChange =
     solicitationEvent?.statusAnterior && solicitationEvent.statusNovo
       ? `${getStatusLabel(solicitationEvent.statusAnterior)} → ${getStatusLabel(solicitationEvent.statusNovo)}`
-      : null;
+      : occurrenceEvent?.statusAnterior && occurrenceEvent.statusNovo
+        ? `${getOccurrenceStatusLabel(occurrenceEvent.statusAnterior)} → ${getOccurrenceStatusLabel(occurrenceEvent.statusNovo)}`
+        : null;
   const entityAvailable = isResourceEvent
     ? Boolean(item.resource)
-    : Boolean(item.solicitation);
+    : isOccurrenceEvent
+      ? Boolean(item.occurrence)
+      : Boolean(item.solicitation);
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={() => onPress(item)}>
@@ -177,7 +211,13 @@ const AuditReportCard = React.memo(function AuditReportCard({
         <View style={styles.cardHeader}>
           <View style={styles.iconWrapper}>
             <Feather
-              name={isResourceEvent ? "box" : "activity"}
+              name={
+                isResourceEvent
+                  ? "box"
+                  : isOccurrenceEvent
+                    ? "alert-triangle"
+                    : "activity"
+              }
               size={18}
               color={colors.primary}
             />
@@ -190,6 +230,8 @@ const AuditReportCard = React.memo(function AuditReportCard({
             <Text style={styles.code}>
               {isResourceEvent
                 ? `Recurso • ${item.entityLabel}`
+                : isOccurrenceEvent
+                  ? `Ocorrência • ${item.entityLabel}`
                 : item.entityLabel}
             </Text>
           </View>
@@ -218,6 +260,11 @@ const AuditReportCard = React.memo(function AuditReportCard({
           {!!solicitationEvent?.motivo && (
             <Text style={styles.reason}>
               Motivo: {solicitationEvent.motivo}
+            </Text>
+          )}
+          {!!occurrenceEvent?.observacao && (
+            <Text style={styles.reason}>
+              Observação: {occurrenceEvent.observacao}
             </Text>
           )}
         </View>
@@ -263,9 +310,13 @@ const AuditReportCard = React.memo(function AuditReportCard({
             {entityAvailable
               ? isResourceEvent
                 ? "Ver recurso"
+                : isOccurrenceEvent
+                  ? "Ver ocorrência"
                 : "Ver solicitação"
               : isResourceEvent
                 ? "Recurso indisponível"
+                : isOccurrenceEvent
+                  ? "Ocorrência indisponível"
                 : "Solicitação indisponível"}
           </Text>
           <Feather
@@ -339,6 +390,7 @@ export function AuditReportScreen() {
         options: [
           { label: "Solicitação", value: "SOLICITACAO" },
           { label: "Recurso", value: "RECURSO" },
+          { label: "Ocorrência", value: "OCORRENCIA" },
         ],
         predicate: (item, value) => item.entityType === value,
       },
@@ -374,6 +426,12 @@ export function AuditReportScreen() {
             return normalizeFilterText(event.recursoNome).includes(
               normalizedValue
             );
+          }
+
+          if (item.entityType === "OCORRENCIA") {
+            return normalizeFilterText(
+              (item.event as OccurrenceEvent).recursoNome
+            ).includes(normalizedValue);
           }
 
           return Boolean(
@@ -443,6 +501,25 @@ export function AuditReportScreen() {
         screen: "ResourceDetails",
         params: {
           resource: item.resource,
+          origin: "AUDITORIA",
+        },
+      });
+      return;
+    }
+
+    if (item.entityType === "OCORRENCIA") {
+      if (!item.occurrence) {
+        Alert.alert(
+          "Ocorrência indisponível",
+          "O evento permanece disponível, mas a ocorrência relacionada não foi encontrada."
+        );
+        return;
+      }
+
+      navigation.navigate("Ocorrências", {
+        screen: "OccurrenceDetails",
+        params: {
+          occurrenceId: item.entityId,
           origin: "AUDITORIA",
         },
       });
