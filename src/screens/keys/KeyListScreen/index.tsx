@@ -11,6 +11,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { FAB, Text } from "react-native-paper";
 
 import { AppAlert } from "../../../components/AppAlert";
+import { AppButton } from "../../../components/AppButton";
 import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
 import {
@@ -54,10 +55,18 @@ const keyFilters: readonly FilterDefinition<Key>[] = [
     type: "select",
     options: [
       { label: "Ativa", value: "ATIVA" },
+      { label: "Disponível", value: "DISPONIVEL" },
+      { label: "Emprestada", value: "EMPRESTADA" },
       { label: "Arquivada", value: "ARQUIVADA" },
     ],
     predicate: (item, value) =>
-      value === "ARQUIVADA" ? item.isArquivado : !item.isArquivado,
+      value === "ARQUIVADA"
+        ? item.isArquivado
+        : value === "EMPRESTADA"
+          ? item.emprestada
+          : value === "DISPONIVEL"
+            ? !item.isArquivado && !item.emprestada
+            : !item.isArquivado,
   },
   {
     key: "codigo",
@@ -186,6 +195,17 @@ export function KeyListScreen() {
         onSortChange={setActiveSort}
       />
 
+      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+        <AppButton
+          mode="outlined"
+          textColor={colors.primary}
+          buttonColor={colors.white}
+          onPress={() => navigation.navigate("KeyMovementHistory")}
+        >
+          Histórico de movimentações
+        </AppButton>
+      </View>
+
       {filteredKeys.length === 0 ? (
         <ScrollView
           alwaysBounceVertical
@@ -241,10 +261,15 @@ export function KeyListScreen() {
                     <Text
                       style={[
                         styles.status,
+                        item.emprestada && styles.borrowedStatus,
                         item.isArquivado && styles.archivedStatus,
                       ]}
                     >
-                      {item.isArquivado ? "Arquivada" : "Ativa"}
+                      {item.isArquivado
+                        ? "Arquivada"
+                        : item.emprestada
+                          ? "Emprestada"
+                          : "Ativa"}
                     </Text>
                     <Feather
                       name="chevron-right"

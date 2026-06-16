@@ -55,10 +55,12 @@ export function AppListFilter<T>({
   extraHeaderAction,
   leftHeaderAction,
 }: AppListFilterProps<T>) {
+  const sortOptions = sorts ?? [];
+  const currentSort = activeSort ?? "";
   const [visible, setVisible] = useState(false);
   const [draftFilters, setDraftFilters] =
     useState<ActiveListFilters>(activeFilters);
-  const [draftSort, setDraftSort] = useState(activeSort);
+  const [draftSort, setDraftSort] = useState(currentSort);
 
   const activeFilterEntries = filters.filter(
     (filter) => activeFilters[filter.key]?.trim()
@@ -66,7 +68,7 @@ export function AppListFilter<T>({
 
   function openModal() {
     setDraftFilters(activeFilters);
-    setDraftSort(activeSort);
+    setDraftSort(currentSort);
     setVisible(true);
   }
 
@@ -83,7 +85,7 @@ export function AppListFilter<T>({
     );
 
     onFiltersChange(cleanedFilters);
-    onSortChange(draftSort);
+    onSortChange?.(draftSort);
     setVisible(false);
   }
 
@@ -94,7 +96,7 @@ export function AppListFilter<T>({
 
   function clearApplied() {
     onFiltersChange({});
-    onSortChange("");
+    onSortChange?.("");
   }
 
   function removeFilter(key: string) {
@@ -155,7 +157,7 @@ export function AppListFilter<T>({
         </TouchableOpacity>
       </View>
 
-      {(activeFilterEntries.length > 0 || activeSort) && (
+      {(activeFilterEntries.length > 0 || currentSort) && (
         <View style={styles.appliedArea}>
           <ScrollView
             horizontal
@@ -181,7 +183,7 @@ export function AppListFilter<T>({
               </TouchableOpacity>
             ))}
 
-            {!!activeSort && (
+            {!!currentSort && (
               <View style={styles.sortChip}>
                 <Feather
                   name="list"
@@ -189,7 +191,7 @@ export function AppListFilter<T>({
                   color={colors.textSecondary}
                 />
                 <Text style={styles.sortChipText}>
-                  {sorts?.find((sort) => sort.key === activeSort)?.label}
+                  {sortOptions.find((sort) => sort.key === currentSort)?.label}
                 </Text>
               </View>
             )}
@@ -348,7 +350,7 @@ export function AppListFilter<T>({
                 value={draftSort}
                 options={[
                   { label: "Ordenação padrão", value: "" },
-                  ...(sorts || []).map((sort) => ({
+                  ...sortOptions.map((sort) => ({
                     label: sort.label,
                     value: sort.key,
                   })),

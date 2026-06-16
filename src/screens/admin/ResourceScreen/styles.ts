@@ -81,6 +81,25 @@ export const styles = StyleSheet.create({
     color: colors.secondary,
   },
 
+  periodHint: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    fontSize: 13,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textSecondary,
+  },
+
+  periodAvailability: {
+    marginTop: 6,
+    fontSize: 13,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.primary,
+  },
+
+  periodAvailabilityUnavailable: {
+    color: colors.error,
+  },
+
   fab: {
     position: "absolute",
     right: 16,

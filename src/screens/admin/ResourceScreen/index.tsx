@@ -28,7 +28,14 @@ import {
 } from "../../../components/AppListFilter";
 
 import { listResources } from "../../../services/resources/resourceServices";
+import {
+  getMachinesAvailabilityForPeriod,
+  getToolsAvailabilityForPeriod,
+  MachinePeriodAvailability,
+  ToolPeriodAvailability,
+} from "../../../services/solicitations/solicitationServices";
 import { Resource } from "../../../types/Resources";
+import { SolicitationShift } from "../../../types/Solicitation";
 
 import { styles } from "./styles";
 import { FAB } from "react-native-paper";
@@ -166,8 +173,23 @@ export function ResourceScreen() {
   const [activeFilters, setActiveFilters] =
     useState<ActiveListFilters>({});
   const [activeSort, setActiveSort] = useState("name-asc");
+  const [periodAvailabilityLoading, setPeriodAvailabilityLoading] =
+    useState(false);
+  const [periodAvailabilityError, setPeriodAvailabilityError] =
+    useState(false);
+  const [toolAvailabilityById, setToolAvailabilityById] = useState<
+    Record<string, ToolPeriodAvailability>
+  >({});
+  const [machineAvailabilityById, setMachineAvailabilityById] = useState<
+    Record<string, MachinePeriodAvailability>
+  >({});
   const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
   const insets = useSafeAreaInsets();
+  const periodDate = activeFilters.dataUtilizacao;
+  const periodShift = activeFilters.turno as SolicitationShift | undefined;
+  const hasPeriod = !!periodDate && !!periodShift;
+  const hasIncompletePeriod =
+    (!!periodDate && !periodShift) || (!periodDate && !!periodShift);
 
   async function fetchResources() {
     const data = await listResources();
@@ -189,6 +211,76 @@ export function ResourceScreen() {
     useCallback(() => {
       loadResources();
     }, [])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      async function loadPeriodAvailability() {
+        if (!periodDate || !periodShift) {
+          setToolAvailabilityById({});
+          setMachineAvailabilityById({});
+          setPeriodAvailabilityError(false);
+          setPeriodAvailabilityLoading(false);
+          return;
+        }
+
+        try {
+          setPeriodAvailabilityLoading(true);
+          setPeriodAvailabilityError(false);
+
+          const tools = resources.filter(
+            (resource) => resource.tipo === "FERRAMENTA"
+          );
+          const machines = resources.filter(
+            (resource) => resource.tipo === "MAQUINA"
+          );
+
+          const [toolAvailability, machineAvailability] =
+            await Promise.all([
+              getToolsAvailabilityForPeriod(
+                tools,
+                periodDate,
+                periodShift
+              ),
+              getMachinesAvailabilityForPeriod(
+                machines,
+                periodDate,
+                periodShift
+              ),
+            ]);
+
+          if (!active) {
+            return;
+          }
+
+          setToolAvailabilityById(toolAvailability);
+          setMachineAvailabilityById(machineAvailability);
+        } catch (error) {
+          console.log(
+            "Erro ao calcular disponibilidade dos recursos:",
+            error
+          );
+
+          if (active) {
+            setPeriodAvailabilityError(true);
+            setToolAvailabilityById({});
+            setMachineAvailabilityById({});
+          }
+        } finally {
+          if (active) {
+            setPeriodAvailabilityLoading(false);
+          }
+        }
+      }
+
+      loadPeriodAvailability();
+
+      return () => {
+        active = false;
+      };
+    }, [periodDate, periodShift, resources])
   );
 
   const { refreshing, refresh } = useManualRefresh({
@@ -245,8 +337,63 @@ export function ResourceScreen() {
         predicate: (item, value) =>
           (item.quantidadeDisponivel ?? 0) === Number(value),
       },
+      {
+        key: "dataUtilizacao",
+        label: "Data de uso",
+        type: "date",
+        predicate: () => true,
+      },
+      {
+        key: "turno",
+        label: "Turno",
+        type: "select",
+        options: [
+          { label: "Tarde", value: "TARDE" },
+          { label: "Noite", value: "NOITE" },
+        ],
+        predicate: () => true,
+      },
+      {
+        key: "disponivelPeriodo",
+        label: "Disponivel no periodo",
+        type: "boolean",
+        placeholder: "Requer data de uso e turno.",
+        formatValue: () => "Ativo",
+        predicate: (item) => {
+          if (
+            !hasPeriod ||
+            periodAvailabilityLoading ||
+            periodAvailabilityError
+          ) {
+            return true;
+          }
+
+          if (item.status === "MANUTENCAO") {
+            return false;
+          }
+
+          if (item.tipo === "FERRAMENTA") {
+            return (
+              (toolAvailabilityById[item.id]?.availableQuantity ?? 0) > 0
+            );
+          }
+
+          if (item.tipo === "MAQUINA") {
+            return machineAvailabilityById[item.id]?.available ?? false;
+          }
+
+          return item.status === "DISPONIVEL";
+        },
+      },
     ];
-  }, [resources]);
+  }, [
+    hasPeriod,
+    machineAvailabilityById,
+    periodAvailabilityError,
+    periodAvailabilityLoading,
+    resources,
+    toolAvailabilityById,
+  ]);
 
   const visibleResources = useMemo(() => {
     if (activeFilters.status === "ARQUIVADO") {
@@ -287,6 +434,63 @@ export function ResourceScreen() {
     };
 
     return labels[type] ?? type;
+  }
+
+  function getPeriodAvailabilityLabel(item: Resource) {
+    if (!hasPeriod) {
+      return null;
+    }
+
+    if (periodAvailabilityLoading) {
+      return "Calculando disponibilidade no periodo...";
+    }
+
+    if (periodAvailabilityError) {
+      return "Nao foi possivel calcular a disponibilidade no periodo.";
+    }
+
+    if (item.status === "MANUTENCAO") {
+      return "Indisponivel no periodo";
+    }
+
+    if (item.tipo === "FERRAMENTA") {
+      const availability = toolAvailabilityById[item.id];
+      const totalQuantity =
+        availability?.totalQuantity ?? item.quantidadeTotal ?? 0;
+      const availableQuantity = availability?.availableQuantity ?? 0;
+
+      return `Disponivel no periodo: ${availableQuantity} de ${totalQuantity}`;
+    }
+
+    if (item.tipo === "MAQUINA") {
+      return machineAvailabilityById[item.id]?.available
+        ? "Disponivel no periodo"
+        : "Indisponivel no periodo";
+    }
+
+    return item.status === "DISPONIVEL"
+      ? "Disponivel operacionalmente"
+      : "Indisponivel operacionalmente";
+  }
+
+  function isPeriodAvailabilityUnavailable(item: Resource) {
+    if (!hasPeriod || periodAvailabilityLoading || periodAvailabilityError) {
+      return false;
+    }
+
+    if (item.status === "MANUTENCAO") {
+      return true;
+    }
+
+    if (item.tipo === "FERRAMENTA") {
+      return (toolAvailabilityById[item.id]?.availableQuantity ?? 0) <= 0;
+    }
+
+    if (item.tipo === "MAQUINA") {
+      return !(machineAvailabilityById[item.id]?.available ?? false);
+    }
+
+    return item.status !== "DISPONIVEL";
   }
 
   const refreshControl = (
@@ -330,6 +534,13 @@ export function ResourceScreen() {
           </TouchableOpacity>
         }
       />
+
+      {hasIncompletePeriod && (
+        <Text style={styles.periodHint}>
+          Informe data de uso e turno para consultar a disponibilidade no
+          periodo.
+        </Text>
+      )}
 
       {visibleResources.length === 0 ? (
         <ScrollView
@@ -409,6 +620,18 @@ export function ResourceScreen() {
                 )}
 
                 <Text style={styles.resourceStatus}>Status: {getStatusLabel(item.status)}</Text>
+
+                {getPeriodAvailabilityLabel(item) && (
+                  <Text
+                    style={[
+                      styles.periodAvailability,
+                      isPeriodAvailabilityUnavailable(item) &&
+                        styles.periodAvailabilityUnavailable,
+                    ]}
+                  >
+                    {getPeriodAvailabilityLabel(item)}
+                  </Text>
+                )}
               </View>
             </AppCard>
           )}

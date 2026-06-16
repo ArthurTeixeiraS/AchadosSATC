@@ -30,12 +30,14 @@ export const styles = StyleSheet.create({
     marginRight: 16,
   },
   resourceName: {
-    ...typography.subtitle1,
+    fontSize: 16,
+    fontFamily: typography.fontFamily.semiBold,
     color: colors.text,
     marginBottom: 4,
   },
   resourceDescription: {
-    ...typography.body2,
+    fontSize: 14,
+    fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
     marginBottom: 8,
   },
@@ -52,7 +54,8 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   resourceTypeBadgeText: {
-    ...typography.caption,
+    fontSize: 12,
+    fontFamily: typography.fontFamily.medium,
     color: colors.textSecondary,
     textTransform: "capitalize",
   },
@@ -65,9 +68,9 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.error + "20", // 20% opacity
   },
   resourceStatusArchivedText: {
-    ...typography.caption,
+    fontSize: 12,
+    fontFamily: typography.fontFamily.semiBold,
     color: colors.error,
-    fontWeight: "600",
     textTransform: "uppercase",
   },
 });

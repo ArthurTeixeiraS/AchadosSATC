@@ -34,6 +34,8 @@ const eventLabels: Record<AuditEventType, string> = {
   RECURSO_CRIACAO: "Recurso cadastrado",
   RECURSO_EDICAO: "Recurso editado",
   RECURSO_REMOCAO: "Recurso removido",
+  RECURSO_ARQUIVADO: "Recurso arquivado",
+  RECURSO_DESARQUIVADO: "Recurso desarquivado",
   ESTOQUE_ENTRADA: "Entrada de estoque",
   ESTOQUE_SAIDA: "Saída de estoque",
   ESTOQUE_AJUSTE: "Ajuste manual de estoque",
