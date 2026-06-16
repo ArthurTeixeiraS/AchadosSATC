@@ -5,7 +5,12 @@ import { MinhasSolicitacoesScreen } from "../screens/professor/MinhasSolicitacoe
 import { ProfessorSolicitationDetailsScreen } from "../screens/professor/ProfessorSolicitationDetailsScreen";
 
 export type MinhasSolicitacoesStackParamList = {
-  MinhasSolicitacoesList: { initialStatus?: string } | undefined;
+  MinhasSolicitacoesList:
+    | {
+        initialStatus?: string;
+        initialAnalysisPending?: boolean;
+      }
+    | undefined;
   ProfessorSolicitationDetails: {
     solicitationId: string;
   };

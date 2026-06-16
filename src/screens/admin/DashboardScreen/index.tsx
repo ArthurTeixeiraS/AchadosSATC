@@ -68,6 +68,15 @@ export function DashboardScreen() {
     });
   }
 
+  function irParaSolicitacoesEmAnalise() {
+    navigation.navigate("Solicitações", {
+      screen: "ReceivedSolicitations",
+      params: {
+        initialAnalysisPending: true,
+      },
+    });
+  }
+
   return (
     <ScreenContainer style={styles.container}>
       <ScrollView
@@ -94,7 +103,7 @@ export function DashboardScreen() {
         <View style={styles.statsRow}>
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => irParaSolicitacoesFiltradas("PENDENTE")}
+            onPress={irParaSolicitacoesEmAnalise}
           >
             <Feather name="clock" size={22} color={colors.warning} />
             <Text style={styles.statNumber}>{stats.pendentes}</Text>
@@ -151,6 +160,26 @@ export function DashboardScreen() {
               <Feather name="box" size={20} color="#fff" />
             </View>
             <Text style={styles.shortcutLabel}>Recursos</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => irPara("Consultas")}
+          >
+            <View style={styles.shortcutIcon}>
+              <Feather name="search" size={20} color="#fff" />
+            </View>
+            <Text style={styles.shortcutLabel}>Consultas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => irPara("Relatórios")}
+          >
+            <View style={styles.shortcutIcon}>
+              <Feather name="bar-chart-2" size={20} color="#fff" />
+            </View>
+            <Text style={styles.shortcutLabel}>Relatórios</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

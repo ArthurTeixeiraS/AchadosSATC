@@ -9,6 +9,7 @@ import {
 import Feather from "@expo/vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 
+import { AppAlert } from "../../../components/AppAlert";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
@@ -31,16 +32,24 @@ export function ProfessorHomeScreen() {
     emUso: [],
     proximasAprovadas: [],
   });
+  const [error, setError] = useState<string | null>(null);
 
   async function loadData() {
     if (appUser) {
-      const homeData = await getProfessorHomeData(appUser.id);
-      setData(homeData);
+      try {
+        const homeData = await getProfessorHomeData(appUser.id);
+        setData(homeData);
+        setError(null);
+      } catch (loadError) {
+        console.log("Erro ao carregar home do professor:", loadError);
+        setError("Não foi possível carregar os dados da sua página inicial.");
+        throw loadError;
+      }
     }
   }
 
   useEffect(() => {
-    loadData();
+    void loadData().catch(() => undefined);
   }, [appUser]);
 
   const { refreshing, refresh } = useManualRefresh({
@@ -56,6 +65,13 @@ export function ProfessorHomeScreen() {
     navigation.navigate("Minhas Solicitações", {
       screen: "MinhasSolicitacoesList",
       params: { initialStatus: status },
+    });
+  }
+
+  function irParaSolicitacoesEmAnalise() {
+    navigation.navigate("Minhas Solicitações", {
+      screen: "MinhasSolicitacoesList",
+      params: { initialAnalysisPending: true },
     });
   }
 
@@ -132,7 +148,9 @@ export function ProfessorHomeScreen() {
             tintColor={colors.primary}
           />
         }
-      >
+        >
+        {!!error && <AppAlert variant="error" message={error} />}
+
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Feather name="user" size={22} color="#fff" />
@@ -157,14 +175,16 @@ export function ProfessorHomeScreen() {
           </View>
 
           {data.pendentes.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhuma solicitação pendente essa semana</Text>
+            <Text style={styles.emptyText}>
+              Nenhuma solicitação pendente nos próximos 7 dias
+            </Text>
           ) : (
             <>
               {data.pendentes.slice(0, 2).map((sol) => renderCard(sol))}
               {data.pendentes.length > 2 && (
                 <TouchableOpacity
                   style={styles.showMoreContainer}
-                  onPress={() => irParaSolicitacoesFiltradas("PENDENTE")}
+                  onPress={irParaSolicitacoesEmAnalise}
                 >
                   <Text style={styles.showMoreText}>Mostrar mais</Text>
                 </TouchableOpacity>
@@ -213,7 +233,7 @@ export function ProfessorHomeScreen() {
 
           {data.proximasAprovadas.length === 0 ? (
             <Text style={styles.emptyText}>
-              Nenhuma solicitação aprovada essa semana
+              Nenhuma solicitação aprovada nos próximos 7 dias
             </Text>
           ) : (
             <>

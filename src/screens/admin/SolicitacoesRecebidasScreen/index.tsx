@@ -128,6 +128,18 @@ const solicitationFilters: readonly FilterDefinition<Solicitation>[] = [
     formatValue: () => "Ativo",
   },
   {
+    key: "analysisPending",
+    label: "Aguardando análise",
+    type: "boolean",
+    placeholder:
+      "Mostrar solicitações pendentes e alterações aguardando reaprovação.",
+    predicate: (item, value) =>
+      value !== "true" ||
+      item.status === "PENDENTE" ||
+      item.status === "ALTERACAO_PENDENTE",
+    formatValue: () => "Ativo",
+  },
+  {
     key: "status",
     label: "Status",
     type: "select",
@@ -231,19 +243,26 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const initialStatus = route.params?.initialStatus;
+    const initialAnalysisPending = route.params?.initialAnalysisPending;
 
-    if (!initialStatus) {
+    if (!initialStatus && !initialAnalysisPending) {
       return;
     }
 
     setActiveFilters((current) => ({
       ...current,
-      status: initialStatus,
+      ...(initialStatus ? { status: initialStatus } : {}),
+      ...(initialAnalysisPending ? { analysisPending: "true" } : {}),
     }));
     navigation.setParams({
       initialStatus: undefined,
+      initialAnalysisPending: undefined,
     });
-  }, [route.params?.initialStatus, navigation]);
+  }, [
+    route.params?.initialStatus,
+    route.params?.initialAnalysisPending,
+    navigation,
+  ]);
 
   useEffect(() => {
     const interval = setInterval(() => {

@@ -10,6 +10,7 @@ export type FuncionarioSolicitacaoStackParamList = {
   ReceivedSolicitations:
     | {
         initialStatus?: SolicitationStatus;
+        initialAnalysisPending?: boolean;
       }
     | undefined;
   FuncionarioSolicitationDetails: {

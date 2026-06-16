@@ -137,6 +137,18 @@ const mySolicitationFilters: readonly FilterDefinition<Solicitation>[] = [
     formatValue: () => "Ativo",
   },
   {
+    key: "analysisPending",
+    label: "Aguardando análise",
+    type: "boolean",
+    placeholder:
+      "Mostrar solicitações pendentes e alterações aguardando reaprovação.",
+    predicate: (item, value) =>
+      value !== "true" ||
+      item.status === "PENDENTE" ||
+      item.status === "ALTERACAO_PENDENTE",
+    formatValue: () => "Ativo",
+  },
+  {
     key: "status",
     label: "Status",
     type: "select",
@@ -207,8 +219,13 @@ export function MinhasSolicitacoesScreen() {
   const [activeFilters, setActiveFilters] =
     useState<ActiveListFilters>(() => {
       const initialStatus = route.params?.initialStatus;
+      const initialAnalysisPending = route.params?.initialAnalysisPending;
       if (initialStatus) {
         const filters: ActiveListFilters = { status: initialStatus };
+        return filters;
+      }
+      if (initialAnalysisPending) {
+        const filters: ActiveListFilters = { analysisPending: "true" };
         return filters;
       }
       const filters: ActiveListFilters = { fromToday: "true" };
@@ -216,13 +233,25 @@ export function MinhasSolicitacoesScreen() {
     });
 
   useEffect(() => {
-    if (route.params?.initialStatus) {
+    if (route.params?.initialStatus || route.params?.initialAnalysisPending) {
       setActiveFilters({
-        status: route.params.initialStatus,
+        ...(route.params.initialStatus
+          ? { status: route.params.initialStatus }
+          : {}),
+        ...(route.params.initialAnalysisPending
+          ? { analysisPending: "true" }
+          : {}),
       });
-      navigation.setParams({ initialStatus: undefined });
+      navigation.setParams({
+        initialStatus: undefined,
+        initialAnalysisPending: undefined,
+      });
     }
-  }, [route.params?.initialStatus, navigation]);
+  }, [
+    route.params?.initialStatus,
+    route.params?.initialAnalysisPending,
+    navigation,
+  ]);
 
   const [activeSort, setActiveSort] = useState("status-priority");
   const [currentTime, setCurrentTime] = useState(() => new Date());
