@@ -176,7 +176,7 @@ export function ProfessorHomeScreen() {
 
           {data.pendentes.length === 0 ? (
             <Text style={styles.emptyText}>
-              Nenhuma solicitação aguardando análise
+              Nenhuma solicitação aguardando análise nos próximos 7 dias
             </Text>
           ) : (
             <>
