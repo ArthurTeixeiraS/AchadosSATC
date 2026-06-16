@@ -162,7 +162,10 @@ export function RegisterSolicitationReturnScreen({
         [
           {
             text: "OK",
-            onPress: () => navigation.goBack(),
+            onPress: () =>
+              navigation.navigate("FuncionarioSolicitationDetails", {
+                solicitationId: solicitation.id,
+              }),
           },
         ]
       );

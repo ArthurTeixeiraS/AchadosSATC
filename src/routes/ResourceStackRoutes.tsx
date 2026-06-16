@@ -15,6 +15,7 @@ export type ResourceStackParamList = {
   | {
     initialType?: ResourceType;
     duplicateFrom?: Resource;
+    duplicateOrigin?: "LIST" | "DETAILS";
   }
   | undefined;
   EditResource: {
@@ -22,7 +23,7 @@ export type ResourceStackParamList = {
   }
   ResourceDetails: {
     resource: Resource;
-    origin?: "AUDITORIA";
+    origin?: "AUDITORIA" | "ARCHIVED";
   };
   ArchivedResourcesList: undefined;
 };

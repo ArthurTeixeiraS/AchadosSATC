@@ -321,6 +321,7 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                             navigation.navigate("CreateResource", {
                                 duplicateFrom: resource,
                                 initialType: resource.tipo,
+                                duplicateOrigin: "DETAILS",
                             })
                         }
                     >

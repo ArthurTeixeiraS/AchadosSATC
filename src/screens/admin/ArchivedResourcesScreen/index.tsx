@@ -153,7 +153,7 @@ export function ArchivedResourcesScreen() {
                 justifyContent: "center",
                 alignItems: "center",
               }}
-              onPress={() => navigation.goBack()}
+              onPress={() => navigation.navigate("ResourceList")}
             >
               <Feather name="arrow-left" size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -195,7 +195,10 @@ export function ArchivedResourcesScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() =>
-                  navigation.navigate("ResourceDetails", { resource: item })
+                  navigation.navigate("ResourceDetails", {
+                    resource: item,
+                    origin: "ARCHIVED",
+                  })
                 }
               >
                 <AppCard style={styles.resourceCard}>

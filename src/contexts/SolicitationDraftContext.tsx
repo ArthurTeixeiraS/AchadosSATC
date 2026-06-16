@@ -9,9 +9,13 @@ import {
 } from "../types/Solicitation";
 import { Resource } from "../types/Resources";
 
+export type SolicitationFlowMode = "CREATE" | "DUPLICATE" | "EDIT";
+
 interface SolicitationDraftContextData {
   draft: SolicitationDraft;
   editingSolicitation: Solicitation | null;
+  flowMode: SolicitationFlowMode;
+  sourceSolicitationId?: string;
 
   setBasicInfo: (data: {
     dataUtilizacao: string;
@@ -27,7 +31,13 @@ interface SolicitationDraftContextData {
   updateToolQuantity: (resourceId: string, quantidade: number) => void;
 
   setObservacoes: (observacoes: string) => void;
-  replaceDraft: (draft: SolicitationDraft) => void;
+  replaceDraft: (
+    draft: SolicitationDraft,
+    options?: {
+      flowMode?: Extract<SolicitationFlowMode, "CREATE" | "DUPLICATE">;
+      sourceSolicitationId?: string;
+    }
+  ) => void;
   startEditing: (solicitation: Solicitation, draft: SolicitationDraft) => void;
   clearDraft: () => void;
 }
@@ -53,6 +63,11 @@ export function SolicitationDraftProvider({
   const [draft, setDraft] = useState<SolicitationDraft>(initialDraft);
   const [editingSolicitation, setEditingSolicitation] =
     useState<Solicitation | null>(null);
+  const [flowMode, setFlowMode] =
+    useState<SolicitationFlowMode>("CREATE");
+  const [sourceSolicitationId, setSourceSolicitationId] = useState<
+    string | undefined
+  >(undefined);
 
   function setBasicInfo(data: {
     dataUtilizacao: string;
@@ -158,8 +173,16 @@ export function SolicitationDraftProvider({
     }));
   }
 
-  function replaceDraft(newDraft: SolicitationDraft) {
+  function replaceDraft(
+    newDraft: SolicitationDraft,
+    options?: {
+      flowMode?: Extract<SolicitationFlowMode, "CREATE" | "DUPLICATE">;
+      sourceSolicitationId?: string;
+    }
+  ) {
     setEditingSolicitation(null);
+    setFlowMode(options?.flowMode ?? "CREATE");
+    setSourceSolicitationId(options?.sourceSolicitationId);
     setDraft(newDraft);
   }
 
@@ -168,11 +191,15 @@ export function SolicitationDraftProvider({
     newDraft: SolicitationDraft
   ) {
     setEditingSolicitation(solicitation);
+    setFlowMode("EDIT");
+    setSourceSolicitationId(solicitation.id);
     setDraft(newDraft);
   }
 
   function clearDraft() {
     setEditingSolicitation(null);
+    setFlowMode("CREATE");
+    setSourceSolicitationId(undefined);
     setDraft(initialDraft);
   }
 
@@ -181,6 +208,8 @@ export function SolicitationDraftProvider({
       value={{
         draft,
         editingSolicitation,
+        flowMode,
+        sourceSolicitationId,
         setBasicInfo,
         addMachine,
         removeMachine,

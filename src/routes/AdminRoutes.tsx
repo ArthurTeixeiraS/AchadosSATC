@@ -246,6 +246,16 @@ export function AdminRoutes() {
                 }
 
                 if (
+                  routeName === "ResourceDetails" &&
+                  activeRoute?.params?.origin === "ARCHIVED"
+                ) {
+                  navigation.navigate("Recursos", {
+                    screen: "ArchivedResourcesList",
+                  });
+                  return;
+                }
+
+                if (
                   routeName === "EditResource" &&
                   activeRoute?.params?.resource
                 ) {
@@ -253,6 +263,20 @@ export function AdminRoutes() {
                     screen: "ResourceDetails",
                     params: {
                       resource: activeRoute.params.resource,
+                    },
+                  });
+                  return;
+                }
+
+                if (
+                  routeName === "CreateResource" &&
+                  activeRoute?.params?.duplicateFrom &&
+                  activeRoute.params.duplicateOrigin === "DETAILS"
+                ) {
+                  navigation.navigate("Recursos", {
+                    screen: "ResourceDetails",
+                    params: {
+                      resource: activeRoute.params.duplicateFrom,
                     },
                   });
                   return;

@@ -10,7 +10,10 @@ import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/Pr
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
 import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
-import { SolicitationDraftProvider } from "../contexts/SolicitationDraftContext";
+import {
+  SolicitationDraftProvider,
+  useSolicitationDraft,
+} from "../contexts/SolicitationDraftContext";
 import {
   MinhasSolicitacoesStackParamList,
   MinhasSolicitacoesStackRoutes,
@@ -47,6 +50,20 @@ function NovaSolicitacaoFlow() {
 }
 
 function ProfessorDrawerRoutes() {
+  const { clearDraft, flowMode, sourceSolicitationId } = useSolicitationDraft();
+
+  function navigateToSourceSolicitation(navigation: any) {
+    if (!sourceSolicitationId) {
+      navigation.navigate("Home");
+      return;
+    }
+
+    navigation.navigate("Minhas Solicitações", {
+      screen: "ProfessorSolicitationDetails",
+      params: { solicitationId: sourceSolicitationId },
+    });
+  }
+
   return (
     <Drawer.Navigator
       drawerContent={(props) => <AppDrawerContent {...props} />}
@@ -88,11 +105,22 @@ function ProfessorDrawerRoutes() {
       <Drawer.Screen
         name="Nova Solicitação"
         component={NovaSolicitacaoFlow}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            clearDraft();
+            navigation.navigate("Nova Solicitação", {
+              screen: "SolicitationInfo",
+            });
+          },
+        })}
         options={({ navigation, route }) => {
           const routeName =
             getFocusedRouteNameFromRoute(route) ?? "SolicitationInfo";
+          const flowTitle =
+            flowMode === "EDIT" ? "Editar solicitação" : "Nova solicitação";
 
-          const config = {
+          const baseConfig = {
             SolicitationInfo: {
               title: "Nova solicitação",
               subtitle: "Etapa 1 de 4 · Informações básicas",
@@ -127,6 +155,22 @@ function ProfessorDrawerRoutes() {
             subtitle: "Preencha os dados da solicitação",
             onBack: () => navigation.navigate("Home"),
           };
+
+          const config =
+            routeName === "SolicitationInfo"
+              ? {
+                  ...baseConfig,
+                  title: flowTitle,
+                  showMenu: flowMode === "CREATE",
+                  onBack:
+                    flowMode === "CREATE"
+                      ? undefined
+                      : () => navigateToSourceSolicitation(navigation),
+                }
+              : {
+                  ...baseConfig,
+                  title: flowTitle,
+                };
 
           return {
             ...getDrawerHeaderOptions(navigation, {
