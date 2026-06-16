@@ -51,7 +51,7 @@ const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 export function AdminRoutes() {
   return (
     <>
-    <StatusBar style="light" backgroundColor={colors.primary} />
+    <StatusBar style="light"/>
     <Drawer.Navigator
       drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
