@@ -527,8 +527,7 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
                     <Text style={styles.groupDate}>{item.date}</Text>
 
                     <Text style={styles.groupCount}>
-                      {item.items.length} 
-                      {item.items.length !== 1 ? " solicitações" : " solicitação"}
+                      {item.items.length} {item.items.length !== 1 ? "solicitações" : "solicitação"}
                     </Text>
                   </View>
 
