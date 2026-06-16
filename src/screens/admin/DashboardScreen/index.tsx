@@ -64,6 +64,7 @@ export function DashboardScreen() {
       screen: "ReceivedSolicitations",
       params: {
         initialStatus: status,
+        clearFilters: true,
       },
     });
   }
@@ -72,7 +73,8 @@ export function DashboardScreen() {
     navigation.navigate("Solicitações", {
       screen: "ReceivedSolicitations",
       params: {
-        initialAnalysisPending: true,
+        initialStatus: "PENDENTE",
+        clearFilters: true,
       },
     });
   }

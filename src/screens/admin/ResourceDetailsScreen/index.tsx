@@ -1,8 +1,8 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { Image, ScrollView, View, Alert } from "react-native";
-import { Text } from "react-native-paper";
+import { Image, ScrollView, View, Alert, FlatList } from "react-native";
+import { Text, Portal, Modal, Button as PaperButton } from "react-native-paper";
 import Feather from "@expo/vector-icons/Feather";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
@@ -11,14 +11,17 @@ import { PageTitle } from "../../../components/PageTitle";
 import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
 import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
+import { Loading } from "../../../components/Loading";
 
 import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { colors } from "../../../styles/colors";
+import { spacing } from "../../../styles/spacing";
+import { radius } from "../../../styles/radius";
+import { typography } from "../../../styles/typography";
 
 import { styles } from "./styles";
 
-import { getResourceById } from "../../../services/resources/resourceServices";
-import { deleteResource } from "../../../services/resources/resourceServices";
+import { getResourceById, archiveResource, unarchiveResource, checkBlockingSolicitations } from "../../../services/resources/resourceServices";
 import { useAuth } from "../../../contexts/AuthContext";
 
 type Props = NativeStackScreenProps<
@@ -56,6 +59,9 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
     const isLaboratorio = resource.tipo === "LABORATORIO";
 
     const [laboratoryName, setLaboratoryName] = useState("");
+    const [isBlockingModalVisible, setBlockingModalVisible] = React.useState(false);
+    const [blockingSolicitations, setBlockingSolicitations] = React.useState<any[]>([]);
+    const [isChecking, setIsChecking] = React.useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -100,35 +106,87 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
         loadLaboratory();
     }, []);
 
-    function handleDeleteResource() {
+    async function handleArchiveResource() {
+        try {
+            setIsChecking(true);
+            const blocking = await checkBlockingSolicitations(resource.id);
+            setIsChecking(false);
+
+            if (blocking.length > 0) {
+                setBlockingSolicitations(blocking);
+                setBlockingModalVisible(true);
+                return;
+            }
+
+            Alert.alert(
+                "Arquivar recurso",
+                "Tem certeza que deseja arquivar este recurso? Ele não estará mais disponível para novas solicitações e listagens padrão.",
+                [
+                    {
+                        text: "Cancelar",
+                        style: "cancel",
+                    },
+                    {
+                        text: "Arquivar",
+                        style: "destructive",
+                        onPress: async () => {
+                            try {
+                                if (!appUser) {
+                                    Alert.alert(
+                                        "Erro ao arquivar",
+                                        "Não foi possível identificar o usuário responsável."
+                                    );
+                                    return;
+                                }
+
+                                await archiveResource(resource.id, appUser);
+                                navigation.navigate("ResourceList");
+                            } catch (error: any) {
+                                console.log("Erro ao arquivar recurso:", error);
+                                Alert.alert(
+                                    "Erro ao arquivar",
+                                    error.message || "Não foi possível arquivar o recurso. Tente novamente."
+                                );
+                            }
+                        },
+                    },
+                ]
+            );
+        } catch (error: any) {
+            setIsChecking(false);
+            Alert.alert("Erro", "Não foi possível verificar a disponibilidade do recurso.");
+        }
+    }
+
+    function handleUnarchiveResource() {
         Alert.alert(
-            "Excluir recurso",
-            "Tem certeza que deseja excluir este recurso? Essa ação não poderá ser desfeita.",
+            "Desarquivar recurso",
+            "Tem certeza que deseja desarquivar este recurso? Ele voltará a estar disponível para novas solicitações.",
             [
                 {
                     text: "Cancelar",
                     style: "cancel",
                 },
                 {
-                    text: "Excluir",
-                    style: "destructive",
+                    text: "Desarquivar",
+                    style: "default",
                     onPress: async () => {
                         try {
                             if (!appUser) {
                                 Alert.alert(
-                                    "Erro ao excluir",
+                                    "Erro ao desarquivar",
                                     "Não foi possível identificar o usuário responsável."
                                 );
                                 return;
                             }
 
-                            await deleteResource(resource.id, appUser);
+                            await unarchiveResource(resource.id, appUser);
                             navigation.navigate("ResourceList");
-                        } catch (error) {
-                            console.log("Erro ao excluir recurso:", error);
+                        } catch (error: any) {
+                            console.log("Erro ao desarquivar recurso:", error);
                             Alert.alert(
-                                "Erro ao excluir",
-                                "Não foi possível excluir o recurso. Tente novamente."
+                                "Erro ao desarquivar",
+                                error.message || "Não foi possível desarquivar o recurso. Tente novamente."
                             );
                         }
                     },
@@ -178,6 +236,15 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                             {getStatusLabel(resource.status)}
                         </Text>
                     </View>
+
+                    {resource.isArchived && (
+                        <View style={styles.infoItem}>
+                            <Text style={styles.infoLabel}>Situação</Text>
+                            <Text style={[styles.statusText, { color: colors.error }]}>
+                                ARQUIVADO
+                            </Text>
+                        </View>
+                    )}
                 </AppCard>
 
                 {isFerramenta && (
@@ -260,16 +327,94 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                         Duplicar recurso
                     </AppButton>
 
-                    <AppDestructiveButton
-                        icon={() => (
-                            <Feather name="trash-2" size={18} color={colors.error} />
-                        )}
-                        onPress={handleDeleteResource}
-                    >
-                        Excluir recurso
-                    </AppDestructiveButton>
+                    {!resource.isArchived && (
+                        <AppDestructiveButton
+                            icon={() => (
+                                <Feather name="archive" size={18} color={colors.error} />
+                            )}
+                            onPress={handleArchiveResource}
+                        >
+                            Arquivar recurso
+                        </AppDestructiveButton>
+                    )}
+
+                    {resource.isArchived && (
+                        <AppButton
+                            icon={() => (
+                                <Feather name="package" size={18} color={colors.primary} />
+                            )}
+                            mode="outlined"
+                            onPress={handleUnarchiveResource}
+                        >
+                            Desarquivar recurso
+                        </AppButton>
+                    )}
                 </AppCard>
             </ScrollView>
+
+            <Portal>
+                <Modal
+                    visible={isBlockingModalVisible}
+                    onDismiss={() => setBlockingModalVisible(false)}
+                    contentContainerStyle={{
+                        backgroundColor: colors.surface,
+                        padding: spacing.lg,
+                        marginHorizontal: spacing.lg,
+                        borderRadius: radius.lg,
+                        maxHeight: "80%",
+                    }}
+                >
+                    <View style={{ alignItems: "center", marginBottom: spacing.md }}>
+                        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center", marginBottom: spacing.sm }}>
+                            <Feather name="alert-triangle" size={24} color={colors.error} />
+                        </View>
+                        <Text style={{ fontSize: 18, fontFamily: typography.fontFamily.bold, color: colors.text, textAlign: "center" }}>
+                            Arquivamento Bloqueado
+                        </Text>
+                        <Text style={{ fontSize: 14, fontFamily: typography.fontFamily.regular, color: colors.textSecondary, textAlign: "center", marginTop: 4 }}>
+                            Este recurso não pode ser arquivado no momento, pois está vinculado às seguintes solicitações ativas:
+                        </Text>
+                    </View>
+
+                    <FlatList
+                        data={blockingSolicitations}
+                        keyExtractor={(item) => item.id}
+                        style={{ flexGrow: 0, marginVertical: spacing.md, maxHeight: 160 }}
+                        showsVerticalScrollIndicator={true}
+                        indicatorStyle="black"
+                        renderItem={({ item }) => (
+                            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: spacing.md, backgroundColor: colors.background, borderRadius: radius.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                                    <Feather name="file-text" size={20} color={colors.textSecondary} />
+                                    <View>
+                                        <Text style={{ fontSize: 14, fontFamily: typography.fontFamily.semiBold, color: colors.text }}>
+                                            Ordem #{item.id.substring(0, 6).toUpperCase()}
+                                        </Text>
+                                        <Text style={{ fontSize: 12, fontFamily: typography.fontFamily.medium, color: colors.textSecondary }}>
+                                            Prof. {item.professorNome?.split(" ")[0] || "Desconhecido"}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={{ backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: colors.border }}>
+                                    <Text style={{ fontSize: 10, fontFamily: typography.fontFamily.bold, color: colors.primary }}>
+                                        {item.status.replace("_", " ")}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+                    />
+
+                    <PaperButton
+                        mode="contained"
+                        onPress={() => setBlockingModalVisible(false)}
+                        buttonColor={colors.primary}
+                        style={{ marginTop: spacing.sm, borderRadius: radius.md }}
+                        contentStyle={{ height: 48 }}
+                    >
+                        Entendi
+                    </PaperButton>
+                </Modal>
+            </Portal>
         </ScreenContainer>
     );
 }

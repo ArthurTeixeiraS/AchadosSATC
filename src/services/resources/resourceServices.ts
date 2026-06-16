@@ -136,19 +136,25 @@ export async function updateResource(
   });
 }
 
-export async function listResources(): Promise<Resource[]> {
-  const recursosRef = collection(db, "recursos");
+export async function listResources(options?: { includeArchived?: boolean }): Promise<Resource[]> {
+  const recursosRef = collection(db, COLLECTION_NAME);
 
   const snapshot = await getDocs(recursosRef);
 
-  return snapshot.docs.map((doc) => ({
+  let resources = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   })) as Resource[];
+
+  if (!options?.includeArchived) {
+    resources = resources.filter((r) => r.isArchived !== true && r.status !== "ARQUIVADO");
+  }
+
+  return resources;
 }
 
 
-export async function listLaboratories(): Promise<Resource[]> {
+export async function listLaboratories(options?: { includeArchived?: boolean }): Promise<Resource[]> {
   const recursosRef = collection(db, COLLECTION_NAME);
 
   const q = query(
@@ -158,10 +164,16 @@ export async function listLaboratories(): Promise<Resource[]> {
 
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map((doc) => ({
+  let labs = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   })) as Resource[];
+
+  if (!options?.includeArchived) {
+    labs = labs.filter((r) => r.isArchived !== true && r.status !== "ARQUIVADO");
+  }
+
+  return labs;
 }
 
 export async function getResourceById(
@@ -181,36 +193,152 @@ export async function getResourceById(
   } as Resource;
 }
 
-export async function deleteResource(
+export async function checkBlockingSolicitations(id: string) {
+  const solicitationsRef = collection(db, "solicitacoes");
+  const solQuery = query(
+    solicitationsRef,
+    where("status", "in", ["PENDENTE", "ALTERACAO_PENDENTE", "APROVADA", "EM_USO"])
+  );
+  
+  const solSnapshot = await getDocs(solQuery);
+  const blockingSolicitations = [];
+
+  for (const docSnap of solSnapshot.docs) {
+    const data = docSnap.data();
+    const inUse = 
+      data.maquinas?.some((m: any) => m.recursoId === id) || 
+      data.ferramentas?.some((f: any) => f.recursoId === id) ||
+      data.laboratoriosIds?.includes(id);
+
+    if (inUse) {
+      blockingSolicitations.push({
+        id: docSnap.id,
+        ...data
+      });
+    }
+  }
+
+  return blockingSolicitations;
+}
+
+export async function archiveResource(
   id: string,
   user: AppUser
 ): Promise<void> {
   const resourceRef = doc(db, COLLECTION_NAME, id);
   const auditRef = doc(collection(resourceRef, AUDIT_COLLECTION_NAME));
 
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(resourceRef);
+  const snapshot = await getDoc(resourceRef);
 
-    if (!snapshot.exists()) {
+  if (!snapshot.exists()) {
+    throw new Error("Recurso não encontrado.");
+  }
+
+  const resource = {
+    id: snapshot.id,
+    ...snapshot.data(),
+  } as Resource;
+
+  if (resource.status === "EM_USO" || (resource.reservas && Object.keys(resource.reservas).length > 0)) {
+    throw new Error("Não é possível arquivar um recurso que está em uso ou reservado.");
+  }
+
+  const solicitationsRef = collection(db, "solicitacoes");
+  const solQuery = query(
+    solicitationsRef,
+    where("status", "in", ["PENDENTE", "ALTERACAO_PENDENTE", "APROVADA", "EM_USO"])
+  );
+  const solSnapshot = await getDocs(solQuery);
+  for (const docSnap of solSnapshot.docs) {
+    const data = docSnap.data();
+    const inUse = 
+      data.maquinas?.some((m: any) => m.recursoId === id) || 
+      data.ferramentas?.some((f: any) => f.recursoId === id) ||
+      data.laboratoriosIds?.includes(id);
+
+    if (inUse) {
+      throw new Error(`Não é possível arquivar este recurso pois ele está vinculado a uma solicitação ativa no sistema (Status: ${data.status}). Encerre ou cancele a solicitação primeiro.`);
+    }
+  }
+
+  if (resource.tipo === "LABORATORIO") {
+    const labQuery = query(
+      collection(db, COLLECTION_NAME),
+      where("laboratorioId", "==", id)
+    );
+    const labSnapshot = await getDocs(labQuery);
+    const hasActiveMachines = labSnapshot.docs.some(docSnap => docSnap.data().isArchived !== true);
+    if (hasActiveMachines) {
+      throw new Error("Não é possível arquivar o laboratório pois existem máquinas ativas vinculadas a ele. Realoque ou arquive as máquinas antes.");
+    }
+  }
+
+  await runTransaction(db, async (transaction) => {
+    const currentSnap = await transaction.get(resourceRef);
+    if (!currentSnap.exists()) {
       throw new Error("Recurso não encontrado.");
     }
-
-    const resource = {
-      id: snapshot.id,
-      ...snapshot.data(),
-    } as Resource;
 
     transaction.set(auditRef, {
       ...createResourceAuditEventData({
         resourceId: id,
         resourceName: resource.nome,
         resourceType: resource.tipo,
-        type: "RECURSO_REMOCAO",
+        type: "RECURSO_ARQUIVADO",
         actor: getActor(user),
-        summary: `${resource.nome} foi removido do inventário.`,
+        summary: `${resource.nome} foi arquivado.`,
       }),
       createdAt: serverTimestamp(),
     });
-    transaction.delete(resourceRef);
+    
+    transaction.update(resourceRef, { 
+      isArchived: true,
+      status: "ARQUIVADO",
+      updatedAt: serverTimestamp() 
+    });
+  });
+}
+
+export async function unarchiveResource(
+  id: string,
+  user: AppUser
+): Promise<void> {
+  const resourceRef = doc(db, COLLECTION_NAME, id);
+  const auditRef = doc(collection(resourceRef, AUDIT_COLLECTION_NAME));
+
+  const snapshot = await getDoc(resourceRef);
+
+  if (!snapshot.exists()) {
+    throw new Error("Recurso não encontrado.");
+  }
+
+  const resource = {
+    id: snapshot.id,
+    ...snapshot.data(),
+  } as Resource;
+
+  await runTransaction(db, async (transaction) => {
+    const currentSnap = await transaction.get(resourceRef);
+    if (!currentSnap.exists()) {
+      throw new Error("Recurso não encontrado.");
+    }
+
+    transaction.set(auditRef, {
+      ...createResourceAuditEventData({
+        resourceId: id,
+        resourceName: resource.nome,
+        resourceType: resource.tipo,
+        type: "RECURSO_DESARQUIVADO",
+        actor: getActor(user),
+        summary: `${resource.nome} foi desarquivado.`,
+      }),
+      createdAt: serverTimestamp(),
+    });
+    
+    transaction.update(resourceRef, { 
+      isArchived: false,
+      status: "DISPONIVEL",
+      updatedAt: serverTimestamp() 
+    });
   });
 }

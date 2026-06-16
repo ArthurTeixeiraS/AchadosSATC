@@ -395,8 +395,15 @@ export function ResourceScreen() {
     toolAvailabilityById,
   ]);
 
+  const visibleResources = useMemo(() => {
+    if (activeFilters.status === "ARQUIVADO") {
+      return resources;
+    }
+    return resources.filter((r) => r.isArchived !== true);
+  }, [resources, activeFilters.status]);
+
   const filteredResources = useListFilter({
-    data: resources,
+    data: visibleResources,
     search,
     filters: resourceFilters,
     activeFilters,
@@ -507,6 +514,25 @@ export function ResourceScreen() {
         sorts={resourceSorts}
         activeSort={activeSort}
         onSortChange={setActiveSort}
+        extraHeaderAction={
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Recursos arquivados"
+            style={{
+              height: 48,
+              width: 48,
+              borderRadius: 8,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+            onPress={() => navigation.navigate("ArchivedResourcesList" as any)}
+          >
+            <Feather name="archive" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        }
       />
 
       {hasIncompletePeriod && (
@@ -516,7 +542,7 @@ export function ResourceScreen() {
         </Text>
       )}
 
-      {resources.length === 0 ? (
+      {visibleResources.length === 0 ? (
         <ScrollView
           alwaysBounceVertical
           style={styles.emptyList}
@@ -556,7 +582,7 @@ export function ResourceScreen() {
           ]}
           refreshControl={refreshControl}
           renderItem={({ item }) => (
-            <AppCard>
+            <AppCard style={item.isArchived ? { opacity: 0.6 } : undefined}>
               <View style={styles.cardContent}>
                 <View style={styles.resourceHeader}>
                   <View style={styles.resourceNameContainer}>
@@ -568,7 +594,10 @@ export function ResourceScreen() {
                         })
                       }
                     >
-                      <Text style={styles.resourceName}>{item.nome}</Text>
+                      <Text style={styles.resourceName}>
+                        {item.nome}
+                        {item.isArchived ? " (ARQUIVADO)" : ""}
+                      </Text>
                     </TouchableOpacity>   
                     {!!item.imagemUrl && (
                       <Feather
