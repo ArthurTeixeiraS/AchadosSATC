@@ -244,9 +244,15 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
   useEffect(() => {
     const initialStatus = route.params?.initialStatus;
     const initialAnalysisPending = route.params?.initialAnalysisPending;
+    const initialFromToday = route.params?.initialFromToday;
     const clearFilters = route.params?.clearFilters;
 
-    if (!initialStatus && !initialAnalysisPending && !clearFilters) {
+    if (
+      !initialStatus &&
+      !initialAnalysisPending &&
+      initialFromToday === undefined &&
+      !clearFilters
+    ) {
       return;
     }
 
@@ -254,15 +260,18 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
       ...(clearFilters ? {} : current),
       ...(initialStatus ? { status: initialStatus } : {}),
       ...(initialAnalysisPending ? { analysisPending: "true" } : {}),
+      ...(initialFromToday ? { fromToday: "true" } : {}),
     }));
     navigation.setParams({
       initialStatus: undefined,
       initialAnalysisPending: undefined,
+      initialFromToday: undefined,
       clearFilters: undefined,
     });
   }, [
     route.params?.initialStatus,
     route.params?.initialAnalysisPending,
+    route.params?.initialFromToday,
     route.params?.clearFilters,
     navigation,
   ]);
