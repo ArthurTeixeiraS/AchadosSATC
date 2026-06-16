@@ -121,7 +121,6 @@ export function KeyWithdrawalScreen() {
       <FlatList
         data={filteredProfessors}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={listStyles.listContent}
         ListHeaderComponent={
           <View style={{ gap: 12 }}>
             {!!error && <AppAlert variant="error" message={error} />}
