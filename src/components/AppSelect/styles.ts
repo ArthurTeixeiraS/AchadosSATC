@@ -18,7 +18,7 @@ export const styles = StyleSheet.create({
   button: {
     borderRadius: 24,
     borderColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
 
   buttonContent: {
