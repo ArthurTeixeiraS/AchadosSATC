@@ -71,6 +71,9 @@ export const styles = StyleSheet.create({
   archivedStatus: {
     color: colors.error,
   },
+  borrowedStatus: {
+    color: colors.warning,
+  },
   fab: {
     position: "absolute",
     right: 20,

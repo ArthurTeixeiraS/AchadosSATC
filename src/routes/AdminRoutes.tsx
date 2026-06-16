@@ -375,6 +375,8 @@ export function AdminRoutes() {
             getFocusedRouteNameFromRoute(route) ??
             "KeyList";
           const isEdit = routeName === "EditKey";
+          const isWithdrawal = routeName === "KeyWithdrawal";
+          const isHistory = routeName === "KeyMovementHistory";
 
           const screenConfig = {
             KeyList: {
@@ -397,6 +399,16 @@ export function AdminRoutes() {
               subtitle: "Atualize os dados da chave",
               showMenu: false,
             },
+            KeyWithdrawal: {
+              title: "Retirada de Chave",
+              subtitle: "Informe o professor responsável",
+              showMenu: false,
+            },
+            KeyMovementHistory: {
+              title: "Histórico de Chaves",
+              subtitle: "Retiradas e devoluções registradas",
+              showMenu: false,
+            },
           }[routeName] ?? {
             title: "Chaves",
             subtitle: "Controle de acesso",
@@ -408,6 +420,19 @@ export function AdminRoutes() {
               ...screenConfig,
               onBack: () => {
                 if (isEdit && activeRoute?.params?.keyId) {
+                  navigation.navigate("Chaves", {
+                    screen: "KeyDetails",
+                    params: {
+                      keyId: activeRoute.params.keyId,
+                    },
+                  });
+                  return;
+                }
+
+                if (
+                  (isWithdrawal || isHistory) &&
+                  activeRoute?.params?.keyId
+                ) {
                   navigation.navigate("Chaves", {
                     screen: "KeyDetails",
                     params: {

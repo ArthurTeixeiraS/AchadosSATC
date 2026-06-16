@@ -152,7 +152,21 @@ service cloud.firestore {
     }
 
     match /movimentacoes/{movimentacaoId} {
-      allow read, create, update, delete: if isEmployee();
+      allow read: if isEmployee();
+      allow create: if isEmployee() &&
+        request.resource.data.tipo == "CHAVE" &&
+        request.resource.data.status == "EM_ABERTO";
+      allow update: if isEmployee() &&
+        resource.data.tipo == "CHAVE" &&
+        resource.data.status == "EM_ABERTO" &&
+        request.resource.data.status == "DEVOLVIDA" &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "devolvidaPor",
+          "devolvidaEm",
+          "status",
+          "updatedAt"
+        ]);
+      allow delete: if false;
     }
 
     match /ocorrencias/{ocorrenciaId} {
