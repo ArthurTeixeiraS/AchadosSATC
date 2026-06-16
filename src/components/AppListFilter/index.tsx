@@ -35,9 +35,11 @@ type AppListFilterProps<T> = {
   filters: readonly FilterDefinition<T>[];
   activeFilters: ActiveListFilters;
   onFiltersChange: (filters: ActiveListFilters) => void;
-  sorts: readonly SortDefinition<T>[];
-  activeSort: string;
-  onSortChange: (sort: string) => void;
+  sorts?: readonly SortDefinition<T>[];
+  activeSort?: string;
+  onSortChange?: (sortKey: string) => void;
+  extraHeaderAction?: React.ReactNode;
+  leftHeaderAction?: React.ReactNode;
 };
 
 export function AppListFilter<T>({
@@ -50,6 +52,8 @@ export function AppListFilter<T>({
   sorts,
   activeSort,
   onSortChange,
+  extraHeaderAction,
+  leftHeaderAction,
 }: AppListFilterProps<T>) {
   const [visible, setVisible] = useState(false);
   const [draftFilters, setDraftFilters] =
@@ -113,6 +117,12 @@ export function AppListFilter<T>({
   return (
     <View style={styles.container}>
       <View style={styles.searchRow}>
+        {leftHeaderAction && (
+          <View style={{ marginRight: 8 }}>
+            {leftHeaderAction}
+          </View>
+        )}
+
         <AppInput
           value={search}
           onChangeText={onSearchChange}
@@ -120,6 +130,12 @@ export function AppListFilter<T>({
           left={<TextInput.Icon icon="magnify" />}
           style={styles.searchInput}
         />
+
+        {extraHeaderAction && (
+          <View style={{ marginLeft: 8 }}>
+            {extraHeaderAction}
+          </View>
+        )}
 
         <TouchableOpacity
           accessibilityRole="button"
@@ -173,7 +189,7 @@ export function AppListFilter<T>({
                   color={colors.textSecondary}
                 />
                 <Text style={styles.sortChipText}>
-                  {sorts.find((sort) => sort.key === activeSort)?.label}
+                  {sorts?.find((sort) => sort.key === activeSort)?.label}
                 </Text>
               </View>
             )}
@@ -332,7 +348,7 @@ export function AppListFilter<T>({
                 value={draftSort}
                 options={[
                   { label: "Ordenação padrão", value: "" },
-                  ...sorts.map((sort) => ({
+                  ...(sorts || []).map((sort) => ({
                     label: sort.label,
                     value: sort.key,
                   })),

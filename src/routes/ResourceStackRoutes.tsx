@@ -5,6 +5,7 @@ import { ResourceScreen } from "../screens/admin/ResourceScreen";
 import { CreateResourceScreen } from "../screens/admin/CreateResourceScreen";
 import { EditResourceScreen } from "../screens/admin/EditResourceScreen";
 import { ResourceDetailsScreen } from "../screens/admin/ResourceDetailsScreen";
+import { ArchivedResourcesScreen } from "../screens/admin/ArchivedResourcesScreen";
 
 import { Resource, ResourceType } from "../types/Resources";
 
@@ -23,6 +24,7 @@ export type ResourceStackParamList = {
     resource: Resource;
     origin?: "AUDITORIA";
   };
+  ArchivedResourcesList: undefined;
 };
 
 const Stack = createNativeStackNavigator<ResourceStackParamList>();
@@ -34,6 +36,11 @@ export function ResourceStackRoutes() {
       <Stack.Screen name="CreateResource" component={CreateResourceScreen} />
       <Stack.Screen name="EditResource" component={EditResourceScreen} />
       <Stack.Screen name="ResourceDetails" component={ResourceDetailsScreen} />
+      <Stack.Screen 
+        name="ArchivedResourcesList" 
+        component={ArchivedResourcesScreen} 
+        options={{ title: "Recursos Arquivados" }}
+      />
     </Stack.Navigator>
   );
 }

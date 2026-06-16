@@ -17,8 +17,7 @@ import { colors } from "../../../styles/colors";
 
 import { styles } from "./styles";
 
-import { getResourceById } from "../../../services/resources/resourceServices";
-import { deleteResource } from "../../../services/resources/resourceServices";
+import { getResourceById, archiveResource, unarchiveResource } from "../../../services/resources/resourceServices";
 import { useAuth } from "../../../contexts/AuthContext";
 
 type Props = NativeStackScreenProps<
@@ -100,35 +99,72 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
         loadLaboratory();
     }, []);
 
-    function handleDeleteResource() {
+    function handleArchiveResource() {
         Alert.alert(
-            "Excluir recurso",
-            "Tem certeza que deseja excluir este recurso? Essa ação não poderá ser desfeita.",
+            "Arquivar recurso",
+            "Tem certeza que deseja arquivar este recurso? Ele não estará mais disponível para novas solicitações e listagens padrão.",
             [
                 {
                     text: "Cancelar",
                     style: "cancel",
                 },
                 {
-                    text: "Excluir",
+                    text: "Arquivar",
                     style: "destructive",
                     onPress: async () => {
                         try {
                             if (!appUser) {
                                 Alert.alert(
-                                    "Erro ao excluir",
+                                    "Erro ao arquivar",
                                     "Não foi possível identificar o usuário responsável."
                                 );
                                 return;
                             }
 
-                            await deleteResource(resource.id, appUser);
+                            await archiveResource(resource.id, appUser);
                             navigation.navigate("ResourceList");
-                        } catch (error) {
-                            console.log("Erro ao excluir recurso:", error);
+                        } catch (error: any) {
+                            console.log("Erro ao arquivar recurso:", error);
                             Alert.alert(
-                                "Erro ao excluir",
-                                "Não foi possível excluir o recurso. Tente novamente."
+                                "Erro ao arquivar",
+                                error.message || "Não foi possível arquivar o recurso. Tente novamente."
+                            );
+                        }
+                    },
+                },
+            ]
+        );
+    }
+
+    function handleUnarchiveResource() {
+        Alert.alert(
+            "Desarquivar recurso",
+            "Tem certeza que deseja desarquivar este recurso? Ele voltará a estar disponível para novas solicitações.",
+            [
+                {
+                    text: "Cancelar",
+                    style: "cancel",
+                },
+                {
+                    text: "Desarquivar",
+                    style: "default",
+                    onPress: async () => {
+                        try {
+                            if (!appUser) {
+                                Alert.alert(
+                                    "Erro ao desarquivar",
+                                    "Não foi possível identificar o usuário responsável."
+                                );
+                                return;
+                            }
+
+                            await unarchiveResource(resource.id, appUser);
+                            navigation.navigate("ResourceList");
+                        } catch (error: any) {
+                            console.log("Erro ao desarquivar recurso:", error);
+                            Alert.alert(
+                                "Erro ao desarquivar",
+                                error.message || "Não foi possível desarquivar o recurso. Tente novamente."
                             );
                         }
                     },
@@ -178,6 +214,15 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                             {getStatusLabel(resource.status)}
                         </Text>
                     </View>
+
+                    {resource.isArchived && (
+                        <View style={styles.infoItem}>
+                            <Text style={styles.infoLabel}>Situação</Text>
+                            <Text style={[styles.statusText, { color: colors.error }]}>
+                                ARQUIVADO
+                            </Text>
+                        </View>
+                    )}
                 </AppCard>
 
                 {isFerramenta && (
@@ -260,14 +305,28 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                         Duplicar recurso
                     </AppButton>
 
-                    <AppDestructiveButton
-                        icon={() => (
-                            <Feather name="trash-2" size={18} color={colors.error} />
-                        )}
-                        onPress={handleDeleteResource}
-                    >
-                        Excluir recurso
-                    </AppDestructiveButton>
+                    {!resource.isArchived && (
+                        <AppDestructiveButton
+                            icon={() => (
+                                <Feather name="archive" size={18} color={colors.error} />
+                            )}
+                            onPress={handleArchiveResource}
+                        >
+                            Arquivar recurso
+                        </AppDestructiveButton>
+                    )}
+
+                    {resource.isArchived && (
+                        <AppButton
+                            icon={() => (
+                                <Feather name="package" size={18} color={colors.primary} />
+                            )}
+                            mode="outlined"
+                            onPress={handleUnarchiveResource}
+                        >
+                            Desarquivar recurso
+                        </AppButton>
+                    )}
                 </AppCard>
             </ScrollView>
         </ScreenContainer>

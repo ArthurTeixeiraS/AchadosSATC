@@ -27,6 +27,7 @@ export interface Resource {
   manutencaoOcorrenciaId?: string;
 
   imagemUrl?: string;
+  isArchived?: boolean;
 
   createdAt?: Date;
   updatedAt?: Date;
