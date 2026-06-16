@@ -20,7 +20,7 @@ Como solução, propõe-se uma aplicação mobile para digitalizar os processos 
 
 ---
 
-## 📱 Sobre o Projeto
+## 📱 Sobre o Projeto (Solução)
 
 O **Ferramentaria SATC** é uma aplicação mobile voltada ao gerenciamento dos recursos utilizados em atividades acadêmicas e práticas da instituição. A solução permite administrar ferramentas, máquinas e laboratórios, acompanhar a disponibilidade dos itens e registrar todo o ciclo de uma solicitação.
 
