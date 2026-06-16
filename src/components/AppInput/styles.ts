@@ -9,8 +9,8 @@ export const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.regular,
   },
   inputMultiline: {
-    minHeight: 120, // Altura mínima confortável para digitar várias linhas
-    textAlignVertical: 'top', // Força o texto para o topo no Android
+    minHeight: 120,
+    textAlignVertical: 'top',
     padding: 10,
   },
   outline: {
