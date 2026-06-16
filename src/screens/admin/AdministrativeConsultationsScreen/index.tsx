@@ -688,7 +688,6 @@ export function AdministrativeConsultationsScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderAllocation}
               refreshControl={refreshControl}
-              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
             />
           )}
@@ -721,7 +720,6 @@ export function AdministrativeConsultationsScreen() {
               keyExtractor={(item) => item.solicitation.id}
               renderItem={renderHistory}
               refreshControl={refreshControl}
-              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
             />
           )}
