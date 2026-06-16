@@ -244,23 +244,26 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
   useEffect(() => {
     const initialStatus = route.params?.initialStatus;
     const initialAnalysisPending = route.params?.initialAnalysisPending;
+    const clearFilters = route.params?.clearFilters;
 
-    if (!initialStatus && !initialAnalysisPending) {
+    if (!initialStatus && !initialAnalysisPending && !clearFilters) {
       return;
     }
 
     setActiveFilters((current) => ({
-      ...current,
+      ...(clearFilters ? {} : current),
       ...(initialStatus ? { status: initialStatus } : {}),
       ...(initialAnalysisPending ? { analysisPending: "true" } : {}),
     }));
     navigation.setParams({
       initialStatus: undefined,
       initialAnalysisPending: undefined,
+      clearFilters: undefined,
     });
   }, [
     route.params?.initialStatus,
     route.params?.initialAnalysisPending,
+    route.params?.clearFilters,
     navigation,
   ]);
 

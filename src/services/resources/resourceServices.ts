@@ -147,7 +147,7 @@ export async function listResources(options?: { includeArchived?: boolean }): Pr
   })) as Resource[];
 
   if (!options?.includeArchived) {
-    resources = resources.filter((r) => r.isArchived !== true);
+    resources = resources.filter((r) => r.isArchived !== true && r.status !== "ARQUIVADO");
   }
 
   return resources;
@@ -170,7 +170,7 @@ export async function listLaboratories(options?: { includeArchived?: boolean }):
   })) as Resource[];
 
   if (!options?.includeArchived) {
-    labs = labs.filter((r) => r.isArchived !== true);
+    labs = labs.filter((r) => r.isArchived !== true && r.status !== "ARQUIVADO");
   }
 
   return labs;
@@ -191,6 +191,34 @@ export async function getResourceById(
     id: snapshot.id,
     ...snapshot.data(),
   } as Resource;
+}
+
+export async function checkBlockingSolicitations(id: string) {
+  const solicitationsRef = collection(db, "solicitacoes");
+  const solQuery = query(
+    solicitationsRef,
+    where("status", "in", ["PENDENTE", "ALTERACAO_PENDENTE", "APROVADA", "EM_USO"])
+  );
+  
+  const solSnapshot = await getDocs(solQuery);
+  const blockingSolicitations = [];
+
+  for (const docSnap of solSnapshot.docs) {
+    const data = docSnap.data();
+    const inUse = 
+      data.maquinas?.some((m: any) => m.recursoId === id) || 
+      data.ferramentas?.some((f: any) => f.recursoId === id) ||
+      data.laboratoriosIds?.includes(id);
+
+    if (inUse) {
+      blockingSolicitations.push({
+        id: docSnap.id,
+        ...data
+      });
+    }
+  }
+
+  return blockingSolicitations;
 }
 
 export async function archiveResource(
@@ -223,9 +251,13 @@ export async function archiveResource(
   const solSnapshot = await getDocs(solQuery);
   for (const docSnap of solSnapshot.docs) {
     const data = docSnap.data();
-    const inUse = data.maquinas?.some((m: any) => m.id === id) || data.ferramentas?.some((f: any) => f.id === id);
+    const inUse = 
+      data.maquinas?.some((m: any) => m.recursoId === id) || 
+      data.ferramentas?.some((f: any) => f.recursoId === id) ||
+      data.laboratoriosIds?.includes(id);
+
     if (inUse) {
-      throw new Error("Não é possível arquivar este recurso pois ele está vinculado a uma solicitação ativa.");
+      throw new Error(`Não é possível arquivar este recurso pois ele está vinculado a uma solicitação ativa no sistema (Status: ${data.status}). Encerre ou cancele a solicitação primeiro.`);
     }
   }
 
@@ -261,6 +293,7 @@ export async function archiveResource(
     
     transaction.update(resourceRef, { 
       isArchived: true,
+      status: "ARQUIVADO",
       updatedAt: serverTimestamp() 
     });
   });
@@ -304,6 +337,7 @@ export async function unarchiveResource(
     
     transaction.update(resourceRef, { 
       isArchived: false,
+      status: "DISPONIVEL",
       updatedAt: serverTimestamp() 
     });
   });

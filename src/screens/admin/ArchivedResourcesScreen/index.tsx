@@ -192,45 +192,47 @@ export function ArchivedResourcesScreen() {
               />
             }
             renderItem={({ item }) => (
-              <AppCard
-                style={styles.resourceCard}
+              <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={() =>
                   navigation.navigate("ResourceDetails", { resource: item })
                 }
               >
-                <View style={styles.resourceInfo}>
-                  <Text style={styles.resourceName} numberOfLines={2}>
-                    {item.nome}
-                  </Text>
-                  {item.descricao ? (
-                    <Text
-                      style={styles.resourceDescription}
-                      numberOfLines={1}
-                    >
-                      {item.descricao}
+                <AppCard style={styles.resourceCard}>
+                  <View style={styles.resourceInfo}>
+                    <Text style={styles.resourceName} numberOfLines={2}>
+                      {item.nome}
                     </Text>
-                  ) : null}
+                    {item.descricao ? (
+                      <Text
+                        style={styles.resourceDescription}
+                        numberOfLines={1}
+                      >
+                        {item.descricao}
+                      </Text>
+                    ) : null}
 
-                  <View style={styles.resourceBadges}>
-                    <View style={styles.resourceTypeBadge}>
-                      <Text style={styles.resourceTypeBadgeText}>
-                        {item.tipo.toLowerCase()}
-                      </Text>
-                    </View>
-                    <View style={[styles.resourceStatusBadge, styles.resourceStatusArchived]}>
-                      <Text style={styles.resourceStatusArchivedText}>
-                        arquivado
-                      </Text>
+                    <View style={styles.resourceBadges}>
+                      <View style={styles.resourceTypeBadge}>
+                        <Text style={styles.resourceTypeBadgeText}>
+                          {item.tipo.toLowerCase()}
+                        </Text>
+                      </View>
+                      <View style={[styles.resourceStatusBadge, styles.resourceStatusArchived]}>
+                        <Text style={styles.resourceStatusArchivedText}>
+                          arquivado
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                <Feather
-                  name="chevron-right"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </AppCard>
+                  <Feather
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </AppCard>
+              </TouchableOpacity>
             )}
           />
         )}

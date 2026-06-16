@@ -1,6 +1,6 @@
 export type ResourceType = "FERRAMENTA" | "MAQUINA" | "LABORATORIO";
 
-export type ResourceStatus = "DISPONIVEL" | "EM_USO" | "MANUTENCAO";
+export type ResourceStatus = "DISPONIVEL" | "EM_USO" | "MANUTENCAO" | "ARQUIVADO";
 
 /*
   Um Recurso poderá ser uma Ferramenta, uma Máquina ou um Laboratório, 
