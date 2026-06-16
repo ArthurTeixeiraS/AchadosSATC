@@ -226,7 +226,6 @@ export function KeyListScreen() {
           data={filteredKeys}
           keyExtractor={(item) => item.id}
           refreshControl={refreshControl}
-          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <TouchableOpacity
