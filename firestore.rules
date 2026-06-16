@@ -14,7 +14,7 @@ service cloud.firestore {
 
     function isActiveUser() {
       return signedIn() &&
-        userDocument().data.statusConta == "ATIVO";
+        userDocument().data.get("statusConta", "ATIVO") == "ATIVO";
     }
 
     function isEmployee() {
@@ -106,6 +106,10 @@ service cloud.firestore {
           ]) &&
           (
             isEmployee() ||
+            (
+              request.resource.data.tipo == "SOLICITACAO_ATRASADA" &&
+              request.resource.data.destinatarioId == request.auth.uid
+            ) ||
             isSolicitationOwnerAfter(
               request.resource.data.solicitacaoId
             )
@@ -183,11 +187,7 @@ service cloud.firestore {
     }
 
     match /solicitacoes/{solicitacaoId} {
-      allow read: if isEmployee() ||
-        (
-          isProfessor() &&
-          resource.data.professorId == request.auth.uid
-        );
+      allow read: if isActiveUser();
       allow create: if isProfessor() &&
         request.resource.data.professorId == request.auth.uid &&
         request.resource.data.status == "PENDENTE";

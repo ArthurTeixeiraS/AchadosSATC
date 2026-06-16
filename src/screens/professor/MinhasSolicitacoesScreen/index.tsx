@@ -208,9 +208,11 @@ export function MinhasSolicitacoesScreen() {
     useState<ActiveListFilters>(() => {
       const initialStatus = route.params?.initialStatus;
       if (initialStatus) {
-        return { status: initialStatus };
+        const filters: ActiveListFilters = { status: initialStatus };
+        return filters;
       }
-      return { fromToday: "true" };
+      const filters: ActiveListFilters = { fromToday: "true" };
+      return filters;
     });
 
   useEffect(() => {

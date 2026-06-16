@@ -179,10 +179,17 @@ export async function syncOverdueNotifications(
   userId: string,
   userRole: UserRole
 ) {
-  const overdueQuery = query(
-    collection(db, SOLICITATION_COLLECTION),
-    where("status", "==", "EM_USO")
-  );
+  const overdueQuery =
+    userRole === "FUNCIONARIO"
+      ? query(
+          collection(db, SOLICITATION_COLLECTION),
+          where("status", "==", "EM_USO")
+        )
+      : query(
+          collection(db, SOLICITATION_COLLECTION),
+          where("status", "==", "EM_USO"),
+          where("professorId", "==", userId)
+        );
   const solicitationsSnapshot = await getDocs(overdueQuery);
   const now = new Date();
   const pendingNotifications: Array<{
