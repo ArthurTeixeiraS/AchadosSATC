@@ -15,18 +15,18 @@ export const AppInput = React.forwardRef<any, AppInputProps>(({ style, multiline
     <TextInput
       ref={ref}
       mode="outlined"
-      multiline={multiline} // 👈 Repasse o multiline para o Paper
+      multiline={multiline}
       style={[
         styles.input,
-        multiline && styles.inputMultiline, // 👈 Se multiline for true, aplica a altura
-        style // 👈 Permite que a tela injete estilos extras se necessário
+        multiline && styles.inputMultiline,
+        style
       ]}
       outlineStyle={styles.outline}
       activeOutlineColor={colors.primary}
       outlineColor={colors.border}
       textColor={colors.text}
       placeholderTextColor={colors.textSecondary}
-      {...props} // Repassa as demais propriedades (placeholder, value, etc)
+      {...props}
     />
   );
 });
