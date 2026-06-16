@@ -141,7 +141,11 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         text: "OK",
                         onPress: () => {
                             clearDraft();
-                            navigation.navigate("SolicitationInfo");
+                            navigation
+                                .getParent()
+                                ?.navigate("Minhas Solicitações", {
+                                    screen: "MinhasSolicitacoesList",
+                                });
                         },
                     },
                 ]
