@@ -25,12 +25,48 @@ export function EditProfileScreen({ navigation }: Props) {
   const [telefone, setTelefone] = useState(appUser?.telefone ?? "");
   const [loading, setLoading] = useState(false);
 
+  function formatTelefone(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+
+    if (digits.length <= 2) {
+      return digits;
+    }
+
+    if (digits.length <= 6) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    }
+
+    if (digits.length <= 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+
+  function handleTelefoneChange(value: string) {
+    setTelefone(formatTelefone(value));
+  }
+
+  function isTelefoneValido(value: string) {
+    return /^\(\d{2}\) \d{5}-\d{4}$/.test(value);
+  }
+
   async function handleSalvar() {
     try {
+      const telefoneFormatado = telefone.trim();
+
+      if (telefoneFormatado && !isTelefoneValido(telefoneFormatado)) {
+        Alert.alert(
+          "Telefone inválido",
+          "Informe o telefone no formato (48) 99999-9999."
+        );
+        return;
+      }
+
       setLoading(true);
 
       await updateUserProfile(appUser!.id, {
-        telefone: telefone.trim() || null,
+        telefone: telefoneFormatado || null,
       });
 
       await reloadUser();
@@ -69,9 +105,10 @@ export function EditProfileScreen({ navigation }: Props) {
         <Text style={styles.label}>Telefone</Text>
         <AppInput
           value={telefone}
-          onChangeText={setTelefone}
+          onChangeText={handleTelefoneChange}
           placeholder="(48) 99999-9999"
           keyboardType="phone-pad"
+          maxLength={15}
         />
 
         <View style={styles.buttonWrapper}>

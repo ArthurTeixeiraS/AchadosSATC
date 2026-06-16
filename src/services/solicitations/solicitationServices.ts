@@ -2379,9 +2379,7 @@ export async function getProfessorHomeData(
     }
 
     if (solicitation.status === "PENDENTE" || solicitation.status === "ALTERACAO_PENDENTE") {
-      if (useDate >= todayTime && useDate <= nextWeekTime) {
-        pendentes.push(solicitation);
-      }
+      pendentes.push(solicitation);
     }
 
     if (solicitation.status === "APROVADA") {

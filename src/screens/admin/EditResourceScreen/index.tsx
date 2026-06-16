@@ -230,13 +230,13 @@ export function EditResourceScreen({ route, navigation }: Props) {
                 <AppInput
                     value={nome}
                     onChangeText={setNome}
-                    placeholder="Nome do recurso"
+                    label="Nome do recurso"
                 />
 
                 <AppInput
                     value={descricao}
                     onChangeText={setDescricao}
-                    placeholder="Descrição"
+                    label="Descrição"
                     multiline
                 />
 
@@ -301,14 +301,14 @@ export function EditResourceScreen({ route, navigation }: Props) {
                         <AppInput
                             value={quantidadeTotal}
                             onChangeText={handleChangeQuantidadeTotal}
-                            placeholder="Quantidade total"
+                            label="Quantidade total"
                             keyboardType="numeric"
                         />
 
                         <AppInput
                             value={quantidadeDisponivel}
                             onChangeText={setQuantidadeDisponivel}
-                            placeholder="Quantidade disponível"
+                            label="Quantidade disponível"
                             keyboardType="numeric"
                         />
                     </>
@@ -326,7 +326,7 @@ export function EditResourceScreen({ route, navigation }: Props) {
                         <AppInput
                             value={patrimonio}
                             onChangeText={setPatrimonio}
-                            placeholder="Patrimônio"
+                            label="Patrimônio"
                         />
                     </>
                 )}
@@ -335,7 +335,7 @@ export function EditResourceScreen({ route, navigation }: Props) {
                     <AppInput
                         value={localizacao}
                         onChangeText={setLocalizacao}
-                        placeholder="Localização do laboratório"
+                        label="Localização do laboratório"
                     />
                 )}
 

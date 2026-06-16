@@ -78,6 +78,7 @@ function ProfessorDrawerRoutes() {
             title: "Início",
             subtitle: "Visão geral da ferramentaria",
           }),
+          drawerLabel: "Início",
           drawerIcon: ({ color, size }) => (
             <Feather name="home" size={size} color={color} />
           ),
