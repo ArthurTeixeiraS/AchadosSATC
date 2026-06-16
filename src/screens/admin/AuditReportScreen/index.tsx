@@ -615,7 +615,6 @@ export function AuditReportScreen() {
           keyExtractor={keyExtractor}
           renderItem={renderEntry}
           refreshControl={refreshControl}
-          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
           maxToRenderPerBatch={6}
