@@ -244,7 +244,6 @@ export function OccurrenceListScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           refreshControl={refreshControl}
-          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.8}

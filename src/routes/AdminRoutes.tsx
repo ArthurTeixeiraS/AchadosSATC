@@ -32,6 +32,7 @@ import {
   OccurrenceStackParamList,
   OccurrenceStackRoutes,
 } from "./OccurrenceStackRoutes";
+import { StatusBar } from 'expo-status-bar';
 
 export type AdminDrawerParamList = {
   Dashboard: undefined;
@@ -49,6 +50,8 @@ const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 
 export function AdminRoutes() {
   return (
+    <>
+    <StatusBar style="light"/>
     <Drawer.Navigator
       drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
@@ -500,5 +503,6 @@ export function AdminRoutes() {
         }}
       />
     </Drawer.Navigator>
+    </>
   );
 }

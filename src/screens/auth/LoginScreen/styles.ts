@@ -7,15 +7,13 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
-    justifyContent: "center",
-    padding: 12,
   },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 8,
     paddingHorizontal: 28,
     paddingVertical: 48,
-    minHeight: "92%",
+    minHeight: "100%",
     justifyContent: "center",
   },
   logoContainer: {

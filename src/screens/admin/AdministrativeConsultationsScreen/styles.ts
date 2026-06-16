@@ -38,11 +38,6 @@ export const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
   },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    gap: 12,
-  },
   card: {
     marginBottom: 0,
   },

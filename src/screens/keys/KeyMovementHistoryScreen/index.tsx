@@ -257,7 +257,6 @@ export function KeyMovementHistoryScreen() {
           data={filteredMovements}
           keyExtractor={(item) => item.id}
           refreshControl={refreshControl}
-          contentContainerStyle={listStyles.listContent}
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.8}

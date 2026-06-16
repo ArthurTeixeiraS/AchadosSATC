@@ -10,11 +10,6 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 96,
-    gap: 10,
-  },
   emptyList: {
     flex: 1,
   },

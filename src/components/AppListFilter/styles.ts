@@ -145,14 +145,15 @@ export const styles = StyleSheet.create({
   checkboxField: {
     minHeight: 58,
     marginBottom: spacing.md,
-    paddingVertical: spacing.xs,
-    paddingRight: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingRight: 20,
   },
   checkboxText: {
     flex: 1,
