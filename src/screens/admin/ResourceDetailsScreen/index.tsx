@@ -181,7 +181,11 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                             }
 
                             await unarchiveResource(resource.id, appUser);
-                            navigation.navigate("ResourceList");
+                            navigation.navigate(
+                                route.params.origin === "ARCHIVED"
+                                    ? "ArchivedResourcesList"
+                                    : "ResourceList"
+                            );
                         } catch (error: any) {
                             console.log("Erro ao desarquivar recurso:", error);
                             Alert.alert(
