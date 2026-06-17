@@ -33,20 +33,49 @@ import {
   OccurrenceStackRoutes,
 } from "./OccurrenceStackRoutes";
 import { StatusBar } from 'expo-status-bar';
+import { createResetFiltersToken } from "./resetFilters";
 
 export type AdminDrawerParamList = {
   Dashboard: undefined;
   Solicitações: NavigatorScreenParams<FuncionarioSolicitacaoStackParamList>;
   Recursos: NavigatorScreenParams<ResourceStackParamList>;
   Chaves: NavigatorScreenParams<KeyStackParamList>;
-  Consultas: undefined;
-  Relatórios: undefined;
+  Consultas:
+    | {
+        resetFiltersToken?: number;
+      }
+    | undefined;
+  Relatórios:
+    | {
+        resetFiltersToken?: number;
+      }
+    | undefined;
   Ocorrências: NavigatorScreenParams<OccurrenceStackParamList>;
   Notificações: undefined;
   Perfil: NavigatorScreenParams<ProfileStackParamList>;
 };
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
+
+function getNestedActiveRoute(route: any, fallbackName: string) {
+  const nestedRoute = route.state?.routes?.[route.state?.index ?? 0];
+
+  if (nestedRoute?.name) {
+    return nestedRoute;
+  }
+
+  if (route.params?.screen) {
+    return {
+      name: route.params.screen,
+      params: route.params.params,
+    };
+  }
+
+  return {
+    name: getFocusedRouteNameFromRoute(route) ?? fallbackName,
+    params: undefined,
+  };
+}
 
 export function AdminRoutes() {
   return (
@@ -91,9 +120,21 @@ export function AdminRoutes() {
       <Drawer.Screen
         name="Solicitações"
         component={FuncionarioSolicitacaoStackRoutes}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Solicitações", {
+              screen: "ReceivedSolicitations",
+              params: { resetFiltersToken: createResetFiltersToken() },
+            });
+          },
+        })}
         options={({ navigation, route }) => {
-          const routeName =
-            getFocusedRouteNameFromRoute(route) ?? "ReceivedSolicitations";
+          const activeRoute = getNestedActiveRoute(
+            route,
+            "ReceivedSolicitations"
+          );
+          const routeName = activeRoute.name;
           const isDetails = routeName === "FuncionarioSolicitationDetails";
           const isReturn = routeName === "RegisterSolicitationReturn";
 
@@ -111,23 +152,6 @@ export function AdminRoutes() {
                   : "Gerencie os pedidos recebidos",
               showMenu: !isDetails && !isReturn,
               onBack: () => {
-                const nestedState = (
-                  route as typeof route & {
-                    state?: {
-                      index: number;
-                      routes: Array<{
-                        name: string;
-                        params?: {
-                          solicitationId?: string;
-                          origin?: "CONSULTAS" | "AUDITORIA" | "NOTIFICACOES";
-                        };
-                      }>;
-                    };
-                  }
-                ).state;
-                const activeRoute =
-                  nestedState?.routes[nestedState.index ?? 0];
-
                 if (
                   isReturn &&
                   activeRoute?.params?.solicitationId
@@ -182,6 +206,15 @@ export function AdminRoutes() {
       <Drawer.Screen
         name="Recursos"
         component={ResourceStackRoutes}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Recursos", {
+              screen: "ResourceList",
+              params: { resetFiltersToken: createResetFiltersToken() },
+            });
+          },
+        })}
         options={({ navigation, route }) => {
           const nestedState = (
             route as typeof route & {
@@ -308,6 +341,14 @@ export function AdminRoutes() {
       <Drawer.Screen
         name="Consultas"
         component={AdministrativeConsultationsScreen}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Consultas", {
+              resetFiltersToken: createResetFiltersToken(),
+            });
+          },
+        })}
         options={({ navigation }) => ({
           ...getDrawerHeaderOptions(navigation, {
             title: "Consultas",
@@ -322,6 +363,14 @@ export function AdminRoutes() {
       <Drawer.Screen
         name="Relatórios"
         component={AuditReportScreen}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Relatórios", {
+              resetFiltersToken: createResetFiltersToken(),
+            });
+          },
+        })}
         options={({ navigation }) => ({
           ...getDrawerHeaderOptions(navigation, {
             title: "Relatórios",
@@ -336,6 +385,15 @@ export function AdminRoutes() {
       <Drawer.Screen
         name="Ocorrências"
         component={OccurrenceStackRoutes}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Ocorrências", {
+              screen: "OccurrenceList",
+              params: { resetFiltersToken: createResetFiltersToken() },
+            });
+          },
+        })}
         options={({ navigation, route }) => {
           const nestedState = (
             route as typeof route & {
@@ -395,6 +453,15 @@ export function AdminRoutes() {
       <Drawer.Screen
         name="Chaves"
         component={KeyStackRoutes}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Chaves", {
+              screen: "KeyList",
+              params: { resetFiltersToken: createResetFiltersToken() },
+            });
+          },
+        })}
         options={({ navigation, route }) => {
           const nestedState = (route as typeof route & {
             state?: {
@@ -471,7 +538,12 @@ export function AdminRoutes() {
                   return;
                 }
 
-                if (isEdit && activeRoute?.params?.keyId) {
+                if (
+                  isEdit &&
+                  activeRoute?.params &&
+                  "keyId" in activeRoute.params &&
+                  activeRoute.params.keyId
+                ) {
                   navigation.navigate("Chaves", {
                     screen: "KeyDetails",
                     params: {
@@ -483,7 +555,9 @@ export function AdminRoutes() {
 
                 if (
                   (isWithdrawal || isHistory) &&
-                  activeRoute?.params?.keyId
+                  activeRoute?.params &&
+                  "keyId" in activeRoute.params &&
+                  activeRoute.params.keyId
                 ) {
                   navigation.navigate("Chaves", {
                     screen: "KeyDetails",

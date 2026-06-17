@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { Text } from "react-native-paper";
 
 import { AppAlert } from "../../../components/AppAlert";
@@ -27,6 +27,7 @@ import {
 import { Loading } from "../../../components/Loading";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 import { listGlobalAuditEntries } from "../../../services/solicitations/auditReportServices";
 import { getAuditEventLabel } from "../../../services/solicitations/solicitationAuditServices";
 import { AuditReportEntry } from "../../../types/AuditReport";
@@ -334,13 +335,26 @@ const AuditReportCard = React.memo(function AuditReportCard({
 
 export function AuditReportScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [entries, setEntries] = useState<AuditReportEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState("audit.search", "");
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({});
-  const [activeSort, setActiveSort] = useState("date-desc");
+    usePersistentScreenState<ActiveListFilters>("audit.filters", {});
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "audit.sort",
+    "date-desc"
+  );
+
+  useEffect(() => {
+    if (!route.params?.resetFiltersToken) return;
+
+    setSearch("");
+    setActiveFilters({});
+    setActiveSort("date-desc");
+    navigation.setParams({ resetFiltersToken: undefined });
+  }, [navigation, route.params?.resetFiltersToken]);
 
   const loadEntries = useCallback(async () => {
     const data = await listGlobalAuditEntries();

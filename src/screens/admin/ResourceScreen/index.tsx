@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { Text } from "react-native-paper";
-import { useFocusEffect } from "@react-navigation/native";
+import { RouteProp, useFocusEffect, useRoute } from "@react-navigation/native";
 import { useCallback } from "react";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
@@ -45,6 +45,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 
 // Seria interessante exibir os laboratórios aos quais as máquinas estão associadas
 
@@ -169,10 +170,16 @@ function ResourceMenuButton({ item, navigation }: {
 export function ResourceScreen() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState(
+    "resources.search",
+    ""
+  );
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({});
-  const [activeSort, setActiveSort] = useState("name-asc");
+    usePersistentScreenState<ActiveListFilters>("resources.filters", {});
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "resources.sort",
+    "name-asc"
+  );
   const [periodAvailabilityLoading, setPeriodAvailabilityLoading] =
     useState(false);
   const [periodAvailabilityError, setPeriodAvailabilityError] =
@@ -184,12 +191,22 @@ export function ResourceScreen() {
     Record<string, MachinePeriodAvailability>
   >({});
   const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
+  const route = useRoute<RouteProp<ResourceStackParamList, "ResourceList">>();
   const insets = useSafeAreaInsets();
   const periodDate = activeFilters.dataUtilizacao;
   const periodShift = activeFilters.turno as SolicitationShift | undefined;
   const hasPeriod = !!periodDate && !!periodShift;
   const hasIncompletePeriod =
     (!!periodDate && !periodShift) || (!periodDate && !!periodShift);
+
+  useEffect(() => {
+    if (!route.params?.resetFiltersToken) return;
+
+    setSearch("");
+    setActiveFilters({});
+    setActiveSort("name-asc");
+    navigation.setParams({ resetFiltersToken: undefined });
+  }, [navigation, route.params?.resetFiltersToken]);
 
   async function fetchResources() {
     const data = await listResources();

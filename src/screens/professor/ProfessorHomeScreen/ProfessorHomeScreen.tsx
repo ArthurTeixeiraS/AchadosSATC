@@ -14,6 +14,7 @@ import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { createResetFiltersToken } from "../../../routes/resetFilters";
 import {
   getProfessorHomeData,
   ProfessorHomeData,
@@ -60,20 +61,44 @@ export function ProfessorHomeScreen() {
   });
 
   function irPara(aba: string) {
+    const resetFiltersToken = createResetFiltersToken();
+
+    if (aba === "Minhas Solicitações") {
+      navigation.navigate("Minhas Solicitações", {
+        screen: "MinhasSolicitacoesList",
+        params: { resetFiltersToken },
+      });
+      return;
+    }
+
+    if (aba === "Ocorrências") {
+      navigation.navigate("Ocorrências", {
+        screen: "OccurrenceList",
+        params: { resetFiltersToken },
+      });
+      return;
+    }
+
     navigation.navigate(aba);
   }
 
   function irParaSolicitacoesFiltradas(status: string) {
     navigation.navigate("Minhas Solicitações", {
       screen: "MinhasSolicitacoesList",
-      params: { initialStatus: status },
+      params: {
+        initialStatus: status,
+        resetFiltersToken: createResetFiltersToken(),
+      },
     });
   }
 
   function irParaSolicitacoesEmAnalise() {
     navigation.navigate("Minhas Solicitações", {
       screen: "MinhasSolicitacoesList",
-      params: { initialAnalysisPending: true },
+      params: {
+        initialAnalysisPending: true,
+        resetFiltersToken: createResetFiltersToken(),
+      },
     });
   }
 

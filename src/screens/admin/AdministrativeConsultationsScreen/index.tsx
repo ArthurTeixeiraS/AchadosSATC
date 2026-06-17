@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { Text } from "react-native-paper";
 
 import { AppAlert } from "../../../components/AppAlert";
@@ -29,6 +29,7 @@ import {
 import { Loading } from "../../../components/Loading";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 import {
   buildResourceAllocations,
   buildSolicitationHistory,
@@ -170,8 +171,12 @@ function searchHistory(item: SolicitationHistoryEntry, search: string) {
 
 export function AdministrativeConsultationsScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [activeTab, setActiveTab] =
-    useState<ConsultationTab>("ALLOCATIONS");
+    usePersistentScreenState<ConsultationTab>(
+      "administrativeConsultations.tab",
+      "ALLOCATIONS"
+    );
   const [solicitations, setSolicitations] = useState<Solicitation[]>([]);
   const [history, setHistory] = useState<SolicitationHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,15 +185,46 @@ export function AdministrativeConsultationsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
-  const [allocationSearch, setAllocationSearch] = useState("");
+  const [allocationSearch, setAllocationSearch] = usePersistentScreenState(
+    "administrativeConsultations.allocationSearch",
+    ""
+  );
   const [allocationFilters, setAllocationFilters] =
-    useState<ActiveListFilters>({});
-  const [allocationSort, setAllocationSort] = useState("priority");
+    usePersistentScreenState<ActiveListFilters>(
+      "administrativeConsultations.allocationFilters",
+      {}
+    );
+  const [allocationSort, setAllocationSort] = usePersistentScreenState(
+    "administrativeConsultations.allocationSort",
+    "priority"
+  );
 
-  const [historySearch, setHistorySearch] = useState("");
+  const [historySearch, setHistorySearch] = usePersistentScreenState(
+    "administrativeConsultations.historySearch",
+    ""
+  );
   const [historyFilters, setHistoryFilters] =
-    useState<ActiveListFilters>({});
-  const [historySort, setHistorySort] = useState("terminal-desc");
+    usePersistentScreenState<ActiveListFilters>(
+      "administrativeConsultations.historyFilters",
+      {}
+    );
+  const [historySort, setHistorySort] = usePersistentScreenState(
+    "administrativeConsultations.historySort",
+    "terminal-desc"
+  );
+
+  useEffect(() => {
+    if (!route.params?.resetFiltersToken) return;
+
+    setActiveTab("ALLOCATIONS");
+    setAllocationSearch("");
+    setAllocationFilters({});
+    setAllocationSort("priority");
+    setHistorySearch("");
+    setHistoryFilters({});
+    setHistorySort("terminal-desc");
+    navigation.setParams({ resetFiltersToken: undefined });
+  }, [navigation, route.params?.resetFiltersToken]);
 
   const loadBaseData = useCallback(async () => {
     const data = await loadAdministrativeConsultationData();

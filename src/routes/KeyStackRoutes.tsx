@@ -10,7 +10,11 @@ import { KeyWithdrawalScreen } from "../screens/keys/KeyWithdrawalScreen";
 import { colors } from "../styles/colors";
 
 export type KeyStackParamList = {
-  KeyList: undefined;
+  KeyList:
+    | {
+        resetFiltersToken?: number;
+      }
+    | undefined;
   CreateKey: undefined;
   KeyDetails: {
     keyId: string;
@@ -19,7 +23,12 @@ export type KeyStackParamList = {
   };
   EditKey: { keyId: string };
   KeyWithdrawal: { keyId: string };
-  KeyMovementHistory: { keyId?: string } | undefined;
+  KeyMovementHistory:
+    | {
+        keyId?: string;
+        resetFiltersToken?: number;
+      }
+    | undefined;
 };
 
 const Stack = createNativeStackNavigator<KeyStackParamList>();

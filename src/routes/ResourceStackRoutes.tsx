@@ -10,7 +10,11 @@ import { ArchivedResourcesScreen } from "../screens/admin/ArchivedResourcesScree
 import { Resource, ResourceType } from "../types/Resources";
 
 export type ResourceStackParamList = {
-  ResourceList: undefined;
+  ResourceList:
+    | {
+        resetFiltersToken?: number;
+      }
+    | undefined;
   CreateResource:
   | {
     initialType?: ResourceType;

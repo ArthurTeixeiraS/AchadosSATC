@@ -17,6 +17,7 @@ import {
   subscribeDashboardStats,
 } from "../../../services/solicitations/solicitationServices";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { createResetFiltersToken } from "../../../routes/resetFilters";
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
 
@@ -56,15 +57,54 @@ export function DashboardScreen() {
   });
 
   function irPara(aba: string) {
+    const resetFiltersToken = createResetFiltersToken();
+
+    if (aba === "Solicitações") {
+      navigation.navigate("Solicitações", {
+        screen: "ReceivedSolicitations",
+        params: { resetFiltersToken },
+      });
+      return;
+    }
+
+    if (aba === "Recursos") {
+      navigation.navigate("Recursos", {
+        screen: "ResourceList",
+        params: { resetFiltersToken },
+      });
+      return;
+    }
+
+    if (aba === "Consultas" || aba === "Relatórios") {
+      navigation.navigate(aba, { resetFiltersToken });
+      return;
+    }
+
+    if (aba === "Chaves") {
+      navigation.navigate("Chaves", {
+        screen: "KeyList",
+        params: { resetFiltersToken },
+      });
+      return;
+    }
+
+    if (aba === "Ocorrências") {
+      navigation.navigate("Ocorrências", {
+        screen: "OccurrenceList",
+        params: { resetFiltersToken },
+      });
+      return;
+    }
+
     navigation.navigate(aba);
   }
-
   function irParaSolicitacoesFiltradas(status: string) {
     navigation.navigate("Solicitações", {
       screen: "ReceivedSolicitations",
       params: {
         initialStatus: status,
         clearFilters: true,
+        resetFiltersToken: createResetFiltersToken(),
       },
     });
   }
@@ -76,6 +116,7 @@ export function DashboardScreen() {
         initialStatus: "PENDENTE",
         initialFromToday: true,
         clearFilters: true,
+        resetFiltersToken: createResetFiltersToken(),
       },
     });
   }

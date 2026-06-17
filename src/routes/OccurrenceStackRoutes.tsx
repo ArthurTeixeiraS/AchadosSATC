@@ -6,7 +6,11 @@ import { CreateOccurrenceScreen } from "../screens/shared/occurrences/CreateOccu
 import { OccurrenceDetailsScreen } from "../screens/shared/occurrences/OccurrenceDetailsScreen";
 
 export type OccurrenceStackParamList = {
-  OccurrenceList: undefined;
+  OccurrenceList:
+    | {
+        resetFiltersToken?: number;
+      }
+    | undefined;
   CreateOccurrence: undefined;
   OccurrenceDetails: {
     occurrenceId: string;

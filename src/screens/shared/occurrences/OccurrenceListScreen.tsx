@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { FAB, Text } from "react-native-paper";
 
@@ -26,6 +26,7 @@ import { Loading } from "../../../components/Loading";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 import { OccurrenceStackParamList } from "../../../routes/OccurrenceStackRoutes";
 import { listOccurrences } from "../../../services/occurrences/occurrenceServices";
 import { Occurrence, OccurrenceStatus } from "../../../types/Occurrence";
@@ -87,13 +88,29 @@ export function OccurrenceListScreen() {
   const { appUser } = useAuth();
   const navigation =
     useNavigation<NativeStackNavigationProp<OccurrenceStackParamList>>();
+  const route = useRoute<RouteProp<OccurrenceStackParamList, "OccurrenceList">>();
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState(
+    "occurrences.search",
+    ""
+  );
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({});
-  const [activeSort, setActiveSort] = useState("recent");
+    usePersistentScreenState<ActiveListFilters>("occurrences.filters", {});
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "occurrences.sort",
+    "recent"
+  );
+
+  useEffect(() => {
+    if (!route.params?.resetFiltersToken) return;
+
+    setSearch("");
+    setActiveFilters({});
+    setActiveSort("recent");
+    navigation.setParams({ resetFiltersToken: undefined });
+  }, [navigation, route.params?.resetFiltersToken]);
 
   const load = useCallback(async () => {
     if (!appUser) return;

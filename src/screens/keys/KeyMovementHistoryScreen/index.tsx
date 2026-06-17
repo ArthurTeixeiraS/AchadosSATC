@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -24,6 +24,7 @@ import {
 import { Loading } from "../../../components/Loading";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 import { listKeyMovements } from "../../../services/keys/keyServices";
 import { KeyMovement } from "../../../types/Key";
 import { colors } from "../../../styles/colors";
@@ -151,10 +152,25 @@ export function KeyMovementHistoryScreen() {
   const [movements, setMovements] = useState<KeyMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState(
+    "keyMovements.search",
+    ""
+  );
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({});
-  const [activeSort, setActiveSort] = useState("recent");
+    usePersistentScreenState<ActiveListFilters>("keyMovements.filters", {});
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "keyMovements.sort",
+    "recent"
+  );
+
+  useEffect(() => {
+    if (!route.params?.resetFiltersToken) return;
+
+    setSearch("");
+    setActiveFilters({});
+    setActiveSort("recent");
+    navigation.setParams({ resetFiltersToken: undefined });
+  }, [navigation, route.params?.resetFiltersToken]);
 
   const fetchMovements = useCallback(async () => {
     const data = await listKeyMovements(keyId);
