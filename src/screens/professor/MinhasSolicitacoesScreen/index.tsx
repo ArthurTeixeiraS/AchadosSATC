@@ -38,6 +38,7 @@ import { Solicitation } from "../../../types/Solicitation";
 import { styles } from "./styles";
 import { colors } from "../../../styles/colors";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -205,6 +206,10 @@ function searchMySolicitation(item: Solicitation, search: string) {
   ].some((value) => normalizeFilterText(value).includes(search));
 }
 
+const defaultMySolicitationFilters: ActiveListFilters = {
+  fromToday: "true",
+};
+
 export function MinhasSolicitacoesScreen() {
   const { appUser } = useAuth();
 
@@ -215,9 +220,12 @@ export function MinhasSolicitacoesScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<MinhasSolicitacoesStackParamList>>();
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState(
+    "mySolicitations.search",
+    ""
+  );
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>(() => {
+    usePersistentScreenState<ActiveListFilters>("mySolicitations.filters", (() => {
       const initialStatus = route.params?.initialStatus;
       const initialAnalysisPending = route.params?.initialAnalysisPending;
       if (initialStatus) {
@@ -228,12 +236,21 @@ export function MinhasSolicitacoesScreen() {
         const filters: ActiveListFilters = { analysisPending: "true" };
         return filters;
       }
-      const filters: ActiveListFilters = { fromToday: "true" };
-      return filters;
-    });
+      return defaultMySolicitationFilters;
+    })());
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "mySolicitations.sort",
+    "status-priority"
+  );
 
   useEffect(() => {
-    if (route.params?.initialStatus || route.params?.initialAnalysisPending) {
+    if (
+      route.params?.initialStatus ||
+      route.params?.initialAnalysisPending ||
+      route.params?.resetFiltersToken
+    ) {
+      setSearch("");
+      setActiveSort("status-priority");
       setActiveFilters({
         ...(route.params.initialStatus
           ? { status: route.params.initialStatus }
@@ -241,19 +258,24 @@ export function MinhasSolicitacoesScreen() {
         ...(route.params.initialAnalysisPending
           ? { analysisPending: "true" }
           : {}),
+        ...(!route.params.initialStatus &&
+        !route.params.initialAnalysisPending
+          ? defaultMySolicitationFilters
+          : {}),
       });
       navigation.setParams({
         initialStatus: undefined,
         initialAnalysisPending: undefined,
+        resetFiltersToken: undefined,
       });
     }
   }, [
     route.params?.initialStatus,
     route.params?.initialAnalysisPending,
+    route.params?.resetFiltersToken,
     navigation,
   ]);
 
-  const [activeSort, setActiveSort] = useState("status-priority");
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {

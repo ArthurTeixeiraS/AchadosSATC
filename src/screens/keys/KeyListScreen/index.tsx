@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { FAB, Text } from "react-native-paper";
 
 import { AppAlert } from "../../../components/AppAlert";
@@ -25,6 +25,8 @@ import {
 import { Loading } from "../../../components/Loading";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
+import { createResetFiltersToken } from "../../../routes/resetFilters";
 import { listKeys } from "../../../services/keys/keyServices";
 import { colors } from "../../../styles/colors";
 import { Key } from "../../../types/Key";
@@ -98,13 +100,28 @@ function searchKey(item: Key, search: string) {
 
 export function KeyListScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [keys, setKeys] = useState<Key[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState("keys.search", "");
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({ status: "ATIVA" });
-  const [activeSort, setActiveSort] = useState("code-asc");
+    usePersistentScreenState<ActiveListFilters>("keys.filters", {
+      status: "ATIVA",
+    });
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "keys.sort",
+    "code-asc"
+  );
+
+  useEffect(() => {
+    if (!route.params?.resetFiltersToken) return;
+
+    setSearch("");
+    setActiveFilters({ status: "ATIVA" });
+    setActiveSort("code-asc");
+    navigation.setParams({ resetFiltersToken: undefined });
+  }, [navigation, route.params?.resetFiltersToken]);
 
   const fetchKeys = useCallback(async () => {
     const data = await listKeys();
@@ -200,7 +217,11 @@ export function KeyListScreen() {
           mode="outlined"
           textColor={colors.primary}
           buttonColor={colors.white}
-          onPress={() => navigation.navigate("KeyMovementHistory")}
+          onPress={() =>
+            navigation.navigate("KeyMovementHistory", {
+              resetFiltersToken: createResetFiltersToken(),
+            })
+          }
         >
           Histórico de movimentações
         </AppButton>

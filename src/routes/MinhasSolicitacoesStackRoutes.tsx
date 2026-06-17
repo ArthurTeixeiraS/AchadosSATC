@@ -9,6 +9,7 @@ export type MinhasSolicitacoesStackParamList = {
     | {
         initialStatus?: string;
         initialAnalysisPending?: boolean;
+        resetFiltersToken?: number;
       }
     | undefined;
   ProfessorSolicitationDetails: {

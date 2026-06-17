@@ -34,6 +34,7 @@ import { Solicitation } from "../../../types/Solicitation";
 import { colors } from "../../../styles/colors";
 import { styles } from "./styles";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { usePersistentScreenState } from "../../../hooks/usePersistentScreenState";
 import { FuncionarioSolicitacaoStackParamList } from "../../../routes/FuncionarioSolicitacaoStackRoutes";
 
 type Props = NativeStackScreenProps<
@@ -228,42 +229,70 @@ function searchSolicitation(item: Solicitation, search: string) {
   ].some((value) => normalizeFilterText(value).includes(search));
 }
 
+const defaultReceivedFilters: ActiveListFilters = {
+  fromToday: "true",
+};
+
 export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
   const [solicitations, setSolicitations] = useState<Solicitation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistentScreenState(
+    "receivedSolicitations.search",
+    ""
+  );
   const [activeFilters, setActiveFilters] =
-    useState<ActiveListFilters>({
-      fromToday: "true",
-    });
-  const [activeSort, setActiveSort] = useState("");
-  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+    usePersistentScreenState<ActiveListFilters>(
+      "receivedSolicitations.filters",
+      defaultReceivedFilters
+    );
+  const [activeSort, setActiveSort] = usePersistentScreenState(
+    "receivedSolicitations.sort",
+    ""
+  );
+  const [expandedDates, setExpandedDates] = usePersistentScreenState<string[]>(
+    "receivedSolicitations.expandedDates",
+    []
+  );
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
     const initialStatus = route.params?.initialStatus;
     const initialAnalysisPending = route.params?.initialAnalysisPending;
     const clearFilters = route.params?.clearFilters;
+    const resetFiltersToken = route.params?.resetFiltersToken;
 
-    if (!initialStatus && !initialAnalysisPending && !clearFilters) {
+    if (
+      !initialStatus &&
+      !initialAnalysisPending &&
+      !clearFilters &&
+      !resetFiltersToken
+    ) {
       return;
     }
 
-    setActiveFilters((current) => ({
-      ...(clearFilters ? {} : current),
-      ...(initialStatus ? { status: initialStatus } : {}),
-      ...(initialAnalysisPending ? { analysisPending: "true" } : {}),
-    }));
+    setSearch("");
+    setActiveSort("");
+    setExpandedDates([]);
+    setActiveFilters(
+      initialStatus || initialAnalysisPending
+        ? {
+            ...(initialStatus ? { status: initialStatus } : {}),
+            ...(initialAnalysisPending ? { analysisPending: "true" } : {}),
+          }
+        : defaultReceivedFilters
+    );
     navigation.setParams({
       initialStatus: undefined,
       initialAnalysisPending: undefined,
       clearFilters: undefined,
+      resetFiltersToken: undefined,
     });
   }, [
     route.params?.initialStatus,
     route.params?.initialAnalysisPending,
     route.params?.clearFilters,
+    route.params?.resetFiltersToken,
     navigation,
   ]);
 

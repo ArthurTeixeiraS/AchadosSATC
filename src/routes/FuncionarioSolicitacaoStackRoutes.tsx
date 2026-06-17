@@ -12,6 +12,7 @@ export type FuncionarioSolicitacaoStackParamList = {
         initialStatus?: SolicitationStatus;
         initialAnalysisPending?: boolean;
         clearFilters?: boolean;
+        resetFiltersToken?: number;
       }
     | undefined;
   FuncionarioSolicitationDetails: {

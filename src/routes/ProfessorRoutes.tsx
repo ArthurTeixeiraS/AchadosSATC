@@ -33,6 +33,7 @@ import {
   OccurrenceStackParamList,
   OccurrenceStackRoutes,
 } from "./OccurrenceStackRoutes";
+import { createResetFiltersToken } from "./resetFilters";
 
 export type ProfessorDrawerParamList = {
   Home: undefined;
@@ -44,6 +45,26 @@ export type ProfessorDrawerParamList = {
 };
 
 const Drawer = createDrawerNavigator<ProfessorDrawerParamList>();
+
+function getNestedActiveRoute(route: any, fallbackName: string) {
+  const nestedRoute = route.state?.routes?.[route.state?.index ?? 0];
+
+  if (nestedRoute?.name) {
+    return nestedRoute;
+  }
+
+  if (route.params?.screen) {
+    return {
+      name: route.params.screen,
+      params: route.params.params,
+    };
+  }
+
+  return {
+    name: getFocusedRouteNameFromRoute(route) ?? fallbackName,
+    params: undefined,
+  };
+}
 
 function NovaSolicitacaoFlow() {
   return <NovaSolicitacaoStackRoutes />;
@@ -188,23 +209,22 @@ function ProfessorDrawerRoutes() {
       <Drawer.Screen
         name="Minhas Solicitações"
         component={MinhasSolicitacoesStackRoutes}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Minhas Solicitações", {
+              screen: "MinhasSolicitacoesList",
+              params: { resetFiltersToken: createResetFiltersToken() },
+            });
+          },
+        })}
         options={({ navigation, route }) => {
-          const routeName =
-            getFocusedRouteNameFromRoute(route) ?? "MinhasSolicitacoesList";
+          const activeRoute = getNestedActiveRoute(
+            route,
+            "MinhasSolicitacoesList"
+          );
+          const routeName = activeRoute.name;
           const isDetails = routeName === "ProfessorSolicitationDetails";
-          const nestedState = (
-            route as typeof route & {
-              state?: {
-                index?: number;
-                routes?: Array<{
-                  name: string;
-                  params?: MinhasSolicitacoesStackParamList["ProfessorSolicitationDetails"];
-                }>;
-              };
-            }
-          ).state;
-          const activeRoute =
-            nestedState?.routes?.[nestedState.index ?? 0];
 
           return {
             ...getDrawerHeaderOptions(navigation, {
@@ -240,6 +260,15 @@ function ProfessorDrawerRoutes() {
       <Drawer.Screen
         name="Ocorrências"
         component={OccurrenceStackRoutes}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("Ocorrências", {
+              screen: "OccurrenceList",
+              params: { resetFiltersToken: createResetFiltersToken() },
+            });
+          },
+        })}
         options={({ navigation, route }) => {
           const routeName =
             getFocusedRouteNameFromRoute(route) ?? "OccurrenceList";
