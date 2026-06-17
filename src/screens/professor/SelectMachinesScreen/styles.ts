@@ -83,6 +83,10 @@ export const styles = StyleSheet.create({
         borderColor: colors.primary,
     },
 
+    machineButtonArchived: {
+        borderColor: colors.error,
+    },
+
     machineButtonDisabled: {
         backgroundColor: colors.border,
         opacity: 0.7,
@@ -96,6 +100,10 @@ export const styles = StyleSheet.create({
 
     machineButtonTextSelected: {
         color: colors.primary,
+    },
+
+    machineButtonTextArchived: {
+        color: colors.error,
     },
 
     bottomSummary: {

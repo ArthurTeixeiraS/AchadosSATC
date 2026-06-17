@@ -44,11 +44,22 @@ export const styles = StyleSheet.create({
     color: colors.text,
   },
 
+  listItemTitleError: {
+    color: colors.error,
+  },
+
   listItemSubtitle: {
     marginTop: 4,
     fontSize: 13,
     fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
+  },
+
+  listItemWarning: {
+    marginTop: 4,
+    fontSize: 13,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.error,
   },
 
   buttonContainer: {

@@ -38,6 +38,7 @@ import {
   setNotifications,
 } from "../notifications/notificationServices";
 import { createResourceAuditEventData } from "../resources/resourceAuditServices";
+import { isArchivedResource } from "../../utils/resourceStatus";
 
 const COLLECTION_NAME = "solicitacoes";
 const RESOURCE_COLLECTION_NAME = "recursos";
@@ -76,6 +77,7 @@ type BusinessErrorCode =
   | "MACHINE_CONFLICT"
   | "INSUFFICIENT_STOCK"
   | "RESOURCE_NOT_FOUND"
+  | "RESOURCE_ARCHIVED"
   | "INVALID_CHANGE"
   | "INVALID_RETURN";
 
@@ -181,6 +183,58 @@ function assertStatus(
 
 function formatValidationItems(title: string, items: string[]) {
   return `${title}\n\n${items.map((item) => `• ${item}`).join("\n")}`;
+}
+
+function throwArchivedResourcesError(items: string[]): never {
+  throw new SolicitationBusinessError(
+    "RESOURCE_ARCHIVED",
+    formatValidationItems(
+      "Remova os recursos arquivados antes de enviar:",
+      items
+    ),
+    items
+  );
+}
+
+function getUniqueDraftResourceItems(draft: SolicitationDraft) {
+  const resources = [
+    ...draft.maquinasSelecionadas.map((item) => item.resource),
+    ...draft.ferramentasSelecionadas.map((item) => item.resource),
+  ];
+  const resourcesById = new Map(
+    resources.map((resource) => [resource.id, resource])
+  );
+
+  return [...resourcesById.values()];
+}
+
+async function validateDraftHasNoArchivedResources(
+  draft: SolicitationDraft
+): Promise<void> {
+  const resources = getUniqueDraftResourceItems(draft);
+
+  if (resources.length === 0) {
+    return;
+  }
+
+  const snapshots = await Promise.all(
+    resources.map((resource) =>
+      getDoc(doc(db, RESOURCE_COLLECTION_NAME, resource.id))
+    )
+  );
+  const archivedResources = resources.filter((resource, index) => {
+    const snapshot = snapshots[index];
+
+    return snapshot?.exists()
+      ? isArchivedResource(snapshot.data())
+      : isArchivedResource(resource);
+  });
+
+  if (archivedResources.length > 0) {
+    throwArchivedResourcesError(
+      archivedResources.map((resource) => resource.nome)
+    );
+  }
 }
 
 function getToolReferences(tools: SolicitationTool[]) {
@@ -350,7 +404,10 @@ function calculateToolPeriodAvailability(
   excludedSolicitationId?: string
 ): ToolPeriodAvailability {
   const totalQuantity = getToolCapacity(resourceData);
-  if (resourceData.status === "MANUTENCAO") {
+  if (
+    resourceData.status === "MANUTENCAO" ||
+    isArchivedResource(resourceData)
+  ) {
     return {
       resourceId,
       totalQuantity,
@@ -459,6 +516,7 @@ export async function getMachinesAvailabilityForPeriod(
           available:
             machineData !== null &&
             machineData.status !== "MANUTENCAO" &&
+            !isArchivedResource(machineData) &&
             !allocatedMachineIds.has(machine.id) &&
             (!reservedSolicitationId ||
               reservedSolicitationId === excludedSolicitationId),
@@ -591,6 +649,8 @@ export async function createSolicitation(
       "Adicione pelo menos uma máquina ou ferramenta antes de enviar."
     );
   }
+
+  await validateDraftHasNoArchivedResources(draft);
 
   await Promise.all([
     validateDraftMachineAvailability(draft),
@@ -921,6 +981,27 @@ export async function updateApprovedSolicitation(
         { resource, quantidade },
       ])
     );
+    const desiredResources = getUniqueDraftResourceItems(draft);
+    const desiredResourceSnapshots = await Promise.all(
+      desiredResources.map((resource) =>
+        transaction.get(doc(db, RESOURCE_COLLECTION_NAME, resource.id))
+      )
+    );
+    const archivedDesiredResources = desiredResources.filter(
+      (resource, index) => {
+        const snapshot = desiredResourceSnapshots[index];
+
+        return snapshot?.exists()
+          ? isArchivedResource(snapshot.data())
+          : isArchivedResource(resource);
+      }
+    );
+
+    if (archivedDesiredResources.length > 0) {
+      throwArchivedResourcesError(
+        archivedDesiredResources.map((resource) => resource.nome)
+      );
+    }
 
     const retainedMachines = solicitation.maquinas.filter((machine) =>
       desiredMachines.has(machine.recursoId)
@@ -1027,10 +1108,13 @@ export async function updateApprovedSolicitation(
 
     addedMachines.forEach((machine) => {
       const snapshot = resourcesById.get(machine.recursoId);
+      const resourceData = snapshot?.data();
       const reservedBy = snapshot?.data()?.reservas?.[reservationKey];
 
       if (
         !snapshot?.exists() ||
+        resourceData?.status === "MANUTENCAO" ||
+        isArchivedResource(resourceData) ||
         allocatedMachineIds.has(machine.recursoId) ||
         (reservedBy && reservedBy !== solicitation.id)
       ) {
@@ -1302,12 +1386,15 @@ export async function decideSolicitationChangeItem(
         );
       }
 
-      if (resourceSnapshot.data().status === "MANUTENCAO") {
+      if (
+        resourceSnapshot.data().status === "MANUTENCAO" ||
+        isArchivedResource(resourceSnapshot.data())
+      ) {
         throw new SolicitationBusinessError(
           itemType === "MAQUINA"
             ? "MACHINE_CONFLICT"
             : "INSUFFICIENT_STOCK",
-          `${item.nome} está em manutenção e não pode ser aprovado.`,
+          `${item.nome} não está disponível e não pode ser aprovado.`,
           [item.nome]
         );
       }
@@ -1612,9 +1699,12 @@ export async function approveSolicitation(
         return;
       }
 
-      if (reservationSnapshot.data().status === "MANUTENCAO") {
+      if (
+        reservationSnapshot.data().status === "MANUTENCAO" ||
+        isArchivedResource(reservationSnapshot.data())
+      ) {
         conflictingMachineNames.add(
-          `${reservation.machine.nome} (em manutenção)`
+          `${reservation.machine.nome} (indisponível)`
         );
         return;
       }
@@ -1655,8 +1745,11 @@ export async function approveSolicitation(
         return;
       }
 
-      if (toolSnapshot.data().status === "MANUTENCAO") {
-        unavailableTools.push(`${requestedTool.nome} (em manutenção)`);
+      if (
+        toolSnapshot.data().status === "MANUTENCAO" ||
+        isArchivedResource(toolSnapshot.data())
+      ) {
+        unavailableTools.push(`${requestedTool.nome} (indisponível)`);
         return;
       }
 

@@ -66,6 +66,11 @@ export const styles = StyleSheet.create({
     gap: 8,
   },
 
+  addButtonDisabled: {
+    backgroundColor: colors.border,
+    opacity: 0.7,
+  },
+
   addButtonText: {
     fontSize: 14,
     fontFamily: typography.fontFamily.semiBold,

@@ -19,6 +19,7 @@ import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoSt
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { listResources } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
+import { isArchivedResource } from "../../../utils/resourceStatus";
 import {
   getToolsAvailabilityForPeriod,
   ToolPeriodAvailability,
@@ -31,6 +32,12 @@ type Props = NativeStackScreenProps<
   NovaSolicitacaoStackParamList,
   "SelectTools"
 >;
+
+function mergeResourcesById(resources: Resource[]) {
+  return [
+    ...new Map(resources.map((resource) => [resource.id, resource])).values(),
+  ];
+}
 
 export function SelectToolsScreen({ navigation }: Props) {
   const {
@@ -52,10 +59,23 @@ export function SelectToolsScreen({ navigation }: Props) {
     try {
       setLoading(true);
 
-      const data = await listResources();
-      const loadedTools = data.filter(
-        (item) => item.tipo === "FERRAMENTA"
+      const data = await listResources({ includeArchived: true });
+      const currentResourcesById = new Map(
+        data.map((resource) => [resource.id, resource])
       );
+      const selectedTools = draft.ferramentasSelecionadas
+        .map(
+          (item) =>
+            currentResourcesById.get(item.resource.id) ?? item.resource
+        )
+        .filter((item) => item.tipo === "FERRAMENTA");
+      const loadedTools = mergeResourcesById([
+        ...data.filter(
+          (item) =>
+            item.tipo === "FERRAMENTA" && !isArchivedResource(item)
+        ),
+        ...selectedTools,
+      ]);
       const availability = draft.turno
         ? await getToolsAvailabilityForPeriod(
             loadedTools,
@@ -77,18 +97,40 @@ export function SelectToolsScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       loadTools();
-    }, [draft.dataUtilizacao, draft.turno, editingSolicitation?.id])
+    }, [
+      draft.dataUtilizacao,
+      draft.ferramentasSelecionadas,
+      draft.turno,
+      editingSolicitation?.id,
+    ])
   );
 
   const filteredTools = useMemo(() => {
+    const selectableTools = tools.filter(
+      (tool) => !isArchivedResource(tool) || !!getSelectedTool(tool.id)
+    );
+    const selectedArchivedTools = draft.ferramentasSelecionadas
+      .map(
+        (item) =>
+          selectableTools.find((tool) => tool.id === item.resource.id) ??
+          item.resource
+      )
+      .filter(
+        (tool) =>
+          tool.tipo === "FERRAMENTA" && isArchivedResource(tool)
+      );
+
     if (!search.trim()) {
-      return [];
+      return selectedArchivedTools;
     }
 
-    return tools.filter((tool) =>
-      tool.nome.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [tools, search]);
+    return mergeResourcesById([
+      ...selectedArchivedTools,
+      ...selectableTools.filter((tool) =>
+        tool.nome.toLowerCase().includes(search.toLowerCase())
+      ),
+    ]);
+  }, [draft.ferramentasSelecionadas, tools, search]);
 
   function getSelectedTool(resourceId: string) {
     return draft.ferramentasSelecionadas.find(
@@ -97,6 +139,14 @@ export function SelectToolsScreen({ navigation }: Props) {
   }
 
   function handleAddTool(tool: Resource) {
+    if (isArchivedResource(tool)) {
+      Alert.alert(
+        "Recurso arquivado",
+        "Este recurso foi arquivado e não pode ser adicionado. Remova-o do rascunho para continuar."
+      );
+      return;
+    }
+
     const availableQuantity =
       availabilityByToolId[tool.id]?.availableQuantity ?? 0;
 
@@ -147,7 +197,7 @@ export function SelectToolsScreen({ navigation }: Props) {
           style={styles.searchInput}
         />
 
-        {!search.trim() ? (
+        {!search.trim() && filteredTools.length === 0 ? (
           <AppCard>
             <EmptyState
               icon="search"
@@ -172,10 +222,13 @@ export function SelectToolsScreen({ navigation }: Props) {
             renderItem={({ item }) => {
               const selectedTool = getSelectedTool(item.id);
               const selectedQuantity = selectedTool?.quantidade ?? 0;
+              const archived = isArchivedResource(item);
               const availableQuantity =
-                availabilityByToolId[item.id]?.availableQuantity ?? 0;
+                archived
+                  ? 0
+                  : availabilityByToolId[item.id]?.availableQuantity ?? 0;
               const exceedsAvailability =
-                selectedQuantity > availableQuantity;
+                archived || selectedQuantity > availableQuantity;
 
               return (
                 <AppCard style={styles.toolCard}>
@@ -196,18 +249,24 @@ export function SelectToolsScreen({ navigation }: Props) {
                             styles.toolAvailabilityError,
                         ]}
                       >
-                        Disponível no período: {availableQuantity}
+                        {archived
+                          ? "Recurso arquivado. Remova este item."
+                          : `Disponível no período: ${availableQuantity}`}
                       </Text>
                     </View>
 
                     {selectedTool ? (
                       <AppQuantityStepper
                         value={selectedQuantity}
-                        min={1}
-                        max={Math.max(
-                          availableQuantity,
-                          selectedQuantity
-                        )}
+                        min={archived ? selectedQuantity : 1}
+                        max={
+                          archived
+                            ? selectedQuantity
+                            : Math.max(
+                                availableQuantity,
+                                selectedQuantity
+                              )
+                        }
                         onChange={(value) =>
                           updateToolQuantity(item.id, value)
                         }
@@ -215,7 +274,11 @@ export function SelectToolsScreen({ navigation }: Props) {
                       />
                     ) : (
                       <TouchableOpacity
-                        style={styles.addButton}
+                        style={[
+                          styles.addButton,
+                          archived && styles.addButtonDisabled,
+                        ]}
+                        disabled={archived}
                         onPress={() => handleAddTool(item)}
                       >
                         <Feather
