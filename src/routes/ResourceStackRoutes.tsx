@@ -46,7 +46,7 @@ export function ResourceStackRoutes() {
       <Stack.Screen 
         name="ArchivedResourcesList" 
         component={ArchivedResourcesScreen} 
-        options={{ title: "Recursos Arquivados" }}
+        options={{ title: "Recursos arquivados" }}
       />
     </Stack.Navigator>
   );

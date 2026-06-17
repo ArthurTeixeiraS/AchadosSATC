@@ -19,7 +19,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   emptyListContent: {
-    justifyContent: "center",
+    paddingTop: 0,
   },
   emptyCard: {
     borderWidth: 1,
@@ -30,14 +30,12 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   resourceNameContainer: {
     flexDirection: "row",
     alignItems: "center",
     flexShrink: 1,
     flex: 1,
   },
-
   imageIcon: {
     marginLeft: 6,
   },
@@ -47,16 +45,13 @@ export const styles = StyleSheet.create({
     color: colors.text,
     flex: 0,
   },
-
   resourceActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-
   cardContent: {
   },
-
   resourceType: {
     fontSize: 12,
     fontFamily: typography.fontFamily.semiBold,

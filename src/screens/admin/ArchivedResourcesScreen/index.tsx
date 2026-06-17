@@ -175,7 +175,7 @@ export function ArchivedResourcesScreen() {
                 title={
                   hasActiveQuery
                     ? "Nenhum recurso encontrado"
-                    : "Arquivo vazio"
+                    : "Nenhum recurso arquivado"
                 }
                 message={
                   hasActiveQuery
