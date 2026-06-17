@@ -114,6 +114,7 @@ export function DashboardScreen() {
       screen: "ReceivedSolicitations",
       params: {
         initialStatus: "PENDENTE",
+        initialFromToday: true,
         clearFilters: true,
         resetFiltersToken: createResetFiltersToken(),
       },

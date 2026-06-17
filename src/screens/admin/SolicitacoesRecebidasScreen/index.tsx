@@ -259,12 +259,14 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
   useEffect(() => {
     const initialStatus = route.params?.initialStatus;
     const initialAnalysisPending = route.params?.initialAnalysisPending;
+    const initialFromToday = route.params?.initialFromToday;
     const clearFilters = route.params?.clearFilters;
     const resetFiltersToken = route.params?.resetFiltersToken;
 
     if (
       !initialStatus &&
       !initialAnalysisPending &&
+      initialFromToday === undefined &&
       !clearFilters &&
       !resetFiltersToken
     ) {
@@ -275,22 +277,25 @@ export function SolicitacoesRecebidasScreen({ route, navigation }: Props) {
     setActiveSort("");
     setExpandedDates([]);
     setActiveFilters(
-      initialStatus || initialAnalysisPending
+      initialStatus || initialAnalysisPending || initialFromToday !== undefined
         ? {
             ...(initialStatus ? { status: initialStatus } : {}),
             ...(initialAnalysisPending ? { analysisPending: "true" } : {}),
+            ...(initialFromToday ? { fromToday: "true" } : {}),
           }
         : defaultReceivedFilters
     );
     navigation.setParams({
       initialStatus: undefined,
       initialAnalysisPending: undefined,
+      initialFromToday: undefined,
       clearFilters: undefined,
       resetFiltersToken: undefined,
     });
   }, [
     route.params?.initialStatus,
     route.params?.initialAnalysisPending,
+    route.params?.initialFromToday,
     route.params?.clearFilters,
     route.params?.resetFiltersToken,
     navigation,
