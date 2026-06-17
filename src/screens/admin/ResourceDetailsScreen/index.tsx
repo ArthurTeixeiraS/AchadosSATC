@@ -63,6 +63,17 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
     const [blockingSolicitations, setBlockingSolicitations] = React.useState<any[]>([]);
     const [isChecking, setIsChecking] = React.useState(false);
 
+    function navigateAfterArchiveChange(
+        fallbackRoute: "ResourceList" | "ArchivedResourcesList"
+    ) {
+        if (route.params.origin === "AUDITORIA") {
+            navigation.getParent()?.navigate("Relatórios");
+            return;
+        }
+
+        navigation.navigate(fallbackRoute);
+    }
+
     useFocusEffect(
         useCallback(() => {
             async function reloadResource() {
@@ -140,7 +151,7 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                                 }
 
                                 await archiveResource(resource.id, appUser);
-                                navigation.navigate("ResourceList");
+                                navigateAfterArchiveChange("ResourceList");
                             } catch (error: any) {
                                 console.log("Erro ao arquivar recurso:", error);
                                 Alert.alert(
@@ -181,10 +192,10 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                             }
 
                             await unarchiveResource(resource.id, appUser);
-                            navigation.navigate(
+                            navigateAfterArchiveChange(
                                 route.params.origin === "ARCHIVED"
                                     ? "ArchivedResourcesList"
-                                    : "ResourceList"
+                                    : "ResourceList",
                             );
                         } catch (error: any) {
                             console.log("Erro ao desarquivar recurso:", error);
