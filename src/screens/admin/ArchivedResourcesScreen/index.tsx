@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -6,13 +6,11 @@ import {
   View,
 } from "react-native";
 import { Text } from "react-native-paper";
-import { useFocusEffect } from "@react-navigation/native";
-
-import { ScreenContainer } from "../../../components/ScreenContainer";
-import { AppCard } from "../../../components/AppCard";
-import { EmptyState } from "../../../components/EmptyState";
-import { Loading } from "../../../components/Loading";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Feather from "@expo/vector-icons/Feather";
+
+import { AppCard } from "../../../components/AppCard";
 import {
   ActiveListFilters,
   AppListFilter,
@@ -21,17 +19,16 @@ import {
   SortDefinition,
   useListFilter,
 } from "../../../components/AppListFilter";
-
+import { EmptyState } from "../../../components/EmptyState";
+import { Loading } from "../../../components/Loading";
+import { ScreenContainer } from "../../../components/ScreenContainer";
+import { useManualRefresh } from "../../../hooks/useManualRefresh";
+import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
 import { listResources } from "../../../services/resources/resourceServices";
+import { colors } from "../../../styles/colors";
 import { Resource } from "../../../types/Resources";
 
 import { styles } from "./styles";
-import { colors } from "../../../styles/colors";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ResourceStackParamList } from "../../../routes/ResourceStackRoutes";
-import { useManualRefresh } from "../../../hooks/useManualRefresh";
 
 const resourceSorts: readonly SortDefinition<Resource>[] = [
   {
@@ -66,12 +63,12 @@ export function ArchivedResourcesScreen() {
   const [search, setSearch] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveListFilters>({});
   const [activeSort, setActiveSort] = useState("name-asc");
-  const navigation = useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
-  const insets = useSafeAreaInsets();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ResourceStackParamList>>();
 
   async function fetchResources() {
     const data = await listResources({ includeArchived: true });
-    setResources(data.filter((r) => r.isArchived === true));
+    setResources(data.filter((resource) => resource.isArchived === true));
   }
 
   async function loadResources() {
@@ -121,14 +118,35 @@ export function ArchivedResourcesScreen() {
     activeSort,
     sorts: resourceSorts,
   });
+  const hasActiveQuery =
+    search.trim().length > 0 || Object.keys(activeFilters).length > 0;
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={refresh}
+      colors={[colors.primary]}
+      tintColor={colors.primary}
+    />
+  );
 
   if (loading && !refreshing) {
-    return <Loading message="Carregando arquivo..." />;
+    return <Loading message="Carregando recursos arquivados..." />;
+  }
+
+  function getTypeLabel(type: string) {
+    const labels: Record<string, string> = {
+      FERRAMENTA: "Ferramenta",
+      MAQUINA: "Máquina",
+      LABORATORIO: "Laboratório",
+    };
+
+    return labels[type] ?? type;
   }
 
   return (
     <View style={styles.container}>
-      <ScreenContainer edges={["left", "right"]} style={styles.screenContent}>
+      <ScreenContainer style={styles.screenContent}>
         <AppListFilter
           search={search}
           onSearchChange={setSearch}
@@ -139,106 +157,80 @@ export function ArchivedResourcesScreen() {
           sorts={resourceSorts}
           activeSort={activeSort}
           onSortChange={setActiveSort}
-          leftHeaderAction={
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Voltar"
-              style={{
-                height: 54,
-                width: 54,
-                borderRadius: 8,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-              onPress={() => navigation.navigate("ResourceList")}
-            >
-              <Feather name="arrow-left" size={20} color={colors.primary} />
-            </TouchableOpacity>
-          }
         />
 
-        {filteredResources.length === 0 ? (
-          <EmptyState
-            icon="archive"
-            title={
-              search.trim()
-                ? "Nenhum recurso encontrado"
-                : "Arquivo vazio"
-            }
-            message={
-              search.trim()
-                ? "Tente buscar com outros termos."
-                : "Nenhum recurso foi arquivado ainda."
-            }
-          />
-        ) : (
-          <FlatList
-            data={filteredResources}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: Math.max(insets.bottom, 24) },
-            ]}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={refresh}
-                colors={[colors.primary]}
-                tintColor={colors.primary}
-              />
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() =>
-                  navigation.navigate("ResourceDetails", {
-                    resource: item,
-                    origin: "ARCHIVED",
-                  })
+        <FlatList
+          data={filteredResources}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredResources.length === 0 && styles.emptyListContent,
+          ]}
+          refreshControl={refreshControl}
+          ListEmptyComponent={
+            <AppCard style={styles.emptyCard}>
+              <EmptyState
+                icon="archive"
+                title={
+                  hasActiveQuery
+                    ? "Nenhum recurso encontrado"
+                    : "Arquivo vazio"
                 }
-              >
-                <AppCard style={styles.resourceCard}>
-                  <View style={styles.resourceInfo}>
-                    <Text style={styles.resourceName} numberOfLines={2}>
-                      {item.nome}
-                    </Text>
-                    {item.descricao ? (
-                      <Text
-                        style={styles.resourceDescription}
-                        numberOfLines={1}
-                      >
-                        {item.descricao}
-                      </Text>
-                    ) : null}
-
-                    <View style={styles.resourceBadges}>
-                      <View style={styles.resourceTypeBadge}>
-                        <Text style={styles.resourceTypeBadgeText}>
-                          {item.tipo.toLowerCase()}
-                        </Text>
-                      </View>
-                      <View style={[styles.resourceStatusBadge, styles.resourceStatusArchived]}>
-                        <Text style={styles.resourceStatusArchivedText}>
-                          arquivado
-                        </Text>
-                      </View>
-                    </View>
+                message={
+                  hasActiveQuery
+                    ? "Tente alterar a busca ou os filtros aplicados."
+                    : "Nenhum recurso foi arquivado ainda."
+                }
+              />
+            </AppCard>
+          }
+          renderItem={({ item }) => (
+            <AppCard>
+              <View style={styles.cardContent}>
+                <View style={styles.resourceHeader}>
+                  <View style={styles.resourceNameContainer}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate("ResourceDetails", {
+                          resource: item,
+                          origin: "ARCHIVED",
+                        })
+                      }
+                    >
+                      <Text style={styles.resourceName}>{item.nome}</Text>
+                    </TouchableOpacity>
+                    {!!item.imagemUrl && (
+                      <Feather
+                        name="image"
+                        size={16}
+                        color={colors.primary}
+                        style={styles.imageIcon}
+                      />
+                    )}
                   </View>
 
-                  <Feather
-                    name="chevron-right"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </AppCard>
-              </TouchableOpacity>
-            )}
-          />
-        )}
+                  <View style={styles.resourceActions}>
+                    <Text style={styles.resourceType}>
+                      {getTypeLabel(item.tipo)}
+                    </Text>
+                  </View>
+                </View>
+
+                {item.descricao && (
+                  <Text style={styles.resourceDescription}>
+                    {item.descricao}
+                  </Text>
+                )}
+
+                <Text style={styles.resourceStatus}>
+                  Status:{" "}
+                  <Text style={styles.archivedStatus}>Arquivado</Text>
+                </Text>
+              </View>
+            </AppCard>
+          )}
+        />
       </ScreenContainer>
     </View>
   );

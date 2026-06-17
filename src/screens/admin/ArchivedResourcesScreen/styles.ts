@@ -15,62 +15,67 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
   },
   listContent: {
-    gap: 12,
+    flexGrow: 1,
+    paddingBottom: 24,
   },
-  resourceCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
+  emptyListContent: {
+    justifyContent: "center",
+  },
+  emptyCard: {
     borderWidth: 1,
     borderColor: colors.border,
   },
-  resourceInfo: {
+  resourceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  resourceNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
     flex: 1,
-    marginRight: 16,
+  },
+
+  imageIcon: {
+    marginLeft: 6,
   },
   resourceName: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: typography.fontFamily.semiBold,
     color: colors.text,
-    marginBottom: 4,
+    flex: 0,
+  },
+
+  resourceActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  cardContent: {
+  },
+
+  resourceType: {
+    fontSize: 12,
+    fontFamily: typography.fontFamily.semiBold,
+    color: colors.primary,
+    textAlign: "right",
   },
   resourceDescription: {
+    marginTop: 8,
     fontSize: 14,
     fontFamily: typography.fontFamily.regular,
     color: colors.textSecondary,
-    marginBottom: 8,
   },
-  resourceBadges: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  resourceTypeBadge: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  resourceTypeBadgeText: {
-    fontSize: 12,
+  resourceStatus: {
+    marginTop: 12,
+    fontSize: 13,
     fontFamily: typography.fontFamily.medium,
-    color: colors.textSecondary,
-    textTransform: "capitalize",
+    color: colors.secondary,
   },
-  resourceStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  resourceStatusArchived: {
-    backgroundColor: colors.error + "20", // 20% opacity
-  },
-  resourceStatusArchivedText: {
-    fontSize: 12,
-    fontFamily: typography.fontFamily.semiBold,
+  archivedStatus: {
     color: colors.error,
-    textTransform: "uppercase",
   },
 });

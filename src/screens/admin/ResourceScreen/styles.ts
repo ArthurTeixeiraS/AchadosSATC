@@ -49,17 +49,6 @@ export const styles = StyleSheet.create({
   cardContent: {
   },
 
-  editButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-
   resourceType: {
     fontSize: 12,
     fontFamily: typography.fontFamily.semiBold,
@@ -105,47 +94,5 @@ export const styles = StyleSheet.create({
     right: 16,
     backgroundColor: colors.primary,
     borderRadius: 999,
-  },
-
-  menuOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-
-  menuBox: {
-    position: "absolute",
-    right: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    minWidth: 140,
-    overflow: "hidden",
-  },
-
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-
-  menuItemText: {
-    fontSize: 14,
-    color: colors.text,
-  },
-
-  menuDivider: {
-    height: 1,
-    backgroundColor: colors.border,
   },
 });

@@ -268,6 +268,11 @@ export function AdminRoutes() {
               subtitle: "Atualize os dados cadastrados",
               showMenu: false,
             },
+            ArchivedResourcesList: {
+              title: "Recursos arquivados",
+              subtitle: "Itens fora da listagem principal",
+              showMenu: false,
+            },
           }[routeName] ?? {
             title: "Recursos",
             subtitle: "Gerencie os recursos",
@@ -292,6 +297,13 @@ export function AdminRoutes() {
                 ) {
                   navigation.navigate("Recursos", {
                     screen: "ArchivedResourcesList",
+                  });
+                  return;
+                }
+
+                if (routeName === "ArchivedResourcesList") {
+                  navigation.navigate("Recursos", {
+                    screen: "ResourceList",
                   });
                   return;
                 }
