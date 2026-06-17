@@ -245,6 +245,30 @@ export function AdminRoutes() {
             activeRoute?.name ??
             getFocusedRouteNameFromRoute(route) ??
             "ResourceList";
+          const getCurrentResourceRoute = () => {
+            const drawerState = navigation.getState();
+            const recursosRoute = drawerState.routes.find(
+              (drawerRoute) => drawerRoute.name === "Recursos"
+            ) as
+              | {
+                  state?: {
+                    index?: number;
+                    routes?: Array<{
+                      name: string;
+                      params?: unknown;
+                    }>;
+                  };
+                }
+              | undefined;
+            const resourceState = recursosRoute?.state;
+            const currentRoute =
+              resourceState?.routes?.[resourceState.index ?? 0];
+
+            return {
+              name: currentRoute?.name ?? routeName,
+              params: currentRoute?.params ?? activeRoute?.params,
+            };
+          };
           const screenConfig = {
             ResourceList: {
               title: "Recursos",
@@ -283,17 +307,25 @@ export function AdminRoutes() {
             ...getDrawerHeaderOptions(navigation, {
               ...screenConfig,
               onBack: () => {
+                const currentRoute = getCurrentResourceRoute();
+                const currentRouteName = currentRoute.name;
+                const currentParams = currentRoute.params as
+                  | (ResourceStackParamList["EditResource"] &
+                      ResourceStackParamList["CreateResource"] &
+                      ResourceStackParamList["ResourceDetails"])
+                  | undefined;
+
                 if (
-                  routeName === "ResourceDetails" &&
-                  activeRoute?.params?.origin === "AUDITORIA"
+                  currentRouteName === "ResourceDetails" &&
+                  currentParams?.origin === "AUDITORIA"
                 ) {
                   navigation.navigate("Relatórios");
                   return;
                 }
 
                 if (
-                  routeName === "ResourceDetails" &&
-                  activeRoute?.params?.origin === "ARCHIVED"
+                  currentRouteName === "ResourceDetails" &&
+                  currentParams?.origin === "ARCHIVED"
                 ) {
                   navigation.navigate("Recursos", {
                     screen: "ArchivedResourcesList",
@@ -301,7 +333,7 @@ export function AdminRoutes() {
                   return;
                 }
 
-                if (routeName === "ArchivedResourcesList") {
+                if (currentRouteName === "ArchivedResourcesList") {
                   navigation.navigate("Recursos", {
                     screen: "ResourceList",
                   });
@@ -309,29 +341,29 @@ export function AdminRoutes() {
                 }
 
                 if (
-                  routeName === "EditResource" &&
-                  activeRoute?.params?.resource
+                  currentRouteName === "EditResource" &&
+                  currentParams?.resource
                 ) {
                   navigation.navigate("Recursos", {
                     screen: "ResourceDetails",
                     params: {
-                      resource: activeRoute.params.resource,
-                      origin: activeRoute.params.returnOrigin,
+                      resource: currentParams.resource,
+                      origin: currentParams.returnOrigin,
                     },
                   });
                   return;
                 }
 
                 if (
-                  routeName === "CreateResource" &&
-                  activeRoute?.params?.duplicateFrom &&
-                  activeRoute.params.duplicateOrigin === "DETAILS"
+                  currentRouteName === "CreateResource" &&
+                  currentParams?.duplicateFrom &&
+                  currentParams.duplicateOrigin === "DETAILS"
                 ) {
                   navigation.navigate("Recursos", {
                     screen: "ResourceDetails",
                     params: {
-                      resource: activeRoute.params.duplicateFrom,
-                      origin: activeRoute.params.returnOrigin,
+                      resource: currentParams.duplicateFrom,
+                      origin: currentParams.returnOrigin,
                     },
                   });
                   return;
