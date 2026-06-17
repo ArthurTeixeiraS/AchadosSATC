@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { AppAlert } from "../../../components/AppAlert";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { useManualRefresh } from "../../../hooks/useManualRefresh";
 import {
   getProfessorHomeData,
@@ -23,6 +24,7 @@ import { styles } from "./styles";
 
 export function ProfessorHomeScreen() {
   const { appUser } = useAuth();
+  const { clearDraft } = useSolicitationDraft();
   const navigation = useNavigation<any>();
 
   const primeiroNome = appUser?.nomeCompleto?.split(" ")[0] ?? "Professor";
@@ -83,6 +85,7 @@ export function ProfessorHomeScreen() {
   }
 
   function irParaNovaSolicitacao() {
+    clearDraft();
     navigation.navigate("Nova Solicitação");
   }
 

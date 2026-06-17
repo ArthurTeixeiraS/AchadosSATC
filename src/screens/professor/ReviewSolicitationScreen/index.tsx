@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import { FirebaseError } from "firebase/app";
 
 import { ScreenContainer } from "../../../components/ScreenContainer";
@@ -11,6 +12,7 @@ import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { EmptyState } from "../../../components/EmptyState";
 
 import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoStackRoutes";
+import type { ProfessorDrawerParamList } from "../../../routes/ProfessorRoutes";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 
 import { Resource } from "../../../types/Resources";
@@ -41,7 +43,13 @@ function getShiftLabel(turno: string) {
 }
 
 export function ReviewSolicitationScreen({ navigation }: Props) {
-    const { draft, editingSolicitation, clearDraft } =
+    const {
+        draft,
+        editingSolicitation,
+        flowMode,
+        sourceSolicitationId,
+        clearDraft,
+    } =
         useSolicitationDraft();
     const [laboratories, setLaboratories] = useState<Resource[]>([]);
     const [loading, setLoading] = useState(false);
@@ -74,6 +82,44 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
         loadLaboratories();
     }, [laboratoryIds]);
 
+    function navigateToProfessorHome() {
+        navigation
+            .getParent<DrawerNavigationProp<ProfessorDrawerParamList>>()
+            ?.navigate("Home");
+    }
+
+    function navigateToSolicitationDetails(solicitationId: string) {
+        navigation
+            .getParent<DrawerNavigationProp<ProfessorDrawerParamList>>()
+            ?.navigate("Minhas Solicitações", {
+                screen: "ProfessorSolicitationDetails",
+                params: { solicitationId },
+            });
+    }
+
+    function navigateToSolicitationList() {
+        navigation
+            .getParent<DrawerNavigationProp<ProfessorDrawerParamList>>()
+            ?.navigate("Minhas Solicitações", {
+                screen: "MinhasSolicitacoesList",
+            });
+    }
+
+    function abandonFlow() {
+        const targetMode = flowMode;
+        const targetSolicitationId =
+            sourceSolicitationId ?? editingSolicitation?.id;
+
+        clearDraft();
+
+        if (targetMode === "CREATE" || !targetSolicitationId) {
+            navigateToProfessorHome();
+            return;
+        }
+
+        navigateToSolicitationDetails(targetSolicitationId);
+    }
+
     function handleCancel() {
         Alert.alert(
             editingSolicitation ? "Cancelar edição" : "Cancelar solicitação",
@@ -87,10 +133,7 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                         ? "Cancelar edição"
                         : "Cancelar solicitação",
                     style: "destructive",
-                    onPress: () => {
-                        clearDraft();
-                        navigation.navigate("SolicitationInfo");
-                    },
+                    onPress: abandonFlow,
                 },
             ]
         );
@@ -140,12 +183,16 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                     {
                         text: "OK",
                         onPress: () => {
+                            const targetSolicitationId =
+                                sourceSolicitationId ?? editingSolicitation?.id;
+
                             clearDraft();
-                            navigation
-                                .getParent()
-                                ?.navigate("Minhas Solicitações", {
-                                    screen: "MinhasSolicitacoesList",
-                                });
+                            if (editingSolicitation && targetSolicitationId) {
+                                navigateToSolicitationDetails(targetSolicitationId);
+                                return;
+                            }
+
+                            navigateToSolicitationList();
                         },
                     },
                 ]

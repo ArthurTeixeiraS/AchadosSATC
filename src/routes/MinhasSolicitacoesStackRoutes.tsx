@@ -13,6 +13,7 @@ export type MinhasSolicitacoesStackParamList = {
     | undefined;
   ProfessorSolicitationDetails: {
     solicitationId: string;
+    origin?: "NOTIFICACOES";
   };
 };
 

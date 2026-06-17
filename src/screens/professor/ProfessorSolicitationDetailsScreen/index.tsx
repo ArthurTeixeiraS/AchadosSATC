@@ -274,7 +274,10 @@ export function ProfessorSolicitationDetailsScreen({
         ferramentasSelecionadas: selectedTools,
       };
 
-      replaceDraft(duplicatedDraft);
+      replaceDraft(duplicatedDraft, {
+        flowMode: "DUPLICATE",
+        sourceSolicitationId: solicitation.id,
+      });
 
       const drawerNavigation =
         navigation.getParent<DrawerNavigationProp<ProfessorDrawerParamList>>();

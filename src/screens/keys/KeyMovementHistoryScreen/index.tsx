@@ -261,7 +261,11 @@ export function KeyMovementHistoryScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() =>
-                navigation.navigate("KeyDetails", { keyId: item.chaveId })
+                navigation.navigate("KeyDetails", {
+                  keyId: item.chaveId,
+                  origin: "HISTORY",
+                  originKeyId: keyId,
+                })
               }
             >
               <View style={styles.movementCard}>

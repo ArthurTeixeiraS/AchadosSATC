@@ -17,7 +17,7 @@ export type FuncionarioSolicitacaoStackParamList = {
     | undefined;
   FuncionarioSolicitationDetails: {
     solicitationId: string;
-    origin?: "CONSULTAS" | "AUDITORIA";
+    origin?: "CONSULTAS" | "AUDITORIA" | "NOTIFICACOES";
   };
   RegisterSolicitationReturn: {
     solicitationId: string;

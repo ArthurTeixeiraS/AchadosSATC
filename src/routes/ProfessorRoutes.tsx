@@ -10,7 +10,10 @@ import { ProfessorHomeScreen } from "../screens/professor/ProfessorHomeScreen/Pr
 import { NotificationsScreen } from "../screens/shared/NotificationsScreen";
 import { AppDrawerContent } from "../components/AppDrawerContent";
 import { NotificationDrawerLabel } from "../components/NotificationDrawerLabel";
-import { SolicitationDraftProvider } from "../contexts/SolicitationDraftContext";
+import {
+  SolicitationDraftProvider,
+  useSolicitationDraft,
+} from "../contexts/SolicitationDraftContext";
 import {
   MinhasSolicitacoesStackParamList,
   MinhasSolicitacoesStackRoutes,
@@ -47,6 +50,20 @@ function NovaSolicitacaoFlow() {
 }
 
 function ProfessorDrawerRoutes() {
+  const { clearDraft, flowMode, sourceSolicitationId } = useSolicitationDraft();
+
+  function navigateToSourceSolicitation(navigation: any) {
+    if (!sourceSolicitationId) {
+      navigation.navigate("Home");
+      return;
+    }
+
+    navigation.navigate("Minhas Solicitações", {
+      screen: "ProfessorSolicitationDetails",
+      params: { solicitationId: sourceSolicitationId },
+    });
+  }
+
   return (
     <Drawer.Navigator
       drawerContent={(props) => <AppDrawerContent {...props} />}
@@ -88,11 +105,22 @@ function ProfessorDrawerRoutes() {
       <Drawer.Screen
         name="Nova Solicitação"
         component={NovaSolicitacaoFlow}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            clearDraft();
+            navigation.navigate("Nova Solicitação", {
+              screen: "SolicitationInfo",
+            });
+          },
+        })}
         options={({ navigation, route }) => {
           const routeName =
             getFocusedRouteNameFromRoute(route) ?? "SolicitationInfo";
+          const flowTitle =
+            flowMode === "EDIT" ? "Editar solicitação" : "Nova solicitação";
 
-          const config = {
+          const baseConfig = {
             SolicitationInfo: {
               title: "Nova solicitação",
               subtitle: "Etapa 1 de 4 · Informações básicas",
@@ -128,6 +156,22 @@ function ProfessorDrawerRoutes() {
             onBack: () => navigation.navigate("Home"),
           };
 
+          const config =
+            routeName === "SolicitationInfo"
+              ? {
+                  ...baseConfig,
+                  title: flowTitle,
+                  showMenu: flowMode === "CREATE",
+                  onBack:
+                    flowMode === "CREATE"
+                      ? undefined
+                      : () => navigateToSourceSolicitation(navigation),
+                }
+              : {
+                  ...baseConfig,
+                  title: flowTitle,
+                };
+
           return {
             ...getDrawerHeaderOptions(navigation, {
               ...config,
@@ -148,6 +192,19 @@ function ProfessorDrawerRoutes() {
           const routeName =
             getFocusedRouteNameFromRoute(route) ?? "MinhasSolicitacoesList";
           const isDetails = routeName === "ProfessorSolicitationDetails";
+          const nestedState = (
+            route as typeof route & {
+              state?: {
+                index?: number;
+                routes?: Array<{
+                  name: string;
+                  params?: MinhasSolicitacoesStackParamList["ProfessorSolicitationDetails"];
+                }>;
+              };
+            }
+          ).state;
+          const activeRoute =
+            nestedState?.routes?.[nestedState.index ?? 0];
 
           return {
             ...getDrawerHeaderOptions(navigation, {
@@ -158,10 +215,19 @@ function ProfessorDrawerRoutes() {
                 ? "Acompanhe os recursos solicitados"
                 : "Acompanhe seus pedidos",
               showMenu: !isDetails,
-              onBack: () =>
+              onBack: () => {
+                if (
+                  isDetails &&
+                  activeRoute?.params?.origin === "NOTIFICACOES"
+                ) {
+                  navigation.navigate("Notificações");
+                  return;
+                }
+
                 navigation.navigate("Minhas Solicitações", {
                   screen: "MinhasSolicitacoesList",
-                }),
+                });
+              },
             }),
             drawerIcon: ({ color, size }) => (
               <Feather name="file-text" size={size} color={color} />

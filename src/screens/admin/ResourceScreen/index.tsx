@@ -528,7 +528,7 @@ export function ResourceScreen() {
               justifyContent: "center",
               alignItems: "center",
             }}
-            onPress={() => navigation.navigate("ArchivedResourcesList" as any)}
+            onPress={() => navigation.navigate("ArchivedResourcesList")}
           >
             <Feather name="archive" size={20} color={colors.primary} />
           </TouchableOpacity>

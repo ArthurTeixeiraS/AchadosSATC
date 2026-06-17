@@ -88,6 +88,7 @@ export function EditResourceScreen({ route, navigation }: Props) {
                             onPress: () =>
                                 navigation.navigate("ResourceDetails", {
                                     resource,
+                                    origin: route.params.returnOrigin,
                                 }),
                         },
                     ]
@@ -210,6 +211,7 @@ export function EditResourceScreen({ route, navigation }: Props) {
 
             navigation.navigate("ResourceDetails", {
                 resource,
+                origin: route.params.returnOrigin,
             });
         } catch (error) {
             console.error("Erro ao editar recurso:", error);
