@@ -1,12 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
-  Modal,
-  Pressable,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { Text } from "react-native-paper";
@@ -91,80 +88,6 @@ function searchResource(item: Resource, search: string) {
     item.patrimonio,
     item.localizacao,
   ].some((value) => normalizeFilterText(value).includes(search));
-}
-
-// Componente separado pra cada botao de menu, assim o useRef funciona certo
-function ResourceMenuButton({ item, navigation }: {
-  item: Resource;
-  navigation: NativeStackNavigationProp<ResourceStackParamList>;
-}) {
-  const buttonRef =
-    useRef<React.ElementRef<typeof TouchableOpacity>>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuTop, setMenuTop] = useState(0);
-  const { height: windowHeight } = useWindowDimensions();
-
-  function handleOpenMenu() {
-    buttonRef.current?.measureInWindow((_x, y, _width, height) => {
-      const menuHeight = 98;
-      const spacing = 4;
-      const topBelow = y + height + spacing;
-      const top = topBelow + menuHeight <= windowHeight
-        ? topBelow
-        : Math.max(8, y - menuHeight - spacing);
-
-      setMenuTop(top);
-      setMenuOpen(true);
-    });
-  }
-
-  return (
-    <View>
-      <TouchableOpacity ref={buttonRef} onPress={handleOpenMenu}>
-        <View style={styles.editButton}>
-          <Feather name="more-vertical" size={16} color={colors.primary} />
-        </View>
-      </TouchableOpacity>
-
-      {menuOpen && (
-        <Modal
-          transparent
-          animationType="fade"
-          onRequestClose={() => setMenuOpen(false)}
-        >
-          <Pressable
-            style={styles.menuOverlay}
-            onPress={() => setMenuOpen(false)}
-          />
-          <View style={[styles.menuBox, { top: menuTop }]}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuOpen(false);
-                navigation.navigate("EditResource", { resource: item });
-              }}
-            >
-              <Feather name="edit-2" size={14} color={colors.text} />
-              <Text style={styles.menuItemText}>Editar</Text>
-            </TouchableOpacity>
-
-            <View style={styles.menuDivider} />
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuOpen(false);
-                navigation.navigate("CreateResource", { duplicateFrom: item });
-              }}
-            >
-              <Feather name="copy" size={14} color={colors.text} />
-              <Text style={styles.menuItemText}>Copiar</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      )}
-    </View>
-  );
 }
 
 export function ResourceScreen() {
@@ -628,7 +551,6 @@ export function ResourceScreen() {
 
                   <View style={styles.resourceActions}>
                     <Text style={styles.resourceType}>{getTypeLabel(item.tipo)}</Text>
-                    <ResourceMenuButton item={item} navigation={navigation} />
                   </View>
                 </View>
 
