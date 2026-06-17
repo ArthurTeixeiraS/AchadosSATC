@@ -192,6 +192,19 @@ function ProfessorDrawerRoutes() {
           const routeName =
             getFocusedRouteNameFromRoute(route) ?? "MinhasSolicitacoesList";
           const isDetails = routeName === "ProfessorSolicitationDetails";
+          const nestedState = (
+            route as typeof route & {
+              state?: {
+                index?: number;
+                routes?: Array<{
+                  name: string;
+                  params?: MinhasSolicitacoesStackParamList["ProfessorSolicitationDetails"];
+                }>;
+              };
+            }
+          ).state;
+          const activeRoute =
+            nestedState?.routes?.[nestedState.index ?? 0];
 
           return {
             ...getDrawerHeaderOptions(navigation, {
@@ -202,10 +215,19 @@ function ProfessorDrawerRoutes() {
                 ? "Acompanhe os recursos solicitados"
                 : "Acompanhe seus pedidos",
               showMenu: !isDetails,
-              onBack: () =>
+              onBack: () => {
+                if (
+                  isDetails &&
+                  activeRoute?.params?.origin === "NOTIFICACOES"
+                ) {
+                  navigation.navigate("Notificações");
+                  return;
+                }
+
                 navigation.navigate("Minhas Solicitações", {
                   screen: "MinhasSolicitacoesList",
-                }),
+                });
+              },
             }),
             drawerIcon: ({ color, size }) => (
               <Feather name="file-text" size={size} color={color} />

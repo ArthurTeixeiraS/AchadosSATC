@@ -119,7 +119,7 @@ export function AdminRoutes() {
                         name: string;
                         params?: {
                           solicitationId?: string;
-                          origin?: "CONSULTAS" | "AUDITORIA";
+                          origin?: "CONSULTAS" | "AUDITORIA" | "NOTIFICACOES";
                         };
                       }>;
                     };
@@ -155,6 +155,14 @@ export function AdminRoutes() {
                   activeRoute?.params?.origin === "AUDITORIA"
                 ) {
                   navigation.navigate("Relatórios");
+                  return;
+                }
+
+                if (
+                  isDetails &&
+                  activeRoute?.params?.origin === "NOTIFICACOES"
+                ) {
+                  navigation.navigate("Notificações");
                   return;
                 }
 
@@ -263,6 +271,7 @@ export function AdminRoutes() {
                     screen: "ResourceDetails",
                     params: {
                       resource: activeRoute.params.resource,
+                      origin: activeRoute.params.returnOrigin,
                     },
                   });
                   return;
@@ -277,6 +286,7 @@ export function AdminRoutes() {
                     screen: "ResourceDetails",
                     params: {
                       resource: activeRoute.params.duplicateFrom,
+                      origin: activeRoute.params.returnOrigin,
                     },
                   });
                   return;
@@ -391,7 +401,7 @@ export function AdminRoutes() {
               index?: number;
               routes?: Array<{
                 name: string;
-                params?: { keyId?: string };
+                params?: KeyStackParamList[keyof KeyStackParamList];
               }>;
             };
           }).state;
@@ -446,6 +456,21 @@ export function AdminRoutes() {
             ...getDrawerHeaderOptions(navigation, {
               ...screenConfig,
               onBack: () => {
+                if (
+                  routeName === "KeyDetails" &&
+                  activeRoute?.params &&
+                  "origin" in activeRoute.params &&
+                  activeRoute.params.origin === "HISTORY"
+                ) {
+                  navigation.navigate("Chaves", {
+                    screen: "KeyMovementHistory",
+                    params: activeRoute.params.originKeyId
+                      ? { keyId: activeRoute.params.originKeyId }
+                      : undefined,
+                  });
+                  return;
+                }
+
                 if (isEdit && activeRoute?.params?.keyId) {
                   navigation.navigate("Chaves", {
                     screen: "KeyDetails",

@@ -87,6 +87,7 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
           screen: "FuncionarioSolicitationDetails",
           params: {
             solicitationId: solicitation.id,
+            origin: "NOTIFICACOES",
           },
         });
         return;
@@ -96,6 +97,7 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
         screen: "ProfessorSolicitationDetails",
         params: {
           solicitationId: solicitation.id,
+          origin: "NOTIFICACOES",
         },
       });
     } catch (notificationError) {

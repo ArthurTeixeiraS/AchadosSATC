@@ -12,7 +12,11 @@ import { colors } from "../styles/colors";
 export type KeyStackParamList = {
   KeyList: undefined;
   CreateKey: undefined;
-  KeyDetails: { keyId: string };
+  KeyDetails: {
+    keyId: string;
+    origin?: "HISTORY";
+    originKeyId?: string;
+  };
   EditKey: { keyId: string };
   KeyWithdrawal: { keyId: string };
   KeyMovementHistory: { keyId?: string } | undefined;

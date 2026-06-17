@@ -308,6 +308,7 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                         onPress={() =>
                             navigation.navigate("EditResource", {
                                 resource,
+                                returnOrigin: route.params.origin,
                             })
                         }
                     >
@@ -322,6 +323,7 @@ export function ResourceDetailsScreen({ route, navigation }: Props) {
                                 duplicateFrom: resource,
                                 initialType: resource.tipo,
                                 duplicateOrigin: "DETAILS",
+                                returnOrigin: route.params.origin,
                             })
                         }
                     >
