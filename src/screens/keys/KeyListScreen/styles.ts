@@ -58,6 +58,16 @@ export const styles = StyleSheet.create({
     alignItems: "flex-end",
     gap: 8,
   },
+  historyShortcut: {
+    height: 48,
+    width: 48,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   status: {
     fontSize: 12,
     fontFamily: typography.fontFamily.semiBold,

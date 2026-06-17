@@ -273,6 +273,8 @@ export function KeyMovementHistoryScreen() {
           data={filteredMovements}
           keyExtractor={(item) => item.id}
           refreshControl={refreshControl}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.historyListContent}
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.8}
@@ -284,19 +286,27 @@ export function KeyMovementHistoryScreen() {
                 })
               }
             >
-              <View style={styles.movementCard}>
+              <AppCard style={styles.movementHistoryCard}>
                 <View style={styles.movementHeader}>
                   <Text style={styles.movementTitle}>
                     {item.chaveCodigo}
                   </Text>
-                  <Text
+                  <View
                     style={[
-                      styles.movementStatus,
-                      item.status === "EM_ABERTO" && styles.borrowedStatus,
+                      styles.movementStatusBadge,
+                      item.status === "EM_ABERTO" &&
+                        styles.openMovementStatusBadge,
                     ]}
                   >
-                    {item.status === "EM_ABERTO" ? "Em aberto" : "Devolvida"}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.movementStatus,
+                        item.status === "EM_ABERTO" && styles.borrowedStatus,
+                      ]}
+                    >
+                      {item.status === "EM_ABERTO" ? "Em aberto" : "Devolvida"}
+                    </Text>
+                  </View>
                 </View>
                 <Text style={styles.movementSubtitle}>
                   Professor: {item.professor.nome}
@@ -322,7 +332,7 @@ export function KeyMovementHistoryScreen() {
                     color={colors.primary}
                   />
                 </View>
-              </View>
+              </AppCard>
             </TouchableOpacity>
           )}
         />
