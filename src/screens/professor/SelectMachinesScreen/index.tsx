@@ -18,6 +18,7 @@ import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoSt
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 import { listResources } from "../../../services/resources/resourceServices";
 import { Resource } from "../../../types/Resources";
+import { isArchivedResource } from "../../../utils/resourceStatus";
 import {
   getMachinesAvailabilityForPeriod,
   MachinePeriodAvailability,
@@ -30,6 +31,12 @@ type Props = NativeStackScreenProps<
   NovaSolicitacaoStackParamList,
   "SelectMachines"
 >;
+
+function mergeResourcesById(resources: Resource[]) {
+  return [
+    ...new Map(resources.map((resource) => [resource.id, resource])).values(),
+  ];
+}
 
 export function SelectMachinesScreen({ navigation }: Props) {
   const {
@@ -51,10 +58,23 @@ export function SelectMachinesScreen({ navigation }: Props) {
     try {
       setLoading(true);
 
-      const data = await listResources();
-      const loadedMachines = data.filter(
-        (item) => item.tipo === "MAQUINA"
+      const data = await listResources({ includeArchived: true });
+      const currentResourcesById = new Map(
+        data.map((resource) => [resource.id, resource])
       );
+      const selectedMachines = draft.maquinasSelecionadas
+        .map(
+          (item) =>
+            currentResourcesById.get(item.resource.id) ?? item.resource
+        )
+        .filter((item) => item.tipo === "MAQUINA");
+      const loadedMachines = mergeResourcesById([
+        ...data.filter(
+          (item) =>
+            item.tipo === "MAQUINA" && !isArchivedResource(item)
+        ),
+        ...selectedMachines,
+      ]);
       const availability = draft.turno
         ? await getMachinesAvailabilityForPeriod(
             loadedMachines,
@@ -77,18 +97,41 @@ export function SelectMachinesScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       loadResources();
-    }, [draft.dataUtilizacao, draft.turno, editingSolicitation?.id])
+    }, [
+      draft.dataUtilizacao,
+      draft.maquinasSelecionadas,
+      draft.turno,
+      editingSolicitation?.id,
+    ])
   );
 
   const filteredMachines = useMemo(() => {
-    if (!search.trim()) {
-      return machines;
-    }
-
-    return machines.filter((machine) =>
-      machine.nome.toLowerCase().includes(search.toLowerCase())
+    const selectableMachines = machines.filter(
+      (machine) => !isArchivedResource(machine) || isSelected(machine.id)
     );
-  }, [machines, search]);
+    const selectedArchivedMachines = draft.maquinasSelecionadas
+      .map(
+        (item) =>
+          selectableMachines.find(
+            (machine) => machine.id === item.resource.id
+          ) ??
+          item.resource
+      )
+      .filter(
+        (machine) =>
+          machine.tipo === "MAQUINA" && isArchivedResource(machine)
+      );
+    const visibleMachines = !search.trim()
+      ? selectableMachines
+      : selectableMachines.filter((machine) =>
+          machine.nome.toLowerCase().includes(search.toLowerCase())
+        );
+
+    return mergeResourcesById([
+      ...selectedArchivedMachines,
+      ...visibleMachines,
+    ]);
+  }, [draft.maquinasSelecionadas, machines, search]);
 
   function isSelected(resourceId: string) {
     return draft.maquinasSelecionadas.some(
@@ -109,6 +152,14 @@ export function SelectMachinesScreen({ navigation }: Props) {
   function handleToggleMachine(machine: Resource) {
     if (isSelected(machine.id)) {
       removeMachine(machine.id);
+      return;
+    }
+
+    if (isArchivedResource(machine)) {
+      Alert.alert(
+        "Recurso arquivado",
+        "Este recurso foi arquivado e não pode ser adicionado. Remova-o do rascunho para continuar."
+      );
       return;
     }
 
@@ -173,8 +224,10 @@ export function SelectMachinesScreen({ navigation }: Props) {
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
               const selected = isSelected(item.id);
+              const archived = isArchivedResource(item);
               const available =
-                availabilityByMachineId[item.id]?.available ?? false;
+                !archived &&
+                (availabilityByMachineId[item.id]?.available ?? false);
 
               return (
                 <AppCard style={styles.machineCard}>
@@ -187,10 +240,13 @@ export function SelectMachinesScreen({ navigation }: Props) {
                   <Text
                     style={[
                       styles.machineStatus,
-                      !available && styles.machineStatusUnavailable,
+                      (!available || archived) &&
+                        styles.machineStatusUnavailable,
                     ]}
                   >
-                    {available
+                    {archived
+                      ? "Recurso arquivado. Remova este item."
+                      : available
                       ? "Disponível no período"
                       : "Indisponível no período"}
                   </Text>
@@ -199,6 +255,7 @@ export function SelectMachinesScreen({ navigation }: Props) {
                     style={[
                       styles.machineButton,
                       selected && styles.machineButtonSelected,
+                      selected && archived && styles.machineButtonArchived,
                       !available &&
                         !selected &&
                         styles.machineButtonDisabled,
@@ -207,18 +264,37 @@ export function SelectMachinesScreen({ navigation }: Props) {
                     onPress={() => handleToggleMachine(item)}
                   >
                     <Feather
-                      name={selected ? "check" : "plus"}
+                      name={
+                        selected && archived
+                          ? "x"
+                          : selected
+                          ? "check"
+                          : "plus"
+                      }
                       size={16}
-                      color={selected ? colors.primary : colors.white}
+                      color={
+                        selected && archived
+                          ? colors.error
+                          : selected
+                          ? colors.primary
+                          : colors.white
+                      }
                     />
 
                     <Text
                       style={[
                         styles.machineButtonText,
                         selected && styles.machineButtonTextSelected,
+                        selected &&
+                          archived &&
+                          styles.machineButtonTextArchived,
                       ]}
                     >
-                      {selected ? "Selecionado" : "Adicionar"}
+                      {selected && archived
+                        ? "Remover"
+                        : selected
+                        ? "Selecionado"
+                        : "Adicionar"}
                     </Text>
                   </TouchableOpacity>
                 </AppCard>

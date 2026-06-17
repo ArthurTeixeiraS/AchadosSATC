@@ -8,6 +8,7 @@ import {
   SolicitationShift,
 } from "../types/Solicitation";
 import { Resource } from "../types/Resources";
+import { isArchivedResource } from "../utils/resourceStatus";
 
 interface SolicitationDraftContextData {
   draft: SolicitationDraft;
@@ -66,6 +67,10 @@ export function SolicitationDraftProvider({
   }
 
   function addMachine(machine: Resource) {
+    if (isArchivedResource(machine)) {
+      return;
+    }
+
     setDraft((oldDraft) => {
       const alreadySelected = oldDraft.maquinasSelecionadas.some(
         (item) => item.resource.id === machine.id
@@ -99,6 +104,10 @@ export function SolicitationDraftProvider({
   }
 
   function addTool(tool: Resource) {
+    if (isArchivedResource(tool)) {
+      return;
+    }
+
     setDraft((oldDraft) => {
       const alreadySelected = oldDraft.ferramentasSelecionadas.some(
         (item) => item.resource.id === tool.id
@@ -141,7 +150,7 @@ export function SolicitationDraftProvider({
     setDraft((oldDraft) => ({
       ...oldDraft,
       ferramentasSelecionadas: oldDraft.ferramentasSelecionadas.map((item) =>
-        item.resource.id === resourceId
+        item.resource.id === resourceId && !isArchivedResource(item.resource)
           ? {
               ...item,
               quantidade,

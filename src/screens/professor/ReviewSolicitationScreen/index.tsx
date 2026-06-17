@@ -9,11 +9,13 @@ import { AppCard } from "../../../components/AppCard";
 import { AppButton } from "../../../components/AppButton";
 import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { EmptyState } from "../../../components/EmptyState";
+import { AppAlert } from "../../../components/AppAlert";
 
 import { NovaSolicitacaoStackParamList } from "../../../routes/NovaSolicitacaoStackRoutes";
 import { useSolicitationDraft } from "../../../contexts/SolicitationDraftContext";
 
 import { Resource } from "../../../types/Resources";
+import { isArchivedResource } from "../../../utils/resourceStatus";
 import { getResourceById } from "../../../services/resources/resourceServices";
 
 import {
@@ -54,6 +56,13 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
 
         return [...new Set(ids)];
     }, [draft.maquinasSelecionadas]);
+
+    const archivedSelectedResources = useMemo(() => {
+        return [
+            ...draft.maquinasSelecionadas.map((item) => item.resource),
+            ...draft.ferramentasSelecionadas.map((item) => item.resource),
+        ].filter(isArchivedResource);
+    }, [draft.ferramentasSelecionadas, draft.maquinasSelecionadas]);
 
     useEffect(() => {
         async function loadLaboratories() {
@@ -107,6 +116,16 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
             Alert.alert(
                 "Selecione um recurso",
                 "Adicione pelo menos uma máquina ou ferramenta antes de enviar."
+            );
+            return;
+        }
+
+        if (archivedSelectedResources.length > 0) {
+            Alert.alert(
+                "Remova recursos arquivados",
+                `Remova estes recursos antes de enviar: ${archivedSelectedResources
+                    .map((resource) => resource.nome)
+                    .join(", ")}.`
             );
             return;
         }
@@ -212,6 +231,16 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                     )}
                 </AppCard>
 
+                {archivedSelectedResources.length > 0 && (
+                    <AppAlert
+                        variant="error"
+                        title="Recursos arquivados selecionados"
+                        message={`Remova antes de enviar: ${archivedSelectedResources
+                            .map((resource) => resource.nome)
+                            .join(", ")}`}
+                    />
+                )}
+
                 <AppCard>
                     <Text style={styles.sectionTitle}>Laboratórios envolvidos</Text>
 
@@ -245,17 +274,35 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                             title="Nenhuma máquina selecionada"
                         />
                     ) : (
-                        draft.maquinasSelecionadas.map((item) => (
-                            <View key={item.resource.id} style={styles.listItem}>
-                                <Text style={styles.listItemTitle}>{item.resource.nome}</Text>
+                        draft.maquinasSelecionadas.map((item) => {
+                            const archived = isArchivedResource(item.resource);
 
-                                {!!item.resource.descricao && (
-                                    <Text style={styles.listItemSubtitle}>
-                                        {item.resource.descricao}
+                            return (
+                                <View key={item.resource.id} style={styles.listItem}>
+                                    <Text
+                                        style={[
+                                            styles.listItemTitle,
+                                            archived && styles.listItemTitleError,
+                                        ]}
+                                    >
+                                        {item.resource.nome}
+                                        {archived ? " (arquivado)" : ""}
                                     </Text>
-                                )}
-                            </View>
-                        ))
+
+                                    {!!item.resource.descricao && (
+                                        <Text style={styles.listItemSubtitle}>
+                                            {item.resource.descricao}
+                                        </Text>
+                                    )}
+
+                                    {archived && (
+                                        <Text style={styles.listItemWarning}>
+                                            Remova este recurso antes de enviar.
+                                        </Text>
+                                    )}
+                                </View>
+                            );
+                        })
                     )}
 
                     <AppButton
@@ -278,19 +325,35 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                             title="Nenhuma ferramenta selecionada"
                         />
                     ) : (
-                        draft.ferramentasSelecionadas.map((item) => (
-                            <View key={item.resource.id} style={styles.listItem}>
-                                <Text style={styles.listItemTitle}>
-                                    {item.quantidade}x {item.resource.nome}
-                                </Text>
+                        draft.ferramentasSelecionadas.map((item) => {
+                            const archived = isArchivedResource(item.resource);
 
-                                {!!item.resource.descricao && (
-                                    <Text style={styles.listItemSubtitle}>
-                                        {item.resource.descricao}
+                            return (
+                                <View key={item.resource.id} style={styles.listItem}>
+                                    <Text
+                                        style={[
+                                            styles.listItemTitle,
+                                            archived && styles.listItemTitleError,
+                                        ]}
+                                    >
+                                        {item.quantidade}x {item.resource.nome}
+                                        {archived ? " (arquivado)" : ""}
                                     </Text>
-                                )}
-                            </View>
-                        ))
+
+                                    {!!item.resource.descricao && (
+                                        <Text style={styles.listItemSubtitle}>
+                                            {item.resource.descricao}
+                                        </Text>
+                                    )}
+
+                                    {archived && (
+                                        <Text style={styles.listItemWarning}>
+                                            Remova este recurso antes de enviar.
+                                        </Text>
+                                    )}
+                                </View>
+                            );
+                        })
                     )}
 
                     <AppButton
@@ -307,7 +370,9 @@ export function ReviewSolicitationScreen({ navigation }: Props) {
                 <View style={styles.buttonContainer}>
                     <AppButton 
                         loading={loading}
-                        disabled={loading}
+                        disabled={
+                            loading || archivedSelectedResources.length > 0
+                        }
                         onPress={handleConfirm}>
                         {editingSolicitation
                             ? "Salvar alterações"
