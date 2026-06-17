@@ -6,6 +6,8 @@ import Feather from "@expo/vector-icons/Feather";
 
 import { AppAlert } from "../../../components/AppAlert";
 import { AppButton } from "../../../components/AppButton";
+import { AppCard } from "../../../components/AppCard";
+import { AppDestructiveButton } from "../../../components/AppDestructiveButton";
 import { ScreenContainer } from "../../../components/ScreenContainer";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
@@ -84,7 +86,7 @@ export function KeyDetailsScreen() {
     const acaoTexto = key.isArquivado ? "reativar" : "arquivar";
 
     Alert.alert(
-      "Confirmar Ação",
+      key.isArquivado ? "Reativar chave" : "Arquivar chave",
       `Tem certeza que deseja ${acaoTexto} esta chave?`,
       [
         { text: "Cancelar", style: "cancel" },
@@ -98,7 +100,7 @@ export function KeyDetailsScreen() {
                 "Sucesso",
                 `Chave ${
                   key.isArquivado ? "reativada" : "arquivada"
-                } com sucesso!`
+                } com sucesso.`
               );
               navigation.navigate("KeyList");
             } catch (error: any) {
@@ -162,9 +164,7 @@ export function KeyDetailsScreen() {
       <ScreenContainer>
         <View style={globalStyles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 12, color: "#6B7280" }}>
-            Buscando detalhes...
-          </Text>
+          <Text style={styles.loadingText}>Buscando detalhes...</Text>
         </View>
       </ScreenContainer>
     );
@@ -178,56 +178,55 @@ export function KeyDetailsScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerCard}>
+        <AppCard style={styles.headerCard}>
           <View style={globalStyles.cardIconWrapper}>
             <Feather name="key" size={28} color={colors.primary} />
           </View>
-          <View style={{ flex: 1 }}>
+
+          <View style={styles.headerInfo}>
             <Text style={styles.codeText}>{key.codigo}</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 4,
-              }}
-            >
+            <View style={styles.statusRow}>
               <View
                 style={[
                   styles.dotStatus,
-                  {
-                    backgroundColor: key.isArquivado
-                      ? "#EF4444"
-                      : key.emprestada
-                        ? colors.warning
-                        : "#10B981",
-                  },
+                  key.isArquivado
+                    ? styles.archivedDot
+                    : key.emprestada
+                      ? styles.borrowedDot
+                      : styles.availableDot,
                 ]}
               />
               <Text style={styles.statusText}>
                 {key.isArquivado
-                  ? "Arquivada (Inativa)"
+                  ? "Arquivada"
                   : key.emprestada
                     ? "Emprestada"
                     : "Disponível para retirada"}
               </Text>
             </View>
           </View>
-        </View>
+        </AppCard>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionLabel}>Laboratório / Localização</Text>
-          <Text style={styles.sectionValue}>{key.localizacao}</Text>
+        <AppCard>
+          <Text style={styles.sectionTitle}>Informações gerais</Text>
+
+          <View style={styles.infoItem}>
+            <Text style={styles.sectionLabel}>Laboratório / Localização</Text>
+            <Text style={styles.sectionValue}>{key.localizacao}</Text>
+          </View>
 
           <Divider style={styles.divider} />
 
-          <Text style={styles.sectionLabel}>Descrição do Acesso</Text>
-          <Text style={styles.sectionValue}>{key.descricao}</Text>
-        </View>
+          <View style={styles.infoItem}>
+            <Text style={styles.sectionLabel}>Descrição do acesso</Text>
+            <Text style={styles.sectionValue}>{key.descricao}</Text>
+          </View>
+        </AppCard>
 
         {key.emprestada && (
           <AppAlert
             variant="warning"
-            title="Chave emprestada:"
+            title="Chave emprestada"
             message={`Professor ${key.professorAtualNome ?? "não informado"}${
               key.professorAtualCracha
                 ? ` · ${key.professorAtualCracha}`
@@ -238,102 +237,140 @@ export function KeyDetailsScreen() {
           />
         )}
 
-        <View style={styles.actionsWrapper}>
+        <AppCard style={styles.actionsCard}>
+          <Text style={styles.sectionTitle}>Ações</Text>
+
           {!key.isArquivado && !key.emprestada && (
             <AppButton
-              mode="contained"
+              icon="login"
               onPress={() =>
                 navigation.navigate("KeyWithdrawal", { keyId: key.id })
               }
             >
-              <Feather name="log-out" size={16} /> Registrar retirada
+              Registrar retirada
             </AppButton>
           )}
 
           {key.emprestada && (
             <AppButton
-              mode="contained"
+              icon="logout"
               loading={loadingAcao}
               onPress={handleReturn}
             >
-              <Feather name="log-in" size={16} /> Registrar devolução
+              Registrar devolução
             </AppButton>
           )}
 
           {!key.isArquivado && !key.emprestada && (
             <AppButton
-              mode="contained"
+              icon="pencil"
               onPress={() => navigation.navigate("EditKey", { keyId: key.id })}
-              style={styles.btnEditar}
             >
-              <Feather name="edit-2" size={16} /> Editar Dados
+              Editar dados
             </AppButton>
           )}
 
           <AppButton
             mode="outlined"
+            icon="clock-outline"
             onPress={() =>
               navigation.navigate("KeyMovementHistory", { keyId: key.id })
             }
-            style={[styles.btnSecondary, { borderColor: colors.primary }]}
+            style={styles.btnSecondary}
             textColor={colors.primary}
             buttonColor={colors.white}
           >
-            <Feather name="clock" size={16} /> Ver histórico
+            Ver histórico
           </AppButton>
 
-          <AppButton
-            mode="outlined"
-            loading={loadingAcao}
-            onPress={handleArchiveToggle}
-            style={[styles.btnSecondary, { borderColor: colors.primary }]}
-            textColor={colors.primary}
-            buttonColor={colors.white}
-          >
-            <Feather name={key.isArquivado ? "unlock" : "archive"} size={16} />{" "}
-            {key.isArquivado ? "Reativar Chave" : "Arquivar Chave"}
-          </AppButton>
-        </View>
+          {key.isArquivado ? (
+            <AppButton
+              mode="outlined"
+              icon="lock-open-variant-outline"
+              loading={loadingAcao}
+              onPress={handleArchiveToggle}
+              style={styles.btnSecondary}
+              textColor={colors.primary}
+              buttonColor={colors.white}
+            >
+              Reativar chave
+            </AppButton>
+          ) : (
+            <AppDestructiveButton
+              icon="archive-outline"
+              loading={loadingAcao}
+              onPress={handleArchiveToggle}
+            >
+              Arquivar chave
+            </AppDestructiveButton>
+          )}
+        </AppCard>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionLabel}>Últimas movimentações</Text>
+        <AppCard>
+          <Text style={styles.sectionTitle}>Últimas movimentações</Text>
           {movements.length === 0 ? (
             <Text style={styles.sectionValue}>
               Nenhuma retirada registrada para esta chave.
             </Text>
           ) : (
-            movements.slice(0, 3).map((movement) => (
-              <View key={movement.id} style={styles.movementCard}>
-                <View style={styles.movementHeader}>
-                  <Text style={styles.movementTitle}>
-                    {movement.professor.nome}
-                  </Text>
-                  <Text
+            movements.slice(0, 3).map((movement, index, list) => {
+              const isLast = index === list.length - 1;
+              const isOpen = movement.status === "EM_ABERTO";
+
+              return (
+                <View key={movement.id} style={styles.timelineRow}>
+                  <View style={styles.timelineMarkerColumn}>
+                    <View style={styles.timelineMarker}>
+                      <Feather
+                        name="check"
+                        size={14}
+                        color={colors.white}
+                      />
+                    </View>
+
+                    {!isLast && <View style={styles.timelineConnector} />}
+                  </View>
+
+                  <View
                     style={[
-                      styles.movementStatus,
-                      movement.status === "EM_ABERTO" &&
-                        styles.borrowedStatus,
+                      styles.timelineContent,
+                      isLast && styles.lastTimelineContent,
                     ]}
                   >
-                    {movement.status === "EM_ABERTO"
-                      ? "Em aberto"
-                      : "Devolvida"}
-                  </Text>
+                    <View style={styles.timelineHeader}>
+                      <Text style={styles.timelineTitle}>
+                        {isOpen
+                          ? "Retirada registrada"
+                          : "Devolução registrada"}
+                      </Text>
+                      <Text style={styles.timelineDate}>
+                        {formatDate(
+                          isOpen
+                            ? movement.retiradaEm
+                            : movement.devolvidaEm
+                        )}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.timelineActor}>
+                      {isOpen
+                        ? movement.retiradaPor.nome
+                        : movement.devolvidaPor?.nome ?? "Não informado"}{" "}
+                      · Funcionário
+                    </Text>
+
+                    <Text style={styles.timelineDetail}>
+                      Professor: {movement.professor.nome}
+                      {movement.professor.cracha
+                        ? ` · ${movement.professor.cracha}`
+                        : ""}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.movementMeta}>
-                  Retirada por {movement.retiradaPor.nome} em{" "}
-                  {formatDate(movement.retiradaEm)}
-                </Text>
-                {movement.devolvidaPor && (
-                  <Text style={styles.movementMeta}>
-                    Devolvida por {movement.devolvidaPor.nome} em{" "}
-                    {formatDate(movement.devolvidaEm)}
-                  </Text>
-                )}
-              </View>
-            ))
+              );
+            })
           )}
-        </View>
+        </AppCard>
       </ScrollView>
     </ScreenContainer>
   );

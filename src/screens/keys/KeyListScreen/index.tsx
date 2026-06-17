@@ -11,7 +11,6 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import { FAB, Text } from "react-native-paper";
 
 import { AppAlert } from "../../../components/AppAlert";
-import { AppButton } from "../../../components/AppButton";
 import { AppCard } from "../../../components/AppCard";
 import { EmptyState } from "../../../components/EmptyState";
 import {
@@ -210,22 +209,21 @@ export function KeyListScreen() {
         sorts={keySorts}
         activeSort={activeSort}
         onSortChange={setActiveSort}
+        extraHeaderAction={
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Histórico de movimentações"
+            style={styles.historyShortcut}
+            onPress={() =>
+              navigation.navigate("KeyMovementHistory", {
+                resetFiltersToken: createResetFiltersToken(),
+              })
+            }
+          >
+            <Feather name="clock" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        }
       />
-
-      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-        <AppButton
-          mode="outlined"
-          textColor={colors.primary}
-          buttonColor={colors.white}
-          onPress={() =>
-            navigation.navigate("KeyMovementHistory", {
-              resetFiltersToken: createResetFiltersToken(),
-            })
-          }
-        >
-          Histórico de movimentações
-        </AppButton>
-      </View>
 
       {filteredKeys.length === 0 ? (
         <ScrollView
